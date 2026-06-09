@@ -221,7 +221,7 @@ function updateNationOverlay(nation) {
 function renderLegend(entries) {
   if (!entries.length) { legend.innerHTML = '<div class="small">이 국가에 표시 가능한 추가 claim project가 없습니다.</div>'; return; }
   legend.innerHTML = entries.map((e,i) => {
-    const meta = PROJECTS[e.project] || {};
+    const meta = PROJECT_META[e.project] || {};
     const cost = meta.researchCost != null && meta.researchCost >= 0 ? meta.researchCost.toLocaleString() : '';
     const label = projectDisplay(e.project);
     const hostile = e.regions.filter(rn => e.claims?.[rn]?.hostileClaim).length;
