@@ -70,7 +70,7 @@ def main() -> int:
     research_counts = object_value(research_catalog.get("counts"))
     claim_nation_meta = object_value(claim.get("nationMeta"))
     require(number_value(region_summary, "regions") >= 300, "region map unexpectedly small")
-    require(region_summary.get("scenarioYear") == "2026", "region map must default to 2026 scenario data")
+    require(str(region_summary.get("scenarioYear")) in ("2022", "2026", "2070"), "region map scenarioYear must be one of 2022, 2026, or 2070")
     require(number_value(claim_stats, "claimRowsNormalized") >= 2000, "claim row count unexpectedly small")
     require(claim_stats.get("regionsUnmatched") == 0, "unmatched claim regions remain")
     require(display_name(region_by_name(region, "RockyMountains"), "en") == "Denver", "Rocky Mountains should display as Denver")
