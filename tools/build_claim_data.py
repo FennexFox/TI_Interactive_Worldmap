@@ -102,6 +102,42 @@ def load_project_localizations(templates_dir: Path, languages: list[str]) -> dic
     return localizations
 
 
+def load_nation_localizations(templates_dir: Path, languages: list[str]) -> dict[str, dict[str, str]]:
+    root = templates_dir.parent / "Localization"
+    localizations: dict[str, dict[str, str]] = {}
+    for language in languages:
+        values = read_localization_file(root / language / f"TINationTemplate.{language}")
+        for key, value in values.items():
+            parts = key.split(".")
+            if len(parts) != 3 or parts[0] != "TINationTemplate" or parts[1] != "displayName":
+                continue
+            _, _, data_name = parts
+            localizations.setdefault(data_name, {})[language] = value
+    return localizations
+
+
+def load_nation_metadata(templates_dir: Path | None, languages: list[str]) -> dict[str, dict[str, Any]]:
+    if templates_dir is None:
+        return {}
+    path = templates_dir / "TINationTemplate.json"
+    if not path.is_file():
+        return {}
+    templates = load_json(path)
+    localizations = load_nation_localizations(templates_dir, languages)
+    metadata: dict[str, dict[str, Any]] = {}
+    for template in templates if isinstance(templates, list) else []:
+        if not isinstance(template, dict) or not template.get("dataName") or template.get("disable"):
+            continue
+        nation = str(template["dataName"])
+        metadata[nation] = {
+            "tag": nation,
+            "displayName": localizations.get(nation, {}),
+            "friendlyName": template.get("friendlyName"),
+            "factionName": template.get("factionName"),
+        }
+    return metadata
+
+
 def load_project_metadata(templates_dir: Path | None, languages: list[str]) -> dict[str, dict[str, Any]]:
     if templates_dir is None:
         return {}
@@ -149,6 +185,7 @@ def build_claim_data(
     bilateral_rows: list[dict[str, Any]],
     aliases: dict[str, str],
     project_template_meta: dict[str, dict[str, Any]] | None,
+    nation_template_meta: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     regions = region_map["regions"]
     summary = dict(region_map["summary"])
@@ -349,6 +386,11 @@ def build_claim_data(
         "summary": summary,
         "claimStats": stats,
         "projects": project_meta,
+        "nationMeta": {
+            nation: {**({"tag": nation}), **((nation_template_meta or {}).get(nation, {}))}
+            for nation in nation_ids
+            if nation
+        },
         "claimsByNation": claims_by_nation,
         "unmatchedExamples": unmatched[:40],
     }
@@ -371,12 +413,15 @@ def main() -> int:
     bilateral_rows = load_json(Path(args.bilateral_template))
     aliases = load_json(Path(args.aliases)) if Path(args.aliases).exists() else {}
     templates_dir = resolve_templates_dir(args.templates_dir)
-    project_template_meta = load_project_metadata(templates_dir, parse_languages(args.project_languages))
+    languages = parse_languages(args.project_languages)
+    project_template_meta = load_project_metadata(templates_dir, languages)
+    nation_template_meta = load_nation_metadata(templates_dir, languages)
     data = build_claim_data(
         region_map=region_map,
         bilateral_rows=bilateral_rows,
         aliases=aliases,
         project_template_meta=project_template_meta,
+        nation_template_meta=nation_template_meta,
     )
     write_json(Path(args.output), data, compact=True)
     print(f"Wrote {args.output}")

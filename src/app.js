@@ -5,6 +5,7 @@ const CLAIMS_BY_NATION = claimMap.claimsByNation;
 const PROJECT_META = claimMap.projects;
 const CLAIM_STATS = claimMap.claimStats;
 const BREAKAWAYS = claimMap.breakaways || [];
+const NATION_META = claimMap.nationMeta || {};
 
 const svg = document.getElementById('map');
 const gRegions = document.getElementById('regions');
@@ -48,9 +49,8 @@ let currentDropdownChoices = [];
 let regionChoices = [];
 let activeIncomingClaimKey = '';
 let pendingHoverNation = '';
-let hoverPreviewTimer = 0;
+let hoverPreviewFrame = 0;
 let tooltipRegionId = null;
-const HOVER_PREVIEW_DELAY_MS = 90;
 const nationChoiceByValue = new Map();
 const incomingClaimsByRegion = new Map();
 
@@ -244,14 +244,13 @@ function labelPosition(r) {
   return null;
 }
 
-const NATION_LABEL_OVERRIDES = {
-  // Terra Invicta's internal tag data does not currently expose localized nation
-  // display names in the generated map payload. Keep known ambiguous tags here
-  // instead of inferring a nation name from one of its regions.
-  SEN: 'Saudi Arabia',
-};
+function localizedDisplayName(displayName) {
+  if (!displayName || typeof displayName !== 'object') return '';
+  return displayName.kor || displayName.en || Object.values(displayName).find(Boolean) || '';
+}
 function nationDisplayName(tag) {
-  return NATION_LABEL_OVERRIDES[tag] || tag;
+  const meta = NATION_META[tag] || {};
+  return localizedDisplayName(meta.displayName) || meta.friendlyName || meta.label || meta.name || tag;
 }
 function humanizeNationLabel(tag) {
   const d = CLAIMS_BY_NATION[tag] || {};
@@ -363,9 +362,9 @@ function resetTransientClaimState() {
   if (claimModeSel.value === 'project') claimModeSel.value = 'all';
 }
 function cancelPendingHoverPreview() {
-  if (hoverPreviewTimer) {
-    window.clearTimeout(hoverPreviewTimer);
-    hoverPreviewTimer = 0;
+  if (hoverPreviewFrame) {
+    window.cancelAnimationFrame(hoverPreviewFrame);
+    hoverPreviewFrame = 0;
   }
   pendingHoverNation = '';
 }
@@ -384,13 +383,13 @@ function scheduleHoverPreviewNation(nation) {
   const nextNation = nation || '';
   if (hoverNation === nextNation && activeNation === nextNation) return;
   pendingHoverNation = nextNation;
-  if (hoverPreviewTimer) return;
-  hoverPreviewTimer = window.setTimeout(() => {
-    hoverPreviewTimer = 0;
+  if (hoverPreviewFrame) return;
+  hoverPreviewFrame = window.requestAnimationFrame(() => {
+    hoverPreviewFrame = 0;
     const next = pendingHoverNation;
     pendingHoverNation = '';
     if (!lockedNation && next) setHoverPreviewNation(next);
-  }, HOVER_PREVIEW_DELAY_MS);
+  });
 }
 function clearHoverPreview() {
   cancelPendingHoverPreview();
@@ -412,13 +411,29 @@ function clearHoverPreview() {
 function buildIncomingClaimIndex() {
   incomingClaimsByRegion.clear();
   for (const [claimant, data] of Object.entries(CLAIMS_BY_NATION)) {
+    const claimantBaseRegions = [...new Set(data.baseRegions || nationRegions.get(claimant) || [])];
     for (const entry of data.projects || []) {
       const label = entry.label || projectDisplay(entry.project);
       if (isExcludedSystemClaim(claimant, entry.project, label)) continue;
-      for (const rn of entry.regions || []) {
-        const claim = entry.claims?.[rn] || {};
+      const entryRegions = [...new Set(entry.regions || [])];
+      const entryClaims = entry.claims || {};
+      const resultRegions = [...new Set([...claimantBaseRegions, ...entryRegions])].filter(Boolean).sort();
+      const resultClaimRegions = entryRegions.filter(rn => !claimantBaseRegions.includes(rn));
+      for (const rn of entryRegions) {
+        const claim = entryClaims?.[rn] || {};
         if (!incomingClaimsByRegion.has(rn)) incomingClaimsByRegion.set(rn, []);
-        incomingClaimsByRegion.get(rn).push({claimant, project:entry.project || '', label, region:rn, claim});
+        incomingClaimsByRegion.get(rn).push({
+          claimant,
+          project: entry.project || '',
+          label,
+          region: rn,
+          claim,
+          claimantBaseRegions,
+          entryRegions,
+          entryClaims,
+          resultRegions,
+          resultClaimRegions,
+        });
       }
     }
   }
@@ -450,13 +465,29 @@ function incomingClaimsForTarget(activeNation, data, baseSet) {
     for (const item of incomingClaimsByRegion.get(rn) || []) {
       if (item.claimant === activeNation) continue;
       const key = incomingClaimKey(item);
-      if (!grouped.has(key)) grouped.set(key, {...item, key, regions:[], claims:{}, hostile:0, gated:0, capital:0});
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          ...item,
+          key,
+          targetRegions: [],
+          regions: [],
+          claims: {},
+          targetClaims: {},
+          hostile: 0,
+          gated: 0,
+          capital: 0,
+        });
+      }
       const g = grouped.get(key);
-      if (!g.regions.includes(rn)) g.regions.push(rn);
-      g.claims[rn] = item.claim || {};
+      if (!g.targetRegions.includes(rn)) g.targetRegions.push(rn);
+      g.targetClaims[rn] = item.claim || {};
       if (item.claim?.hostileClaim) g.hostile += 1;
       if (item.claim?.gatedClaim) g.gated += 1;
       if (item.claim?.capitalClaim) g.capital += 1;
+      g.regions = [...new Set(item.resultClaimRegions || item.entryRegions || [])].filter(Boolean).sort();
+      g.claims = item.entryClaims || {};
+      g.resultRegions = [...new Set(item.resultRegions || item.entryRegions || [])].filter(Boolean).sort();
+      g.claimantBaseRegions = [...new Set(item.claimantBaseRegions || [])].filter(Boolean).sort();
     }
   }
   return [...grouped.values()].sort((a,b) => a.claimant.localeCompare(b.claimant) || projectSortLabel(a.project).localeCompare(projectSortLabel(b.project)));
@@ -594,17 +625,22 @@ function renderClaimSection(title, items, emptyText, kind) {
     const project = item.project || '';
     const label = projectDisplay(project);
     const regions = item.regions || [];
-    const hostile = item.hostile ?? regions.filter(rn => item.claims?.[rn]?.hostileClaim).length;
-    const gated = item.gated ?? regions.filter(rn => item.claims?.[rn]?.gatedClaim).length;
-    const capital = item.capital ?? regions.filter(rn => item.claims?.[rn]?.capitalClaim).length;
+    const targetRegions = kind === 'incoming' ? (item.targetRegions || regions) : regions;
+    const detailRegions = kind === 'incoming' ? (item.resultRegions || regions) : regions;
+    const detailClaims = item.claims || {};
+    const hostile = item.hostile ?? targetRegions.filter(rn => item.targetClaims?.[rn]?.hostileClaim || item.claims?.[rn]?.hostileClaim).length;
+    const gated = item.gated ?? targetRegions.filter(rn => item.targetClaims?.[rn]?.gatedClaim || item.claims?.[rn]?.gatedClaim).length;
+    const capital = item.capital ?? targetRegions.filter(rn => item.targetClaims?.[rn]?.capitalClaim || item.claims?.[rn]?.capitalClaim).length;
     const who = kind === 'incoming' ? humanizeNationLabel(item.claimant) : humanizeNationLabel(activeNation);
     const key = kind === 'incoming' ? incomingClaimKey(item) : outgoingClaimKey(item);
     const active = kind === 'incoming' ? activeIncomingClaimKey === key : activeOutgoing === key;
-    const regionNames = regions.map(prettyRegion);
-    const preview = regionNames.slice(0, 4).join(', ') + (regionNames.length > 4 ? `, +${regionNames.length - 4}` : '');
-    const direction = kind === 'incoming' ? `targets: ${preview}` : `claims: ${preview}`;
-    const regionDetails = active ? renderRegionList(regions, item.claims || {}, kind === 'incoming' ? 'targeted' : 'claimed') : '';
-    return `<div class="claimListGroup${active ? ' active' : ''}"><button type="button" class="claimListItem${active ? ' active' : ''}" data-claim-kind="${kind}" data-claim-index="${i}" data-claim-key="${escapeHtml(key)}" title="${escapeHtml(regionNames.join(', '))}"><b>${escapeHtml(who)} · ${escapeHtml(label)}</b><span>${escapeHtml(direction)} · ${regions.length} region${regions.length === 1 ? '' : 's'}${hostile ? ' · hostile '+hostile : ''}${capital ? ' · capital '+capital : ''}${gated ? ' · gated '+gated : ''}</span></button>${regionDetails}</div>`;
+    const targetNames = targetRegions.map(prettyRegion);
+    const targetPreview = targetNames.slice(0, 4).join(', ') + (targetNames.length > 4 ? `, +${targetNames.length - 4}` : '');
+    const direction = kind === 'incoming'
+      ? `targets: ${targetPreview || 'selected region'} · resulting country ${detailRegions.length} region${detailRegions.length === 1 ? '' : 's'}`
+      : `claims: ${targetPreview}`;
+    const regionDetails = active ? renderRegionList(detailRegions, detailClaims, kind === 'incoming' ? 'result' : 'claimed') : '';
+    return `<div class="claimListGroup${active ? ' active' : ''}"><button type="button" class="claimListItem${active ? ' active' : ''}" data-claim-kind="${kind}" data-claim-index="${i}" data-claim-key="${escapeHtml(key)}" title="${escapeHtml(detailRegions.map(prettyRegion).join(', '))}"><b>${escapeHtml(who)} · ${escapeHtml(label)}</b><span>${escapeHtml(direction)}${hostile ? ' · hostile '+hostile : ''}${capital ? ' · capital '+capital : ''}${gated ? ' · gated '+gated : ''}</span></button>${regionDetails}</div>`;
   }).join('');
   return `<div class="claimSection"><b>${escapeHtml(title)}</b><div class="claimList">${rows}</div></div>`;
 }
@@ -658,10 +694,7 @@ function renderLabels() {
   }
   gLabels.appendChild(frag);
 }
-function onRegionMove(e, r) {
-  if (!lockedNation) scheduleHoverPreviewNation(r.nationTag);
-  else hoverNation = r.nationTag;
-  document.getElementById('hoverPill').textContent = `Hover nation: ${r.nationTag} · ${prettyRegion(r.regionName)}`;
+function showRegionTooltip(e, r) {
   if (tooltipRegionId !== r.id) {
     const d = CLAIMS_BY_NATION[r.nationTag];
     const claimCount = d ? d.totalClaimRegions : 0;
@@ -674,9 +707,21 @@ function onRegionMove(e, r) {
   tip.style.left = Math.max(8, Math.min(rect.width-335, e.clientX-rect.left+14)) + 'px';
   tip.style.top = Math.max(8, Math.min(rect.height-125, e.clientY-rect.top+14)) + 'px';
 }
-function onRegionLeave() {
+function onRegionEnter(e, r) {
+  if (!lockedNation) scheduleHoverPreviewNation(r.nationTag);
+  else hoverNation = r.nationTag;
+  document.getElementById('hoverPill').textContent = `Hover nation: ${r.nationTag} · ${prettyRegion(r.regionName)}`;
+  showRegionTooltip(e, r);
+}
+function onRegionMove(e, r) {
+  showRegionTooltip(e, r);
+}
+function onRegionLeave(e) {
   tooltipRegionId = null;
   tip.style.display='none';
+  const next = e?.relatedTarget;
+  if (next?.classList?.contains('region')) return;
+  clearHoverPreview();
 }
 function onMapMove(e) {
   const target = e.target;
@@ -731,19 +776,21 @@ function updateNationOverlay(nation) {
   const incomingEntries = incomingClaimsForTarget(activeNation, data, baseSet);
   const activeIncoming = selectedIncomingEntry(incomingEntries);
   if (activeIncomingClaimKey && !activeIncoming) activeIncomingClaimKey = '';
+  const displayBaseSet = activeIncoming ? new Set(activeIncoming.claimantBaseRegions || []) : baseSet;
   const entries = activeIncoming ? [activeIncoming] : allEntries;
   const claimSet = new Set();
-  entries.forEach(e => e.regions.forEach(r => { if (activeIncoming || !baseSet.has(r)) claimSet.add(r); }));
+  entries.forEach(e => e.regions.forEach(r => { if (!displayBaseSet.has(r)) claimSet.add(r); }));
+  const resultSet = activeIncoming ? new Set([...(activeIncoming.resultRegions || []), ...(activeIncoming.claimantBaseRegions || [])]) : new Set([...displayBaseSet, ...claimSet]);
   document.querySelectorAll('.region').forEach(p => {
     const rn = p.dataset.region;
-    if (baseSet.has(rn)) p.classList.add('owned-highlight');
+    if (displayBaseSet.has(rn)) p.classList.add('owned-highlight');
     if (claimSet.has(rn)) p.classList.add('claim-target');
-    if (activeNation && !baseSet.has(rn) && !claimSet.has(rn)) p.classList.add('dimmed');
+    if (activeNation && !resultSet.has(rn)) p.classList.add('dimmed');
   });
   const frag = document.createDocumentFragment();
   const labFrag = document.createDocumentFragment();
   if (claimModeSel.value !== 'off') {
-    for (const rn of baseSet) {
+    for (const rn of displayBaseSet) {
       const r = regionByName[rn];
       if (!r) continue;
       const p = document.createElementNS('http://www.w3.org/2000/svg','path');
@@ -755,7 +802,7 @@ function updateNationOverlay(nation) {
     }
   }
   entries.forEach((entry, i) => {
-    const visibleClaimRegions = activeIncoming ? (entry.regions || []) : (entry.regions || []).filter(rn => !baseSet.has(rn));
+    const visibleClaimRegions = (entry.regions || []).filter(rn => !displayBaseSet.has(rn));
     if (!visibleClaimRegions.length) return;
     const tier = countryProjectTier(entry, tierByProject);
     const color = projectColor(entry.project, tier);
@@ -783,9 +830,9 @@ function updateNationOverlay(nation) {
   });
   gClaimOverlays.appendChild(frag);
   gClaimLabels.appendChild(labFrag);
-  const ownedCount = baseSet.size;
+  const ownedCount = displayBaseSet.size;
   const claimCount = claimSet.size;
-  const projectCount = entries.filter(e => e.project && (e.regions || []).some(rn => !baseSet.has(rn))).length;
+  const projectCount = entries.filter(e => e.project && (e.regions || []).some(rn => !displayBaseSet.has(rn))).length;
   document.getElementById('claimPill').textContent = `${nationDisplayName(activeNation)}: base ${ownedCount}, claim ${claimCount}, tech ${projectCount}`;
   const breakawayText = data.breakawayFrom ? ` · breakaway from ${escapeHtml(data.breakawayFrom)}` : '';
   const gatedCount = (data.gatedRegions || []).length;
@@ -802,7 +849,7 @@ function updateNationOverlay(nation) {
       projectFilter = '';
       projectSel.value = '';
       if (claimModeSel.value === 'project') claimModeSel.value = 'all';
-      selectedRegionNames = new Set(source.regions || []);
+      selectedRegionNames = new Set(source.targetRegions || source.regions || []);
       updateNationOverlay(activeNation);
       return;
     }
@@ -887,7 +934,6 @@ function applyFilters(rerenderResults=true) {
     const okClaims = !onlyClaims || !currentNation || claimSet.has(r.regionName) || baseSet.has(r.regionName);
     t.style.display = okQ && okClaims ? '' : 'none';
   });
-  document.getElementById('visiblePill').textContent = `Visible ${visible} / ${REGIONS.length}`;
   if (rerenderResults && results) {
     const nationMatches = q ? nationChoices.filter(c => c.searchText.includes(q)).slice(0, 25) : [];
     const nationHtml = nationMatches.map(c => `<div class="item nationResult" data-nation="${escapeHtml(c.tag)}"><b>${escapeHtml(c.label)}</b><div class="small">Nation 선택 · tag ${escapeHtml(c.tag)}</div></div>`).join('');
