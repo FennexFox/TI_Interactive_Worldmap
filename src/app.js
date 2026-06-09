@@ -740,16 +740,15 @@ function renderLabels() {
 }
 function showRegionTooltip(e, r) {
   if (tooltipRegionId !== r.id) {
-    const d = CLAIMS_BY_NATION[r.nationTag];
-    const claimCount = d ? d.totalClaimRegions : 0;
-    const status = d ? statusLabel(d.status) : 'existing';
-    tip.innerHTML = `<b>${escapeHtml(prettyRegion(r.regionName))}</b><div class="muted">${escapeHtml(r.name)} · Nation ${escapeHtml(r.nationTag)}</div><div class="small">${escapeHtml(r.nationTag)} · ${escapeHtml(status)} · potential claim regions: ${claimCount}</div>`;
+    tip.textContent = `${prettyRegion(r.regionName)} (${nationDisplayName(r.nationTag)})`;
     tooltipRegionId = r.id;
   }
-  tip.style.display='block';
+  tip.style.display = 'block';
   const rect = svgWrap.getBoundingClientRect();
-  tip.style.left = Math.max(8, Math.min(rect.width-335, e.clientX-rect.left+14)) + 'px';
-  tip.style.top = Math.max(8, Math.min(rect.height-125, e.clientY-rect.top+14)) + 'px';
+  const tipWidth = tip.offsetWidth || 160;
+  const tipHeight = tip.offsetHeight || 26;
+  tip.style.left = Math.max(8, Math.min(rect.width - tipWidth - 8, e.clientX - rect.left + 10)) + 'px';
+  tip.style.top = Math.max(8, Math.min(rect.height - tipHeight - 8, e.clientY - rect.top + 10)) + 'px';
 }
 function onRegionEnter(e, r) {
   if (!lockedNation) scheduleHoverPreviewNation(r.nationTag);
@@ -946,13 +945,23 @@ function updateNationOverlay(nation) {
     const source = kind === 'incoming' ? incomingEntries[index] : outgoingEntries[index];
     if (!source) return;
     if (kind === 'incoming') {
-      const key = incomingClaimKey(source);
-      activeIncomingClaimKey = activeIncomingClaimKey === key ? '' : key;
-      projectFilter = '';
-      projectSel.value = '';
-      if (claimModeSel.value === 'project') claimModeSel.value = 'all';
-      focusRegions(source.targetRegions || source.regions || []);
-      updateNationOverlay(activeNation);
+      // Incoming cards are invitations to inspect the claimant's resulting country,
+      // not a special overlay mode for the currently selected target nation.
+      // Switch the active nation/claim context to the claimant and select the
+      // corresponding outgoing claim there; keep the current target region focused.
+      const claimant = source.claimant || '';
+      if (!claimant) return;
+      activeIncomingClaimKey = '';
+      lockedNation = claimant;
+      hoverNation = '';
+      projectFilter = outgoingClaimKey(source);
+      claimModeSel.value = 'project';
+      if (source.project) projectSel.value = source.project;
+      else projectSel.value = '';
+      search.value = humanizeNationLabel(claimant);
+      search.dataset.selectedNation = claimant;
+      closeNationDropdown();
+      updateNationOverlay(claimant);
       return;
     }
     const key = outgoingClaimKey(source);
@@ -961,8 +970,12 @@ function updateNationOverlay(nation) {
     claimModeSel.value = projectFilter ? 'project' : 'all';
     if (projectFilter && projectFilter !== '__base__') projectSel.value = projectFilter;
     else projectSel.value = '';
-    focusRegions(source.regions || []);
+    // Switching claim cards should change the active claim overlay, not the
+    // currently focused region. Region rows inside a claim card call
+    // focusRegions(..., { preserveNation: true }) when the user explicitly
+    // wants to move focus to a specific target/result region.
     updateNationOverlay(activeNation);
+    updateSelectedRegions();
   }));
   nationInfo.querySelectorAll('.legendRegionItem[data-region-name]').forEach(el => el.addEventListener('click', e => {
     e.stopPropagation();

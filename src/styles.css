@@ -64,9 +64,7 @@
   .selection-label { pointer-events:none; font-size:.055px; font-weight:800; fill:#fff7b8; text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.82); stroke-width:.015; }
   .claim-label { pointer-events:none; font-size:.033px; fill:rgba(255,255,255,.88); text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.7); stroke-width:.008; }
   .label { pointer-events:none; font-size:.035px; fill:rgba(255,255,255,.78); text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.65); stroke-width:.008; }
-  .tooltip { position:absolute; pointer-events:none; z-index:5; display:none; min-width:210px; max-width:320px; background:rgba(8,13,24,.94); border:1px solid rgba(255,255,255,.14); border-radius:12px; padding:10px; box-shadow:0 12px 36px rgba(0,0,0,.35); }
-  .tooltip b { display:block; margin-bottom:2px; }
-  .tooltip .muted { color:var(--muted); font-size:12px; }
+  .tooltip { position:absolute; pointer-events:none; z-index:5; display:none; width:max-content; max-width:min(260px, calc(100% - 16px)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:rgba(8,13,24,.9); border:1px solid rgba(255,255,255,.12); border-radius:7px; padding:3px 7px; box-shadow:0 6px 18px rgba(0,0,0,.28); color:rgba(245,248,255,.92); font-size:12px; line-height:1.25; }
   .panel { margin-top:10px; background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:12px; }
   .kv { display:grid; grid-template-columns:115px 1fr; gap:6px; font-size:13px; }
   .kv div:nth-child(odd) { color:var(--muted); }
