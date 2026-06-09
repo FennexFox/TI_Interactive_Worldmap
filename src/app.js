@@ -117,9 +117,15 @@ const I18N = {
     'claimDirection.noTargets': '대상 없음',
     'claimDirection.cumulative': ' · 누적: 직접 {direct} + 선행 {inherited}',
     'claimCard.title': '{tag} - {nation} - {project} - {research}',
+    'claimCard.fieldTag': '코드',
+    'claimCard.fieldNation': '국가',
+    'claimCard.fieldProject': '프로젝트',
+    'claimCard.fieldResearch': '연구',
     'claimCard.projectBaseline': '기본 영유권',
     'claimCard.researchTier': '연구 단계 {tier}',
     'claimCard.researchBaseline': '연구 불필요',
+    'claimCard.researchTierValue': '단계 {tier}',
+    'claimCard.researchBaselineValue': '불필요',
     'claimStat.hostile': ' · 적대 {count}',
     'claimStat.capital': ' · 수도 {count}',
     'claimStat.gated': ' · 조건부 {count}',
@@ -221,9 +227,15 @@ const I18N = {
     'claimDirection.noTargets': 'no targets',
     'claimDirection.cumulative': ' · cumulative: direct {direct} + inherited {inherited}',
     'claimCard.title': '{tag} - {nation} - {project} - {research}',
+    'claimCard.fieldTag': 'Code',
+    'claimCard.fieldNation': 'Nation',
+    'claimCard.fieldProject': 'Project',
+    'claimCard.fieldResearch': 'Research',
     'claimCard.projectBaseline': 'baseline claim',
     'claimCard.researchTier': 'research tier {tier}',
     'claimCard.researchBaseline': 'no research',
+    'claimCard.researchTierValue': 'tier {tier}',
+    'claimCard.researchBaselineValue': 'none',
     'claimStat.hostile': ' · hostile {count}',
     'claimStat.capital': ' · capital {count}',
     'claimStat.gated': ' · conditional {count}',
@@ -702,22 +714,35 @@ function humanizeNationLabel(tag) {
   const displayName = nationDisplayName(tag);
   return `${tag}${displayName !== tag ? ' · ' + displayName : ''}${statusText}${techText}${regionText}`;
 }
-function claimCardResearchLabel(entry, nation) {
-  if (!entry?.project) return t('claimCard.researchBaseline');
+function claimCardResearchLabel(entry, nation, {compact=false} = {}) {
+  if (!entry?.project) return t(compact ? 'claimCard.researchBaselineValue' : 'claimCard.researchBaseline');
   const d = CLAIMS_BY_NATION[nation] || {};
   const baseSet = new Set(d.baseRegions || nationRegions.get(nation) || []);
   const tierByProject = countryProjectTierMap(nation, baseSet);
-  return t('claimCard.researchTier', {tier: countryProjectTier(entry, tierByProject) + 1});
+  const tier = countryProjectTier(entry, tierByProject) + 1;
+  return t(compact ? 'claimCard.researchTierValue' : 'claimCard.researchTier', {tier});
 }
-function claimCardTitle(entry, kind) {
+function claimCardTitleParts(entry, kind) {
   const nation = kind === 'incoming' ? (entry.claimant || '') : activeNation;
   const nationName = nationDisplayName(nation);
-  return t('claimCard.title', {
+  return {
     tag: nation || '-',
     nation: nationName || nation || '-',
     project: entry.project ? projectDisplay(entry.project) : t('claimCard.projectBaseline'),
-    research: claimCardResearchLabel(entry, nation),
-  });
+    research: claimCardResearchLabel(entry, nation, {compact: true}),
+  };
+}
+function claimCardTitle(entry, kind) {
+  return t('claimCard.title', claimCardTitleParts(entry, kind));
+}
+function renderClaimCardTitle(entry, kind) {
+  const parts = claimCardTitleParts(entry, kind);
+  const fields = [
+    ['nation', t('claimCard.fieldNation'), parts.nation],
+    ['research', t('claimCard.fieldResearch'), parts.research],
+    ['project', t('claimCard.fieldProject'), parts.project],
+  ];
+  return `<div class="claimCardTitle">${fields.map(([key, label, value]) => `<span class="claimCardTitleField claimCardTitleField--${key}"><span class="claimCardTitleLabel">${escapeHtml(label)}</span><b class="claimCardTitleValue">${escapeHtml(value)}</b></span>`).join('')}</div>`;
 }
 function buildNationChoices() {
   const tags = [...new Set([...REGIONS.map(r => r.nationTag), ...Object.keys(CLAIMS_BY_NATION), ...Object.keys(NATION_META)])].filter(Boolean).sort();
@@ -1157,6 +1182,7 @@ function renderClaimSection(title, items, emptyText, kind) {
     const gated = item.gated ?? targetRegions.filter(rn => item.targetClaims?.[rn]?.gatedClaim || item.claims?.[rn]?.gatedClaim).length;
     const capital = item.capital ?? targetRegions.filter(rn => item.targetClaims?.[rn]?.capitalClaim || item.claims?.[rn]?.capitalClaim).length;
     const claimTitle = claimCardTitle(item, kind);
+    const claimTitleHtml = renderClaimCardTitle(item, kind);
     const key = kind === 'incoming' ? incomingClaimKey(item) : outgoingClaimKey(item);
     const active = kind === 'incoming' ? activeIncomingClaimKey === key : activeOutgoing === key;
     const targetNames = targetRegions.map(prettyRegion);
@@ -1169,7 +1195,7 @@ function renderClaimSection(title, items, emptyText, kind) {
     const cumulativeText = kind === 'outgoing' && inherited ? t('claimDirection.cumulative', {direct, inherited}) : '';
     const statsText = `${hostile ? t('claimStat.hostile', {count: hostile}) : ''}${capital ? t('claimStat.capital', {count: capital}) : ''}${gated ? t('claimStat.gated', {count: gated}) : ''}`;
     const regionDetails = active ? renderRegionList(detailRegions, detailClaims, kind === 'incoming' ? 'result' : 'claimed', item.regionSourceLabels || {}) : '';
-    return `<div class="claimListGroup${active ? ' active' : ''}"><button type="button" class="claimListItem${active ? ' active' : ''}" data-claim-kind="${kind}" data-claim-index="${i}" data-claim-key="${escapeHtml(key)}" title="${escapeHtml(detailRegions.map(prettyRegion).join(', '))}"><b>${escapeHtml(claimTitle)}</b><span>${escapeHtml(direction + cumulativeText + statsText)}</span></button>${regionDetails}</div>`;
+    return `<div class="claimListGroup${active ? ' active' : ''}"><button type="button" class="claimListItem${active ? ' active' : ''}" data-claim-kind="${kind}" data-claim-index="${i}" data-claim-key="${escapeHtml(key)}" title="${escapeHtml(claimTitle + ' · ' + detailRegions.map(prettyRegion).join(', '))}">${claimTitleHtml}<span class="claimListMeta">${escapeHtml(direction + cumulativeText + statsText)}</span></button>${regionDetails}</div>`;
   }).join('');
   return `<details class="infoSubsection claimSection" data-info-section="${sectionKey}"${infoSectionOpenAttribute(sectionKey)}><summary><span>${escapeHtml(title)}</span></summary><div class="infoSubsectionBody claimList">${rows}</div></details>`;
 }
