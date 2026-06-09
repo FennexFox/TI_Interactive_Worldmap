@@ -12,13 +12,18 @@
   h2 { font-size:12px; margin:20px 0 8px; color:#cbd5e1; letter-spacing:.04em; text-transform:uppercase; }
   code { background:rgba(255,255,255,.08); padding:.1em .35em; border-radius:6px; }
   .desc { color:var(--muted); margin-bottom:14px; }
-  .mapStats { display:flex; gap:6px; align-items:center; justify-content:center; flex-wrap:wrap; max-width:58vw; }
-  .mapStats span { border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); border-radius:999px; padding:4px 8px; color:var(--muted); font-size:11px; white-space:nowrap; }
-  .mapStats b { color:#dbeafe; font-weight:700; }
   label { display:block; color:#cbd5e1; font-size:12px; margin:12px 0 6px; }
   input,select,button { width:100%; border-radius:10px; border:1px solid rgba(255,255,255,.12); background:#0b1020; color:var(--text); padding:9px 10px; }
   button { cursor:pointer; background:#18233a; }
   button:hover { background:#223052; }
+  .searchCombo { position:relative; }
+  .searchDropdown { position:absolute; z-index:30; top:calc(100% + 4px); left:0; right:0; max-height:260px; overflow:auto; padding:5px; border:1px solid rgba(255,255,255,.16); border-radius:12px; background:#0e1525; box-shadow:0 16px 38px rgba(0,0,0,.42); }
+  .searchOption { display:grid; grid-template-columns:auto 1fr; gap:8px; align-items:center; width:100%; padding:8px 9px; border:0; border-radius:8px; background:transparent; color:var(--text); font:inherit; text-align:left; }
+  .searchOption:hover, .searchOption.active { background:rgba(145,183,255,.14); }
+  .searchOption.selected { background:rgba(255,247,184,.12); }
+  .searchOption.empty { display:block; color:var(--muted); cursor:default; }
+  .searchOptionTag { min-width:3.4em; color:#dbeafe; font-weight:800; letter-spacing:.02em; }
+  .searchOptionLabel { color:#cbd5e1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .mapbar { display:flex; gap:8px; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid rgba(255,255,255,.08); background:rgba(10,15,25,.78); backdrop-filter:blur(8px); }
   .mapbar .left { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
@@ -84,10 +89,13 @@
   .claimSections { display:flex; flex-direction:column; gap:10px; margin-top:12px; }
   .claimSection { border-top:1px solid rgba(255,255,255,.08); padding-top:10px; }
   .claimSection > b { display:block; margin-bottom:6px; color:#dbeafe; }
-  .claimList { display:flex; flex-direction:column; gap:6px; max-height:220px; overflow:auto; }
+  .claimList { display:flex; flex-direction:column; gap:7px; }
+  .claimListGroup { display:flex; flex-direction:column; gap:5px; }
+  .claimListGroup.active { border-radius:11px; background:rgba(145,183,255,.045); padding:3px; border:1px solid rgba(145,183,255,.18); }
   .claimListItem { display:flex; flex-direction:column; gap:2px; align-items:flex-start; text-align:left; padding:7px 9px; border-radius:9px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); color:var(--text); font:inherit; }
   .claimListItem:hover { background:rgba(255,255,255,.08); border-color:rgba(145,183,255,.28); }
+  .claimListItem.active { background:rgba(145,183,255,.14); border-color:rgba(145,183,255,.42); }
   .claimListItem span { color:var(--muted); font-size:12px; }
   .muted { color:var(--muted); }
   .hint { color:#cbd5e1; font-size:12px; margin-top:8px; }
-  @media (max-width:1000px) { .app { grid-template-columns:1fr; height:auto; } aside { border-right:0; border-bottom:1px solid rgba(255,255,255,.08); } main { height:72vh; } .mapStats { order:3; width:100%; max-width:none; justify-content:flex-start; } }
+  @media (max-width:1000px) { .app { grid-template-columns:1fr; height:auto; } aside { border-right:0; border-bottom:1px solid rgba(255,255,255,.08); } main { height:72vh; } }

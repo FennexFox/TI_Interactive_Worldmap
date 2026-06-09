@@ -14,9 +14,11 @@
 
     <h2>탐색 / 선택</h2>
     <label for="search">국가/region 검색 · 선택</label>
-    <input id="search" list="nationOptions" placeholder="국가 tag 또는 region명 입력: CHN, Korea, Taiwan..." autocomplete="off" />
-    <datalist id="nationOptions"></datalist>
-    <div class="small" style="margin-top:6px;">입력창의 드롭다운에서 국가를 선택하면 고정됩니다. 빈 지도 공간을 클릭하면 선택이 해제됩니다.</div>
+    <div class="searchCombo" id="nationSearchCombo">
+      <input id="search" placeholder="국가 tag 또는 region명 입력: CHN, Korea, Taiwan..." autocomplete="off" role="combobox" aria-expanded="false" aria-controls="nationDropdown" aria-autocomplete="list" />
+      <div class="searchDropdown" id="nationDropdown" role="listbox" hidden></div>
+    </div>
+    <div class="small" style="margin-top:6px;">입력창을 클릭하면 국가 목록이 열립니다. 입력하면 국가와 region 목록이 필터링되고, 항목을 클릭하면 선택됩니다. 빈 지도 공간을 클릭하면 선택이 해제됩니다.</div>
 
     <div class="row">
       <div><label for="claimMode">Claim 표시</label><select id="claimMode"><option value="all">전체 claim</option><option value="project">선택 project만</option><option value="off">끄기</option></select></div>
@@ -34,11 +36,6 @@
     <h2>선택 국가</h2>
     <div class="panel" id="nationInfo">지도에서 국가/region 위에 마우스를 올리세요.</div>
 
-    <h2>claim legend</h2>
-    <div class="legend" id="legend"><div class="small">hover한 국가의 claim 묶음이 여기에 표시됩니다.</div></div>
-
-    <h2>검색 결과</h2>
-    <div class="list" id="results"></div>
 
     <div class="note">
       이 MVP는 <code>TIBilateralTemplate.json</code>의 <code>relationType=Claim</code>, <code>projectUnlockName</code>, <code>nation1</code>, <code>region1</code>을 사용합니다. 연구가 즉시 병합을 수행한다기보다 “병합/정복/통합 가능성의 전제인 claim을 부여”한다는 의미로 표시합니다. <code>projectUnlockName</code>이 없는 claim도 기본/상시 claim으로 포함합니다.
@@ -52,7 +49,6 @@
         <span class="pill selected" id="selectedPill" style="display:none"></span>
         <span class="pill warn" id="warnPill" style="display:none"></span>
       </div>
-      <div class="mapStats" id="stats" aria-label="Map dataset summary"></div>
       <span class="pill" id="visiblePill"></span>
     </div>
     <div class="svgwrap">
