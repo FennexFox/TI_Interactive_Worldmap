@@ -1,11 +1,14 @@
-window.TI_DATA_PROMISE.then(({regionMap, claimMap}) => {
+window.TI_DATA_PROMISE.then(({regionMap, claimMap, catalogs = {}}) => {
 const REGIONS = regionMap.regions;
 const SUMMARY = regionMap.summary;
+const NATION_COLOR_PALETTE = SUMMARY.nationColorPalette || [];
+const NATION_COLOR_INDEXES = SUMMARY.nationColorIndexes || {};
 const CLAIMS_BY_NATION = claimMap.claimsByNation;
 const PROJECT_META = claimMap.projects;
 const CLAIM_STATS = claimMap.claimStats;
 const BREAKAWAYS = claimMap.breakaways || [];
-const NATION_META = claimMap.nationMeta || {};
+const NATION_CATALOG = catalogs.nations || {};
+const NATION_META = {...(claimMap.nationMeta || {}), ...((NATION_CATALOG && NATION_CATALOG.nations) || {})};
 
 const svg = document.getElementById('map');
 const gRegions = document.getElementById('regions');
@@ -370,7 +373,7 @@ function setHoverPill(region=null) {
   const el = document.getElementById('hoverPill');
   if (!el) return;
   el.textContent = region
-    ? t('pill.hoverRegion', {nation: region.nationTag, region: prettyRegion(region.regionName)})
+    ? t('pill.hoverRegion', {nation: region.nationTag, region: localizedRegionName(region)})
     : t('pill.hoverEmpty');
 }
 function setClaimsPillEmpty() {
@@ -531,11 +534,20 @@ function projectDisplay(p) {
   return meta.displayName?.[dataLanguageKey()] || meta.displayName?.en || meta.displayName?.kor || meta.friendlyName || meta.label || p.replace('Project_','');
 }
 function prettyRegion(s) { return String(s || '').replace(/([a-z])([A-Z])/g,'$1 $2'); }
+function localizedRegionName(regionOrName) {
+  const region = typeof regionOrName === 'string' ? regionByName[regionOrName] : regionOrName;
+  if (!region) return prettyRegion(regionOrName);
+  return localizedDisplayName(region.displayName) || region.primaryCity || prettyRegion(region.regionName);
+}
 function hashHue(s) { let h=0; for (let i=0;i<String(s).length;i++) h=(h*31+String(s).charCodeAt(i))>>>0; return h%360; }
 function colorFor(r) {
   const mode = baseModeSel.value;
   if (mode === 'plain') return 'hsl(215 45% 39%)';
   if (mode === 'points') { const t=Math.min(1, Math.log10(r.points+1)/3); return `hsl(${220-170*t} 58% ${34+22*t}%)`; }
+  const colorIndex = NATION_COLOR_INDEXES[r.nationTag];
+  if (NATION_COLOR_PALETTE.length && Number.isInteger(colorIndex)) {
+    return NATION_COLOR_PALETTE[colorIndex % NATION_COLOR_PALETTE.length];
+  }
   return `hsl(${hashHue(r.nationTag || r.regionName)} 50% 43%)`;
 }
 function projectCost(project) {
@@ -619,9 +631,36 @@ function localizedDisplayName(displayName) {
   if (!displayName || typeof displayName !== 'object') return '';
   return displayName[dataLanguageKey()] || displayName.en || displayName.kor || Object.values(displayName).find(Boolean) || '';
 }
+function uniqueSearchTerms(values) {
+  const seen = new Set();
+  const result = [];
+  for (const value of values) {
+    const text = String(value || '').trim();
+    const key = text.toLowerCase();
+    if (!text || seen.has(key)) continue;
+    seen.add(key);
+    result.push(text);
+  }
+  return result;
+}
 function nationDisplayName(tag) {
   const meta = NATION_META[tag] || {};
   return localizedDisplayName(meta.displayName) || meta.friendlyName || meta.label || meta.name || tag;
+}
+function nationSearchAliases(tag) {
+  const meta = NATION_META[tag] || {};
+  const displayName = meta.displayName && typeof meta.displayName === 'object' ? meta.displayName : {};
+  const explicitAliases = Array.isArray(meta.aliases) ? meta.aliases : [];
+  return uniqueSearchTerms([
+    tag,
+    ...explicitAliases,
+    displayName.en,
+    displayName.kor,
+    ...Object.values(displayName),
+    meta.friendlyName,
+    meta.label,
+    meta.name,
+  ]);
 }
 function humanizeNationLabel(tag) {
   const d = CLAIMS_BY_NATION[tag] || {};
@@ -633,25 +672,28 @@ function humanizeNationLabel(tag) {
   return `${tag}${displayName !== tag ? ' · ' + displayName : ''}${statusText}${techText}${regionText}`;
 }
 function buildNationChoices() {
-  const tags = [...new Set([...REGIONS.map(r => r.nationTag), ...Object.keys(CLAIMS_BY_NATION)])].filter(Boolean).sort();
+  const tags = [...new Set([...REGIONS.map(r => r.nationTag), ...Object.keys(CLAIMS_BY_NATION), ...Object.keys(NATION_META)])].filter(Boolean).sort();
   nationChoices = tags.map(tag => {
-    const d = CLAIMS_BY_NATION[tag] || {};
     const label = humanizeNationLabel(tag);
-    const alias = nationDisplayName(tag);
-    return {tag, label, searchText: `${tag} ${label} ${alias}`.toLowerCase()};
+    const aliases = nationSearchAliases(tag);
+    return {tag, label, aliases, searchText: [label, ...aliases].join(' ').toLowerCase()};
   });
   nationChoiceByValue.clear();
   for (const c of nationChoices) {
     nationChoiceByValue.set(c.label.toLowerCase(), c.tag);
     nationChoiceByValue.set(c.tag.toLowerCase(), c.tag);
+    for (const alias of c.aliases || []) {
+      const key = alias.toLowerCase();
+      if (!nationChoiceByValue.has(key)) nationChoiceByValue.set(key, c.tag);
+    }
   }
   regionChoices = REGIONS.map(r => ({
     type:'region',
     id:r.id,
     tag:r.nationTag,
     regionName:r.regionName,
-    label:`${prettyRegion(r.regionName)} · ${r.nationTag}`,
-    searchText:`${r.name} ${r.regionName} ${prettyRegion(r.regionName)} ${r.nationTag}`.toLowerCase(),
+    label:`${localizedRegionName(r)} · ${r.nationTag}`,
+    searchText:`${r.name} ${r.regionName} ${localizedRegionName(r)} ${prettyRegion(r.regionName)} ${r.primaryCity || ''} ${Object.values(r.displayName || {}).join(' ')} ${r.nationTag}`.toLowerCase(),
   }));
 }
 function parseNationSearchValue(value) {
@@ -671,10 +713,31 @@ function searchFilterText() {
   return isSelectedNationSearch() ? '' : search.value.trim().toLowerCase();
 }
 
+function nationChoiceMatchRank(choice, q) {
+  const tag = choice.tag.toLowerCase();
+  const aliases = (choice.aliases || []).map(alias => alias.toLowerCase());
+  if (tag === q) return 0;
+  if (aliases.some(alias => alias === q)) return 1;
+  if (tag.startsWith(q) || aliases.some(alias => alias.startsWith(q))) return 2;
+  if (choice.label.toLowerCase().startsWith(q)) return 3;
+  return 4;
+}
+function sortNationMatches(a, b, q) {
+  return nationChoiceMatchRank(a, q) - nationChoiceMatchRank(b, q)
+    || a.tag.localeCompare(b.tag)
+    || a.label.localeCompare(b.label);
+}
+function matchingNationChoices(q, limit) {
+  return nationChoices
+    .filter(c => c.searchText.includes(q))
+    .sort((a, b) => sortNationMatches(a, b, q))
+    .slice(0, limit);
+}
+
 function visibleNationChoices() {
   const q = search.value.trim().toLowerCase();
   if (!q) return nationChoices.slice(0, 28).map(c => ({...c, type:'nation'}));
-  const nationMatches = nationChoices.filter(c => c.searchText.includes(q)).slice(0, 12).map(c => ({...c, type:'nation'}));
+  const nationMatches = matchingNationChoices(q, 12).map(c => ({...c, type:'nation'}));
   const regionMatches = regionChoices.filter(c => c.searchText.includes(q)).slice(0, 16);
   return [...nationMatches, ...regionMatches].slice(0, 28);
 }
@@ -877,7 +940,7 @@ function selectedRegionSummary() {
   if (names.length === 1) {
     const rn = names[0];
     const r = regionByName[rn];
-    return t('selected.region', {region: prettyRegion(rn), nation: r?.nationTag ? ' · '+r.nationTag : ''});
+    return t('selected.region', {region: localizedRegionName(r || rn), nation: r?.nationTag ? ' · '+r.nationTag : ''});
   }
   return t('selected.regions', {count: names.length});
 }
@@ -908,7 +971,7 @@ function renderSelectionOutlines() {
       text.setAttribute('class', 'selection-label');
       text.setAttribute('x', lab.x);
       text.setAttribute('y', lab.y - 0.052);
-      text.textContent = prettyRegion(rn);
+      text.textContent = localizedRegionName(r);
       text.dataset.region = rn;
       frag.appendChild(text);
     }
@@ -946,7 +1009,7 @@ function renderRegionList(regionNames, claims={}, prefix='targets', regionSource
       meta: meta ? ` · ${meta}` : '',
       source: source ? ` · ${source}` : '',
     });
-    return `<button type="button" class="legendRegionItem${active ? ' active' : ''}" data-region-name="${escapeHtml(rn)}"><b>${escapeHtml(prettyRegion(rn))}</b><span>${escapeHtml(detail)}</span></button>`;
+    return `<button type="button" class="legendRegionItem${active ? ' active' : ''}" data-region-name="${escapeHtml(rn)}"><b>${escapeHtml(localizedRegionName(region || rn))}</b><span>${escapeHtml(detail)}</span></button>`;
   }).join('');
   return `<div class="legendRegionList">${rows}</div>`;
 }
@@ -1105,7 +1168,7 @@ function renderLabels() {
     if (!lab) continue;
     const t = document.createElementNS('http://www.w3.org/2000/svg','text');
     t.setAttribute('class','label'); t.setAttribute('x', lab.x); t.setAttribute('y', lab.y);
-    t.textContent = prettyRegion(r.regionName);
+    t.textContent = localizedRegionName(r);
     t.dataset.id = r.id;
     t.dataset.region = r.regionName;
     t.dataset.nation = r.nationTag;
@@ -1116,7 +1179,7 @@ function renderLabels() {
 }
 function showRegionTooltip(e, r) {
   if (tooltipRegionId !== r.id) {
-    tip.textContent = `${prettyRegion(r.regionName)} (${nationDisplayName(r.nationTag)})`;
+    tip.textContent = `${localizedRegionName(r)} (${nationDisplayName(r.nationTag)})`;
     tooltipRegionId = r.id;
   }
   tip.style.display = 'block';
@@ -1449,7 +1512,7 @@ function applyFilters(rerenderResults=true) {
   let visible=0; const matches=[];
   regionPathElements.forEach(p => {
     const r = REGIONS[Number(p.dataset.id)];
-    const text = (r.name+' '+r.regionName+' '+r.nationTag).toLowerCase();
+      const text = (r.name+' '+r.regionName+' '+localizedRegionName(r)+' '+(r.primaryCity || '')+' '+Object.values(r.displayName || {}).join(' ')+' '+r.nationTag).toLowerCase();
     const okQ = !q || text.includes(q);
     const okClaims = !onlyClaims || !currentNation || claimSet.has(r.regionName) || baseSet.has(r.regionName);
     const ok = okQ && okClaims;
@@ -1458,14 +1521,14 @@ function applyFilters(rerenderResults=true) {
   });
   labelTextElements.forEach(t => {
     const r = REGIONS[Number(t.dataset.id)];
-    const okQ = !q || (r.name+' '+r.regionName+' '+r.nationTag).toLowerCase().includes(q);
+    const okQ = !q || (r.name+' '+r.regionName+' '+localizedRegionName(r)+' '+(r.primaryCity || '')+' '+Object.values(r.displayName || {}).join(' ')+' '+r.nationTag).toLowerCase().includes(q);
     const okClaims = !onlyClaims || !currentNation || claimSet.has(r.regionName) || baseSet.has(r.regionName);
     t.style.display = okQ && okClaims ? '' : 'none';
   });
   if (rerenderResults && results) {
-    const nationMatches = q ? nationChoices.filter(c => c.searchText.includes(q)).slice(0, 25) : [];
+    const nationMatches = q ? matchingNationChoices(q, 25) : [];
     const nationHtml = nationMatches.map(c => `<div class="item nationResult" data-nation="${escapeHtml(c.tag)}"><b>${escapeHtml(c.label)}</b><div class="small">${escapeHtml(t('results.nation', {tag: c.tag}))}</div></div>`).join('');
-    const regionHtml = matches.map(r => `<div class="item" data-id="${r.id}"><b>${escapeHtml(prettyRegion(r.regionName))}</b><div class="small">${escapeHtml(r.name)} · ${escapeHtml(r.nationTag)}</div></div>`).join('');
+    const regionHtml = matches.map(r => `<div class="item" data-id="${r.id}"><b>${escapeHtml(localizedRegionName(r))}</b><div class="small">${escapeHtml(r.name)} · ${escapeHtml(r.nationTag)}</div></div>`).join('');
     const empty = !nationHtml && !regionHtml ? `<div class="item small">${escapeHtml(t('search.noResults'))}</div>` : '';
     results.innerHTML = nationHtml + regionHtml + empty;
     results.querySelectorAll('.item[data-nation]').forEach(el => el.addEventListener('click', () => focusNation(el.dataset.nation)));

@@ -45,9 +45,11 @@ python .\tools\rebuild_pages.py `
   --no-commit
 ```
 
-`rebuild_pages.py` passes the local Templates directory to the claim builder, which reads
-`TIProjectTemplate.json` and localization files directly for project labels, costs, and
-prerequisites.
+`rebuild_pages.py` uses the local Templates directory to generate committed app-facing
+catalogs under `data/`, then builds the claim map from those catalogs. Template-derived
+region ownership and display names default to the `2026` scenario; pass
+`--scenario-year 2022` or `--scenario-year 2070` to rebuild against another supported
+start year.
 
 For development fixtures, use:
 
@@ -72,8 +74,12 @@ python .\tools\rebuild_pages.py --templates-dir "<Templates>" --region-outlines 
 
 The deploy helper only stages generated paths:
 
+- `data/nations.catalog.json`
+- `data/research.catalog.json`
 - `data/generated/region_map.generated.json`
 - `data/generated/claim_map.generated.json`
+- `docs/data/nations.catalog.json`
+- `docs/data/research.catalog.json`
 - `docs/data/region_map.generated.json`
 - `docs/data/claim_map.generated.json`
 - `docs/assets/data.generated.js`

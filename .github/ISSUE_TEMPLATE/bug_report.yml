@@ -1,24 +1,26 @@
 name: Bug report
-description: Report incorrect map rendering, data matching, or UI behavior
-title: ""
-labels: ["bug"]
+description: Report incorrect map rendering, data matching, or UI behavior.
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
 body:
   - type: textarea
     id: summary
     attributes:
       label: Summary
       description: What is wrong?
+      placeholder: Example: Claim data is missing after selecting a specific nation.
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
       label: Steps to reproduce
-      description: How can this be reproduced?
+      description: List the steps needed to reproduce the issue.
       placeholder: |
-        1. Open ...
+        1. Open the page.
         2. Select ...
-        3. Observe ...
+        3. Click ...
+        4. Observe ...
     validations:
       required: true
   - type: textarea
@@ -35,6 +37,20 @@ body:
       description: What happened?
     validations:
       required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      description: Choose the closest area for this issue.
+      options:
+        - Map rendering
+        - Nation or region data
+        - Claim or project data
+        - Search, filters, or language UI
+        - Build or deployed output
+        - Other
+    validations:
+      required: false
   - type: textarea
     id: data_context
     attributes:
@@ -45,7 +61,7 @@ body:
   - type: textarea
     id: verification
     attributes:
-      label: Verification notes
-      description: Any screenshots, console output, fixture names, or manual checks.
+      label: Evidence
+      description: Add screenshots, console output, links, or manual verification notes if available.
     validations:
       required: false

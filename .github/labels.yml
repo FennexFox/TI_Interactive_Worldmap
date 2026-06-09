@@ -1,0 +1,21 @@
+- name: bug
+  color: d73a4a
+  description: Something is not working or the generated map/data is incorrect.
+- name: feedback
+  color: 0e8a16
+  description: User feedback about usability, presentation, documentation, or workflow.
+- name: enhancement
+  color: a2eeef
+  description: New feature or improvement request.
+- name: needs-triage
+  color: fbca04
+  description: Needs initial review, prioritization, and routing.
+- name: data
+  color: 5319e7
+  description: Related to Terra Invicta data extraction, generated data, or normalization.
+- name: ui
+  color: 1d76db
+  description: Related to map interaction, layout, visual presentation, or accessibility.
+- name: reproduction-needed
+  color: ededed
+  description: Needs clearer reproduction steps or additional evidence.

@@ -44,3 +44,53 @@ test('sidebar falls back when persisted settings have unexpected JSON types', as
   await expect(cards.nth(0).locator('.sideCardBody')).toBeVisible();
   await expect(cards.nth(1).locator('.sideCardBody')).toBeVisible();
 });
+
+test('nation search uses catalog names and keeps region names separate', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  const search = page.locator('#search');
+  const options = page.locator('#nationDropdown .searchOption');
+  const nationOption = (tag) => options.filter({ has: page.locator('.searchOptionTag', { hasText: tag }) });
+  const regionOption = options.filter({ has: page.locator('.searchOptionTag', { hasText: 'REGION' }) });
+
+  await search.fill('Canada');
+  await expect(nationOption('CAN').first()).toContainText('Canada');
+
+  await search.fill('캐나다');
+  await expect(nationOption('CAN').first()).toBeVisible();
+
+  await search.fill('United States');
+  await expect(nationOption('USA').first()).toBeVisible();
+
+  await search.fill('China');
+  await expect(nationOption('CHN').first()).toContainText('China');
+
+  await search.fill('SEN');
+  await expect(options.first().locator('.searchOptionTag')).toHaveText('SEG');
+  await expect(nationOption('SEG').first()).toContainText('Senegal');
+  await expect(nationOption('SEN')).toHaveCount(0);
+
+  await search.fill('Senegambia');
+  await expect(regionOption.filter({ hasText: 'Dakar' }).first()).toContainText('SEG');
+  await expect(nationOption('SEN')).toHaveCount(0);
+
+  await search.fill('Denver');
+  await expect(regionOption.filter({ hasText: 'Denver' }).first()).toContainText('USA');
+
+  await search.fill('Seoul');
+  await expect(regionOption.filter({ hasText: 'Seoul' }).first()).toContainText('KOR');
+
+  await search.fill('Saudi Arabia');
+  await expect(nationOption('SAU').first()).toContainText('Saudi Arabia');
+  await expect(nationOption('SAU').first()).not.toContainText('formable');
+
+  await search.fill('Guatemala');
+  await expect(nationOption('GTM').first()).toContainText('Guatemala');
+  await expect(regionOption.filter({ hasText: 'Guatemala City' }).first()).toContainText('GTM');
+  await expect(nationOption('GUA')).toHaveCount(0);
+
+  await search.fill('Liangguang');
+  await expect(nationOption('GUA').first()).toContainText('Liangguang');
+  await expect(nationOption('GUA').first()).not.toContainText('Guatemala');
+});

@@ -1,0 +1,271 @@
+import json
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+
+import build_claim_data as cd
+import build_nation_catalog as nc
+import build_region_outline_data as ro
+import build_research_catalog as rc
+
+
+def write_json(path: Path, value: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def write_text(path: Path, value: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(value, encoding="utf-8")
+
+
+class CatalogBuilderTests(unittest.TestCase):
+    def test_region_map_uses_scenario_template_display_and_owner_names(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            templates_dir = root / "Templates"
+            write_json(
+                templates_dir / "TINationTemplate.json",
+                [
+                    {"dataName": "2026_USA", "friendlyName": "2026_United States of America"},
+                    {"dataName": "2026_SAU", "friendlyName": "2026_Saudi Arabia"},
+                    {"dataName": "2026_IRL", "friendlyName": "2026_Ireland"},
+                    {"dataName": "2026_GTM", "friendlyName": "2026_Guatemala"},
+                    {"dataName": "2026_KOR", "friendlyName": "2026_South Korea"},
+                    {"dataName": "GUA", "friendlyName": "Liangguang"},
+                ],
+            )
+            write_json(
+                templates_dir / "TIRegionTemplate.json",
+                [
+                    {"dataName": "2026_RockyMountains", "mapRegionName": "map_RockyMountains", "primaryCity": "Denver", "sortNation": "USA"},
+                    {"dataName": "2026_SouthKorea", "mapRegionName": "map_SouthKorea", "primaryCity": "Seoul", "sortNation": "SouthKorea"},
+                    {"dataName": "2026_Hijaz", "mapRegionName": "map_Hijaz", "primaryCity": "Jeddah", "sortNation": "Saudi Arabia"},
+                    {"dataName": "2026_Ireland", "mapRegionName": "map_Ireland", "primaryCity": "Dublin", "sortNation": "Ireland"},
+                    {"dataName": "2026_Guatemala", "mapRegionName": "map_Guatemala", "primaryCity": "Guatemala City", "sortNation": "Guatemala"},
+                ],
+            )
+            write_json(
+                templates_dir / "TIMapRegionTemplate.json",
+                [
+                    {"dataName": "map_RockyMountains", "friendlyNationName": "USA"},
+                    {"dataName": "map_SouthKorea", "friendlyNationName": "South Korea"},
+                    {"dataName": "map_Hijaz", "friendlyNationName": "Saudi Arabia"},
+                    {"dataName": "map_Ireland", "friendlyNationName": "Ireland"},
+                    {"dataName": "map_Guatemala", "friendlyNationName": "Guatemala"},
+                ],
+            )
+            write_text(
+                root / "Localization" / "en" / "TIRegionTemplate.en",
+                "\n".join(
+                    [
+                        "TIRegionTemplate.displayName.RockyMountains=Denver",
+                        "TIRegionTemplate.displayName.SouthKorea=Seoul",
+                        "TIRegionTemplate.displayName.Hijaz=Jeddah",
+                        "TIRegionTemplate.displayName.Ireland=Dublin",
+                        "TIRegionTemplate.displayName.Guatemala=Guatemala City",
+                    ]
+                ),
+            )
+            raw = {
+                "collectionName": "fixture",
+                "width": 10,
+                "height": 10,
+                "regions": [
+                    {"regionName": "RockyMountains", "nationTag": "USA", "path": "M 0 0 L 1 0 L 0 1 Z"},
+                    {"regionName": "SouthKorea", "nationTag": "KOR", "path": "M 1 0 L 2 0 L 1 1 Z"},
+                    {"regionName": "Hijaz", "nationTag": "SEN", "path": "M 2 0 L 3 0 L 2 1 Z"},
+                    {"regionName": "Ireland", "nationTag": "EUA", "path": "M 3 0 L 4 0 L 3 1 Z"},
+                    {"regionName": "Guatemala", "nationTag": "GUA", "path": "M 4 0 L 5 0 L 4 1 Z"},
+                ],
+            }
+
+            metadata = ro.load_region_metadata(templates_dir, ["en"], "2026")
+            region_map = ro.compact_region_outlines(raw, region_metadata=metadata, scenario_year="2026")
+            by_name = {row["regionName"]: row for row in region_map["regions"]}
+
+            self.assertEqual(region_map["summary"]["scenarioYear"], "2026")
+            self.assertEqual(by_name["RockyMountains"]["displayName"]["en"], "Denver")
+            self.assertEqual(by_name["SouthKorea"]["displayName"]["en"], "Seoul")
+            self.assertEqual(by_name["Hijaz"]["nationTag"], "SAU")
+            self.assertEqual(by_name["Ireland"]["nationTag"], "IRL")
+            self.assertEqual(by_name["Guatemala"]["nationTag"], "GTM")
+            self.assertEqual(by_name["Guatemala"]["outlineNationTag"], "GUA")
+
+    def test_nation_catalog_uses_template_names_not_region_names(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            templates_dir = root / "Templates"
+            write_json(
+                templates_dir / "TINationTemplate.json",
+                [
+                    {"dataName": "2026_CAN", "friendlyName": "2026_Canada"},
+                    {"dataName": "CAN", "friendlyName": "Canada"},
+                    {"dataName": "SAU", "friendlyName": "Saudi Arabia"},
+                ],
+            )
+            write_text(
+                root / "Localization" / "en" / "TINationTemplate.en",
+                "\n".join(
+                    [
+                        "TINationTemplate.displayName.CAN=Canada",
+                        "TINationTemplate.displayName.2026_CAN=2026_Canada",
+                        "TINationTemplate.displayName.SAU=Saudi Arabia",
+                    ]
+                ),
+            )
+            write_text(
+                root / "Localization" / "kor" / "TINationTemplate.kor",
+                "\n".join(
+                    [
+                        "TINationTemplate.displayName.CAN=Canada Local",
+                        "TINationTemplate.displayName.SAU=Saudi Local",
+                    ]
+                ),
+            )
+            region_map = {
+                "regions": [
+                    {"regionName": "Ontario", "nationTag": "CAN"},
+                    {"regionName": "Senegambia", "nationTag": "SEN"},
+                ]
+            }
+            bilateral_rows = [
+                {"relationType": "Claim", "nation1": "SAU", "region1": "Senegambia"},
+                {"relationType": "Breakaway", "nation1": "SEN", "nation2": "SAU"},
+            ]
+
+            catalog = nc.build_catalog(
+                templates_dir,
+                ["kor", "en"],
+                region_map=region_map,
+                bilateral_rows=bilateral_rows,
+            )
+
+            self.assertEqual(catalog["nations"]["CAN"]["displayName"]["en"], "Canada")
+            self.assertNotIn("2026_CAN", catalog["nations"])
+            self.assertIn("Canada Local", catalog["nations"]["CAN"]["aliases"])
+            self.assertEqual(catalog["nations"]["SEN"]["aliases"], ["SEN"])
+            self.assertTrue(catalog["nations"]["SEN"]["existsAtStart"])
+            self.assertTrue(catalog["nations"]["SEN"]["isBreakaway"])
+            self.assertNotIn("Senegambia", catalog["nations"]["SEN"]["aliases"])
+
+    def test_research_catalog_records_claim_granting_projects(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            templates_dir = root / "Templates"
+            write_json(
+                templates_dir / "TITechTemplate.json",
+                [
+                    {"dataName": "Tech_Alpha", "friendlyName": "Alpha", "researchCost": 100},
+                    {"dataName": "Tech_Beta", "friendlyName": "Beta", "researchCost": 200},
+                ],
+            )
+            write_json(
+                templates_dir / "TIProjectTemplate.json",
+                [
+                    {
+                        "dataName": "Project_TestClaim",
+                        "friendlyName": "Test Claim",
+                        "researchCost": 500,
+                        "techCategory": "SocialScience",
+                        "prereqs": ["Tech_Alpha"],
+                        "altPrereq0": "Tech_Beta",
+                        "requiresNation": "SAU",
+                    }
+                ],
+            )
+            write_text(
+                root / "Localization" / "en" / "TIProjectTemplate.en",
+                "TIProjectTemplate.displayName.Project_TestClaim=Test Claim Project\n",
+            )
+
+            catalog = rc.build_catalog(
+                templates_dir,
+                ["en"],
+                bilateral_rows=[
+                    {
+                        "relationType": "Claim",
+                        "nation1": "SAU",
+                        "region1": "Raw_Senegambia",
+                        "projectUnlockName": "Project_TestClaim",
+                    }
+                ],
+                aliases={"Raw_Senegambia": "Senegambia"},
+            )
+            node = catalog["nodes"][catalog["byDataName"]["Project_TestClaim"]]
+
+            self.assertEqual(node["displayName"]["en"], "Test Claim Project")
+            self.assertEqual(node["claimGrant"]["nations"], ["SAU"])
+            self.assertEqual(node["claimGrant"]["regions"], ["Senegambia"])
+            self.assertEqual(
+                node["requirements"]["all"][0],
+                {
+                    "any": [
+                        {"node": "Tech_Alpha", "kind": "tech"},
+                        {"node": "Tech_Beta", "kind": "tech"},
+                    ]
+                },
+            )
+            self.assertEqual(node["requirements"]["all"][1], {"nation": "SAU"})
+
+    def test_claim_data_consumes_catalog_metadata(self):
+        nation_catalog = {
+            "nations": {
+                "CAN": {
+                    "tag": "CAN",
+                    "displayName": {"en": "Canada"},
+                    "friendlyName": "Canada",
+                    "aliases": ["CAN", "Canada"],
+                },
+                "SEN": {"tag": "SEN", "aliases": ["SEN"]},
+            }
+        }
+        research_catalog = {
+            "nodes": [
+                {
+                    "dataName": "Project_TestClaim",
+                    "kind": "project",
+                    "displayName": {"en": "Test Claim Project"},
+                    "friendlyName": "Test Claim",
+                    "researchCost": 500,
+                    "category": "SocialScience",
+                    "prerequisiteNodes": ["Tech_Alpha"],
+                    "requirements": {"all": [{"node": "Tech_Alpha", "kind": "tech"}]},
+                }
+            ]
+        }
+        region_map = {
+            "summary": {"regions": 2},
+            "regions": [
+                {"regionName": "Ontario", "nationTag": "CAN"},
+                {"regionName": "Senegambia", "nationTag": "SEN"},
+            ],
+        }
+
+        data = cd.build_claim_data(
+            region_map=region_map,
+            bilateral_rows=[
+                {
+                    "relationType": "Claim",
+                    "nation1": "CAN",
+                    "region1": "Senegambia",
+                    "projectUnlockName": "Project_TestClaim",
+                }
+            ],
+            aliases={},
+            project_template_meta=cd.project_metadata_from_research_catalog(research_catalog),
+            nation_template_meta=cd.catalog_nation_metadata(nation_catalog),
+        )
+
+        self.assertEqual(data["nationMeta"]["CAN"]["displayName"]["en"], "Canada")
+        self.assertEqual(data["nationMeta"]["SEN"]["aliases"], ["SEN"])
+        self.assertEqual(data["projects"]["Project_TestClaim"]["label"], "Test Claim Project")
+        self.assertEqual(data["projects"]["Project_TestClaim"]["prerequisiteNodes"], ["Tech_Alpha"])
+
+
+if __name__ == "__main__":
+    unittest.main()
