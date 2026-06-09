@@ -34,13 +34,13 @@
   .region.owned-highlight { stroke:white; stroke-width:.016; filter:brightness(1.55); opacity:1; }
   .region.selected { stroke:#fff; stroke-width:.02; filter:brightness(1.75); }
   .region.hidden { display:none; }
-  svg:has(#claimOverlays .claim-overlay) .region { fill:transparent; opacity:.35; filter:none; }
-  svg:has(#claimOverlays .claim-overlay) .region.dimmed { opacity:.12; }
-  svg:has(#claimOverlays .claim-overlay) .region.owned-highlight { fill:transparent; opacity:.7; filter:none; }
-  svg:has(#claimOverlays .claim-overlay) .region.selected { fill:transparent; opacity:.85; }
-  svg:has(#claimOverlays .claim-overlay) .region:hover { filter:none; }
+  svg:has(#claimOverlays .claim-overlay) .region { opacity:1; filter:saturate(.42) brightness(.62); }
+  svg:has(#claimOverlays .claim-overlay) .region.dimmed { opacity:1; filter:saturate(.18) brightness(.38); }
+  svg:has(#claimOverlays .claim-overlay) .region.owned-highlight { fill:transparent; opacity:.82; filter:none; }
+  svg:has(#claimOverlays .claim-overlay) .region.selected { opacity:1; filter:saturate(.55) brightness(.78); }
+  svg:has(#claimOverlays .claim-overlay) .region:hover { filter:saturate(.6) brightness(.82); }
   .claim-overlay { pointer-events:none; stroke:rgba(255,255,255,.55); stroke-width:.012; vector-effect:non-scaling-stroke; mix-blend-mode:screen; }
-  svg:has(#claimOverlays .claim-overlay) .claim-overlay { mix-blend-mode:normal; filter:saturate(1.28) brightness(1.18); }
+  svg:has(#claimOverlays .claim-overlay) .claim-overlay { mix-blend-mode:normal; filter:saturate(1.45) brightness(1.35); }
   .claim-overlay.peaceful { stroke:#9ee7ff; stroke-width:.015; }
   .claim-overlay.hostile { stroke:var(--hostile); stroke-width:.023; }
   .claim-overlay.capital { stroke-dasharray:.035 .018; stroke-width:.027; }
