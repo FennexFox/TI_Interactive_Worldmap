@@ -24,6 +24,15 @@ def _plain(value: Any) -> Any:
     return value
 
 
+def _normalize_region_collection(tree: dict[str, Any]) -> dict[str, Any]:
+    plain = _plain(tree)
+    if isinstance(plain.get("regions"), list):
+        return plain
+    if isinstance(plain.get("regionOutlines"), list):
+        plain["regions"] = plain["regionOutlines"]
+    return plain
+
+
 def extract_with_unitypy(asset: Path) -> dict[str, Any]:
     try:
         import UnityPy  # type: ignore
@@ -47,9 +56,10 @@ def extract_with_unitypy(asset: Path) -> dict[str, Any]:
         regions = tree.get("regions") or tree.get("regionOutlines")
         if not isinstance(regions, list):
             continue
-        candidates.append(_plain(tree))
+        normalized = _normalize_region_collection(tree)
+        candidates.append(normalized)
         if name == "EarthRegionOutlines":
-            return _plain(tree)
+            return normalized
     if not candidates:
         raise SystemExit(f"No MonoBehaviour region outline collection found in {asset}")
     return max(candidates, key=lambda item: len(item.get("regions") or []))
