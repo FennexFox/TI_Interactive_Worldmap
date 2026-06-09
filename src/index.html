@@ -10,8 +10,6 @@
 <div class="app">
   <aside>
     <h1 data-i18n="app.title">Terra Invicta Claim / Unification Map</h1>
-    <div class="desc" data-i18n="app.description">Hover a nation or region to show current territory and available claim ranges. The map includes both baseline claims and research-unlocked claims, with peaceful and hostile claims separated.</div>
-
     <h2 data-i18n="section.explore">Explore and Select</h2>
     <label for="search" data-i18n="search.label">Search and select nation/region</label>
     <div class="searchCombo" id="nationSearchCombo">
@@ -36,10 +34,6 @@
     <h2 data-i18n="section.selectedNation">Selected Nation</h2>
     <div class="panel" id="nationInfo" data-i18n="nationInfo.empty">Hover a nation or region on the map.</div>
 
-
-    <div class="note" data-i18n-html="note.claimSource">
-      This map uses <code>relationType=Claim</code>, <code>projectUnlockName</code>, <code>nation1</code>, and <code>region1</code> from <code>TIBilateralTemplate.json</code>. Research is shown as granting claims, which are prerequisites for merger, conquest, or unification possibilities, rather than as performing those actions immediately. Claims without <code>projectUnlockName</code> are included as baseline claims.
-    </div>
   </aside>
   <main>
     <div class="mapbar">
@@ -65,6 +59,9 @@
         <g id="selectionOutlines"></g>
       </svg>
       <div class="tooltip" id="tip"></div>
+    </div>
+    <div class="mapNote" data-i18n-html="note.claimSource">
+      This map uses <code>relationType=Claim</code>, <code>projectUnlockName</code>, <code>nation1</code>, and <code>region1</code> from <code>TIBilateralTemplate.json</code>. Research is shown as granting claims, which are prerequisites for merger, conquest, or unification possibilities, rather than as performing those actions immediately. Claims without <code>projectUnlockName</code> are included as baseline claims.
     </div>
   </main>
 </div>

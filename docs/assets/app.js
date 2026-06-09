@@ -36,7 +36,6 @@ const I18N = {
   ko: {
     'document.title': 'Terra Invicta 영유권 / 통합 지도',
     'app.title': 'Terra Invicta 영유권 / 통합 지도',
-    'app.description': '국가나 지역 위에 마우스를 올리면 현재 영토와 획득 가능한 영유권 범위를 표시합니다. 기본 영유권과 연구 해금 영유권을 함께 보여주고 평화적/적대적 영유권을 구분합니다.',
     'section.explore': '탐색 및 선택',
     'search.label': '국가/지역 검색 및 선택',
     'search.placeholder': '국가 태그 또는 지역명 입력: CHN, Korea, Taiwan...',
@@ -132,7 +131,6 @@ const I18N = {
   en: {
     'document.title': 'Terra Invicta Claim / Unification Map',
     'app.title': 'Terra Invicta Claim / Unification Map',
-    'app.description': 'Hover a nation or region to show current territory and available claim ranges. The map includes both baseline claims and research-unlocked claims, with peaceful and hostile claims separated.',
     'section.explore': 'Explore and Select',
     'search.label': 'Search and select nation/region',
     'search.placeholder': 'Enter a nation tag or region name: CHN, Korea, Taiwan...',
