@@ -25,3 +25,22 @@ test('language selector switches static and dynamic UI copy', async ({ page }) =
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.locator('#claimPill')).toHaveText('Claims: -');
 });
+
+test('sidebar falls back when persisted settings have unexpected JSON types', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('ti-map-language', 'en');
+    localStorage.setItem('ti-map-aside-card-order', JSON.stringify('selected'));
+    localStorage.setItem('ti-map-aside-card-collapsed', JSON.stringify(42));
+    localStorage.setItem('ti-map-nation-info-sections', JSON.stringify(null));
+  });
+
+  await page.goto('/');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  const cards = page.locator('#asideCardList .sideCard');
+  await expect(cards).toHaveCount(2);
+  await expect(cards.nth(0)).toHaveAttribute('data-aside-card', 'explore');
+  await expect(cards.nth(1)).toHaveAttribute('data-aside-card', 'selected');
+  await expect(cards.nth(0).locator('.sideCardBody')).toBeVisible();
+  await expect(cards.nth(1).locator('.sideCardBody')).toBeVisible();
+});

@@ -250,11 +250,15 @@ function saveLanguage(language) {
   try { window.localStorage?.setItem(LANGUAGE_STORAGE_KEY, language); }
   catch (_) {}
 }
-function readJsonSetting(key, fallback) {
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+function readJsonSetting(key, fallback, isValid = () => true) {
   try {
     const raw = window.localStorage?.getItem(key);
     if (!raw) return fallback;
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    return isValid(parsed) ? parsed : fallback;
   } catch (_) {
     return fallback;
   }
@@ -264,13 +268,13 @@ function saveJsonSetting(key, value) {
   catch (_) {}
 }
 function infoSectionOpenAttribute(key) {
-  const state = readJsonSetting(NATION_INFO_SECTION_STORAGE_KEY, {});
+  const state = readJsonSetting(NATION_INFO_SECTION_STORAGE_KEY, {}, isPlainObject);
   return state[key] === false ? '' : ' open';
 }
 function bindNationInfoSectionToggles() {
   nationInfo.querySelectorAll('.infoSubsection[data-info-section]').forEach(section => {
     section.addEventListener('toggle', () => {
-      const state = readJsonSetting(NATION_INFO_SECTION_STORAGE_KEY, {});
+      const state = readJsonSetting(NATION_INFO_SECTION_STORAGE_KEY, {}, isPlainObject);
       state[section.dataset.infoSection] = section.open;
       saveJsonSetting(NATION_INFO_SECTION_STORAGE_KEY, state);
     });
@@ -317,10 +321,10 @@ function initAsideCards() {
   const list = document.getElementById('asideCardList');
   if (!list) return;
   const cardsByKey = new Map([...list.querySelectorAll('.sideCard[data-aside-card]')].map(card => [card.dataset.asideCard, card]));
-  const savedOrder = readJsonSetting(ASIDE_CARD_ORDER_STORAGE_KEY, DEFAULT_ASIDE_CARD_ORDER);
+  const savedOrder = readJsonSetting(ASIDE_CARD_ORDER_STORAGE_KEY, DEFAULT_ASIDE_CARD_ORDER, Array.isArray);
   const order = [...savedOrder.filter(key => cardsByKey.has(key)), ...DEFAULT_ASIDE_CARD_ORDER.filter(key => !savedOrder.includes(key))];
   order.forEach(key => list.appendChild(cardsByKey.get(key)));
-  const collapsed = readJsonSetting(ASIDE_CARD_COLLAPSE_STORAGE_KEY, {});
+  const collapsed = readJsonSetting(ASIDE_CARD_COLLAPSE_STORAGE_KEY, {}, isPlainObject);
   cardsByKey.forEach((card, key) => setAsideCardCollapsed(card, !!collapsed[key]));
   list.addEventListener('click', e => {
     const card = e.target.closest('.sideCard[data-aside-card]');
