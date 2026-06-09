@@ -7,7 +7,7 @@ test('language selector switches static and dynamic UI copy', async ({ page }) =
   await expect(page.locator('#languageSel')).toHaveValue('en');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.locator('h1')).toHaveText('Terra Invicta Claim / Unification Map');
-  await expect(page.locator('#search')).toHaveAttribute('placeholder', 'Enter a nation tag or region name: CHN, Korea, Taiwan...');
+  await expect(page.locator('#search')).toHaveAttribute('placeholder', 'Enter a nation tag, region, or project: CHN, Korea, Greater India...');
   await expect(page.locator('#claimMode option[value="project"]')).toHaveText('Selected project only');
   await expect(page.locator('#claimPill')).toHaveText('Claims: -');
 
@@ -18,7 +18,7 @@ test('language selector switches static and dynamic UI copy', async ({ page }) =
   await page.selectOption('#languageSel', 'ko');
   await expect(page.locator('html')).toHaveAttribute('lang', 'ko');
   await expect(page.locator('h1')).toHaveText('Terra Invicta 영유권 / 통합 지도');
-  await expect(page.locator('#search')).toHaveAttribute('placeholder', '국가 태그 또는 지역명 입력: CHN, Korea, Taiwan...');
+  await expect(page.locator('#search')).toHaveAttribute('placeholder', '국가 태그, 지역명, 프로젝트명 입력: CHN, Korea, Greater India...');
   await expect(page.locator('#claimPill')).toHaveText('영유권: -');
 
   await page.selectOption('#languageSel', 'en');
@@ -93,4 +93,22 @@ test('nation search uses catalog names and keeps region names separate', async (
   await search.fill('Liangguang');
   await expect(nationOption('GUA').first()).toContainText('Liangguang');
   await expect(nationOption('GUA').first()).not.toContainText('Guatemala');
+});
+
+test('nation search matches claim project names to claimant nations', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  const search = page.locator('#search');
+  const options = page.locator('#nationDropdown .searchOption');
+  const nationOption = (tag) => options.filter({ has: page.locator('.searchOptionTag', { hasText: tag }) });
+
+  await search.fill('United Turkestan');
+  await expect(nationOption('TUR').first()).toBeVisible();
+
+  await search.fill('Greater India');
+  await expect(nationOption('IND').first()).toBeVisible();
+
+  await search.fill('연합된 투르키스탄');
+  await expect(nationOption('TUR').first()).toBeVisible();
 });

@@ -45,8 +45,8 @@ const I18N = {
     'app.title': 'Terra Invicta 영유권 / 통합 지도',
     'section.explore': '탐색 및 선택',
     'search.label': '국가/지역 검색 및 선택',
-    'search.placeholder': '국가 태그 또는 지역명 입력: CHN, Korea, Taiwan...',
-    'search.help': '입력창을 클릭하면 국가 목록이 열립니다. 입력하면 국가와 지역 목록이 필터링되고, 항목을 클릭하면 선택됩니다. 빈 지도 공간을 클릭하면 선택이 해제됩니다.',
+    'search.placeholder': '국가 태그, 지역명, 프로젝트명 입력: CHN, Korea, Greater India...',
+    'search.help': '입력창을 클릭하면 국가 목록이 열립니다. 입력하면 국가, 지역, 영유권 프로젝트 목록이 필터링되고, 항목을 클릭하면 선택됩니다. 빈 지도 공간을 클릭하면 선택이 해제됩니다.',
     'search.noResults': '검색 결과 없음',
     'search.regionTag': '지역',
     'claimMode.label': '영유권 표시',
@@ -116,6 +116,10 @@ const I18N = {
     'claimDirection.selectedRegion': '선택한 지역',
     'claimDirection.noTargets': '대상 없음',
     'claimDirection.cumulative': ' · 누적: 직접 {direct} + 선행 {inherited}',
+    'claimCard.title': '{tag} - {nation} - {project} - {research}',
+    'claimCard.projectBaseline': '기본 영유권',
+    'claimCard.researchTier': '연구 단계 {tier}',
+    'claimCard.researchBaseline': '연구 불필요',
     'claimStat.hostile': ' · 적대 {count}',
     'claimStat.capital': ' · 수도 {count}',
     'claimStat.gated': ' · 조건부 {count}',
@@ -145,8 +149,8 @@ const I18N = {
     'app.title': 'Terra Invicta Claim / Unification Map',
     'section.explore': 'Explore and Select',
     'search.label': 'Search and select nation/region',
-    'search.placeholder': 'Enter a nation tag or region name: CHN, Korea, Taiwan...',
-    'search.help': 'Click the field to open the nation list. Typing filters nations and regions; click an item to select it. Click empty map space to clear the selection.',
+    'search.placeholder': 'Enter a nation tag, region, or project: CHN, Korea, Greater India...',
+    'search.help': 'Click the field to open the nation list. Typing filters nations, regions, and claim projects; click an item to select it. Click empty map space to clear the selection.',
     'search.noResults': 'No results',
     'search.regionTag': 'REGION',
     'claimMode.label': 'Claim display',
@@ -216,6 +220,10 @@ const I18N = {
     'claimDirection.selectedRegion': 'selected region',
     'claimDirection.noTargets': 'no targets',
     'claimDirection.cumulative': ' · cumulative: direct {direct} + inherited {inherited}',
+    'claimCard.title': '{tag} - {nation} - {project} - {research}',
+    'claimCard.projectBaseline': 'baseline claim',
+    'claimCard.researchTier': 'research tier {tier}',
+    'claimCard.researchBaseline': 'no research',
     'claimStat.hostile': ' · hostile {count}',
     'claimStat.capital': ' · capital {count}',
     'claimStat.gated': ' · conditional {count}',
@@ -662,6 +670,29 @@ function nationSearchAliases(tag) {
     meta.name,
   ]);
 }
+function projectSearchAliases(project, entryLabel='') {
+  const meta = PROJECT_META[project] || {};
+  const displayName = meta.displayName && typeof meta.displayName === 'object' ? meta.displayName : {};
+  return uniqueSearchTerms([
+    project,
+    String(project || '').replace(/^Project_/, ''),
+    entryLabel,
+    meta.label,
+    meta.friendlyName,
+    displayName.en,
+    displayName.kor,
+    ...Object.values(displayName),
+  ]);
+}
+function nationClaimProjectSearchAliases(tag) {
+  const data = CLAIMS_BY_NATION[tag] || {};
+  const terms = [];
+  for (const entry of data.projects || []) {
+    if (!entry?.project) continue;
+    terms.push(...projectSearchAliases(entry.project, entry.label));
+  }
+  return uniqueSearchTerms(terms);
+}
 function humanizeNationLabel(tag) {
   const d = CLAIMS_BY_NATION[tag] || {};
   const regionCount = (nationRegions.get(tag) || d.baseRegions || []).length;
@@ -671,12 +702,30 @@ function humanizeNationLabel(tag) {
   const displayName = nationDisplayName(tag);
   return `${tag}${displayName !== tag ? ' · ' + displayName : ''}${statusText}${techText}${regionText}`;
 }
+function claimCardResearchLabel(entry, nation) {
+  if (!entry?.project) return t('claimCard.researchBaseline');
+  const d = CLAIMS_BY_NATION[nation] || {};
+  const baseSet = new Set(d.baseRegions || nationRegions.get(nation) || []);
+  const tierByProject = countryProjectTierMap(nation, baseSet);
+  return t('claimCard.researchTier', {tier: countryProjectTier(entry, tierByProject) + 1});
+}
+function claimCardTitle(entry, kind) {
+  const nation = kind === 'incoming' ? (entry.claimant || '') : activeNation;
+  const nationName = nationDisplayName(nation);
+  return t('claimCard.title', {
+    tag: nation || '-',
+    nation: nationName || nation || '-',
+    project: entry.project ? projectDisplay(entry.project) : t('claimCard.projectBaseline'),
+    research: claimCardResearchLabel(entry, nation),
+  });
+}
 function buildNationChoices() {
   const tags = [...new Set([...REGIONS.map(r => r.nationTag), ...Object.keys(CLAIMS_BY_NATION), ...Object.keys(NATION_META)])].filter(Boolean).sort();
   nationChoices = tags.map(tag => {
     const label = humanizeNationLabel(tag);
     const aliases = nationSearchAliases(tag);
-    return {tag, label, aliases, searchText: [label, ...aliases].join(' ').toLowerCase()};
+    const projectAliases = nationClaimProjectSearchAliases(tag);
+    return {tag, label, aliases, projectAliases, searchText: [label, ...aliases, ...projectAliases].join(' ').toLowerCase()};
   });
   nationChoiceByValue.clear();
   for (const c of nationChoices) {
@@ -716,11 +765,14 @@ function searchFilterText() {
 function nationChoiceMatchRank(choice, q) {
   const tag = choice.tag.toLowerCase();
   const aliases = (choice.aliases || []).map(alias => alias.toLowerCase());
+  const projectAliases = (choice.projectAliases || []).map(alias => alias.toLowerCase());
   if (tag === q) return 0;
   if (aliases.some(alias => alias === q)) return 1;
   if (tag.startsWith(q) || aliases.some(alias => alias.startsWith(q))) return 2;
   if (choice.label.toLowerCase().startsWith(q)) return 3;
-  return 4;
+  if (projectAliases.some(alias => alias === q)) return 4;
+  if (projectAliases.some(alias => alias.startsWith(q))) return 5;
+  return 6;
 }
 function sortNationMatches(a, b, q) {
   return nationChoiceMatchRank(a, q) - nationChoiceMatchRank(b, q)
@@ -1097,7 +1149,6 @@ function renderClaimSection(title, items, emptyText, kind) {
   const activeOutgoing = claimModeSel.value === 'project' ? projectFilter : '';
   const rows = items.map((item, i) => {
     const project = item.project || '';
-    const label = projectDisplay(project);
     const regions = item.regions || [];
     const targetRegions = kind === 'incoming' ? (item.targetRegions || regions) : regions;
     const detailRegions = kind === 'incoming' ? (item.resultRegions || regions) : regions;
@@ -1105,7 +1156,7 @@ function renderClaimSection(title, items, emptyText, kind) {
     const hostile = item.hostile ?? targetRegions.filter(rn => item.targetClaims?.[rn]?.hostileClaim || item.claims?.[rn]?.hostileClaim).length;
     const gated = item.gated ?? targetRegions.filter(rn => item.targetClaims?.[rn]?.gatedClaim || item.claims?.[rn]?.gatedClaim).length;
     const capital = item.capital ?? targetRegions.filter(rn => item.targetClaims?.[rn]?.capitalClaim || item.claims?.[rn]?.capitalClaim).length;
-    const who = kind === 'incoming' ? humanizeNationLabel(item.claimant) : humanizeNationLabel(activeNation);
+    const claimTitle = claimCardTitle(item, kind);
     const key = kind === 'incoming' ? incomingClaimKey(item) : outgoingClaimKey(item);
     const active = kind === 'incoming' ? activeIncomingClaimKey === key : activeOutgoing === key;
     const targetNames = targetRegions.map(prettyRegion);
@@ -1118,7 +1169,7 @@ function renderClaimSection(title, items, emptyText, kind) {
     const cumulativeText = kind === 'outgoing' && inherited ? t('claimDirection.cumulative', {direct, inherited}) : '';
     const statsText = `${hostile ? t('claimStat.hostile', {count: hostile}) : ''}${capital ? t('claimStat.capital', {count: capital}) : ''}${gated ? t('claimStat.gated', {count: gated}) : ''}`;
     const regionDetails = active ? renderRegionList(detailRegions, detailClaims, kind === 'incoming' ? 'result' : 'claimed', item.regionSourceLabels || {}) : '';
-    return `<div class="claimListGroup${active ? ' active' : ''}"><button type="button" class="claimListItem${active ? ' active' : ''}" data-claim-kind="${kind}" data-claim-index="${i}" data-claim-key="${escapeHtml(key)}" title="${escapeHtml(detailRegions.map(prettyRegion).join(', '))}"><b>${escapeHtml(who)} · ${escapeHtml(label)}</b><span>${escapeHtml(direction + cumulativeText + statsText)}</span></button>${regionDetails}</div>`;
+    return `<div class="claimListGroup${active ? ' active' : ''}"><button type="button" class="claimListItem${active ? ' active' : ''}" data-claim-kind="${kind}" data-claim-index="${i}" data-claim-key="${escapeHtml(key)}" title="${escapeHtml(detailRegions.map(prettyRegion).join(', '))}"><b>${escapeHtml(claimTitle)}</b><span>${escapeHtml(direction + cumulativeText + statsText)}</span></button>${regionDetails}</div>`;
   }).join('');
   return `<details class="infoSubsection claimSection" data-info-section="${sectionKey}"${infoSectionOpenAttribute(sectionKey)}><summary><span>${escapeHtml(title)}</span></summary><div class="infoSubsectionBody claimList">${rows}</div></details>`;
 }
