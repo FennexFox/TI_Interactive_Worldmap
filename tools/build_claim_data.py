@@ -11,6 +11,7 @@ import argparse
 import collections
 import json
 import re
+import os
 from pathlib import Path
 from typing import Any
 
@@ -34,16 +35,108 @@ def norm_id(value: Any) -> str:
     return re.sub(r"^(?:2026|2070)_", "", str(value))
 
 
-def project_label(project_id: str, research_catalog: dict[str, Any] | None) -> str:
+def normalize_string_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value if item]
+    if isinstance(value, str) and value:
+        return [value]
+    return []
+
+
+def parse_languages(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def candidate_templates_dirs() -> list[Path]:
+    env = os.environ.get("TI_TEMPLATES_DIR")
+    candidates = [
+        Path.home() / ".steam/steam/steamapps/common/Terra Invicta/TerraInvicta_Data/StreamingAssets/Templates",
+        Path.home() / ".local/share/Steam/steamapps/common/Terra Invicta/TerraInvicta_Data/StreamingAssets/Templates",
+        Path("C:/Program Files (x86)/Steam/steamapps/common/Terra Invicta/TerraInvicta_Data/StreamingAssets/Templates"),
+        Path("C:/Program Files/Steam/steamapps/common/Terra Invicta/TerraInvicta_Data/StreamingAssets/Templates"),
+        Path("D:/SteamLibrary/steamapps/common/Terra Invicta/TerraInvicta_Data/StreamingAssets/Templates"),
+        Path("E:/SteamLibrary/steamapps/common/Terra Invicta/TerraInvicta_Data/StreamingAssets/Templates"),
+    ]
+    return ([Path(env)] if env else []) + candidates
+
+
+def resolve_templates_dir(templates_arg: str | None) -> Path | None:
+    if templates_arg:
+        path = Path(templates_arg).expanduser()
+        if not path.is_dir():
+            raise SystemExit(f"Templates directory not found: {path}")
+        return path
+    for path in candidate_templates_dirs():
+        if (path / "TIProjectTemplate.json").is_file():
+            return path
+    return None
+
+
+def read_localization_file(path: Path) -> dict[str, str]:
+    values: dict[str, str] = {}
+    if not path.is_file():
+        return values
+    with path.open("r", encoding="utf-8-sig") as handle:
+        for raw_line in handle:
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            values[key.strip()] = value.strip()
+    return values
+
+
+def load_project_localizations(templates_dir: Path, languages: list[str]) -> dict[str, dict[str, str]]:
+    root = templates_dir.parent / "Localization"
+    localizations: dict[str, dict[str, str]] = {}
+    for language in languages:
+        values = read_localization_file(root / language / f"TIProjectTemplate.{language}")
+        for key, value in values.items():
+            parts = key.split(".")
+            if len(parts) != 3 or parts[0] != "TIProjectTemplate" or parts[1] != "displayName":
+                continue
+            _, _, data_name = parts
+            localizations.setdefault(data_name, {})[language] = value
+    return localizations
+
+
+def load_project_metadata(templates_dir: Path | None, languages: list[str]) -> dict[str, dict[str, Any]]:
+    if templates_dir is None:
+        return {}
+    path = templates_dir / "TIProjectTemplate.json"
+    if not path.is_file():
+        return {}
+    templates = load_json(path)
+    localizations = load_project_localizations(templates_dir, languages)
+    metadata: dict[str, dict[str, Any]] = {}
+    for template in templates if isinstance(templates, list) else []:
+        if not isinstance(template, dict) or not template.get("dataName") or template.get("disable"):
+            continue
+        project = str(template["dataName"])
+        prereqs = normalize_string_list(template.get("prereqs"))
+        alt_prereq = template.get("altPrereq0")
+        if alt_prereq:
+            prereqs.append(str(alt_prereq))
+        metadata[project] = {
+            "displayName": localizations.get(project, {}),
+            "friendlyName": template.get("friendlyName"),
+            "researchCost": template.get("researchCost"),
+            "category": template.get("techCategory"),
+            "prerequisiteNodes": sorted(set(prereqs)),
+        }
+    return metadata
+
+
+def project_label(project_id: str, project_template_meta: dict[str, dict[str, Any]] | None) -> str:
     if not project_id:
         return "기본 claim / no research"
     label = None
-    if research_catalog:
-        idx = research_catalog.get("byDataName", {}).get(project_id)
-        if idx is not None:
-            node = research_catalog["nodes"][idx]
-            display_name = node.get("displayName") or {}
-            label = display_name.get("kor") or display_name.get("en") or node.get("friendlyName")
+    if project_template_meta:
+        meta = project_template_meta.get(project_id) or {}
+        display_name = meta.get("displayName") or {}
+        label = display_name.get("kor") or display_name.get("en") or meta.get("friendlyName")
     if label:
         return label
     label = project_id.replace("Project_", "").replace("_", " ")
@@ -55,7 +148,7 @@ def build_claim_data(
     region_map: dict[str, Any],
     bilateral_rows: list[dict[str, Any]],
     aliases: dict[str, str],
-    research_catalog: dict[str, Any] | None,
+    project_template_meta: dict[str, dict[str, Any]] | None,
 ) -> dict[str, Any]:
     regions = region_map["regions"]
     summary = dict(region_map["summary"])
@@ -154,20 +247,9 @@ def build_claim_data(
             project_counts[project] += len(regs)
             if project in project_meta:
                 continue
-            meta: dict[str, Any] = {"id": project, "label": project_label(project, research_catalog)}
-            if research_catalog:
-                idx = research_catalog.get("byDataName", {}).get(project)
-                if idx is not None:
-                    node = research_catalog["nodes"][idx]
-                    meta.update(
-                        {
-                            "displayName": node.get("displayName") or {},
-                            "friendlyName": node.get("friendlyName"),
-                            "researchCost": node.get("researchCost"),
-                            "category": node.get("category"),
-                            "prerequisiteNodes": node.get("prerequisiteNodes") or [],
-                        }
-                    )
+            meta: dict[str, Any] = {"id": project, "label": project_label(project, project_template_meta)}
+            if project_template_meta and project in project_template_meta:
+                meta.update(project_template_meta[project])
             project_meta[project] = meta
 
     for project, meta in project_meta.items():
@@ -203,13 +285,13 @@ def build_claim_data(
                 project_meta.get(item[0], {}).get("researchCost")
                 if project_meta.get(item[0], {}).get("researchCost") is not None
                 else 9_999_999,
-                project_label(item[0], research_catalog),
+                project_label(item[0], project_template_meta),
             ),
         ):
             projects.append(
                 {
                     "project": project,
-                    "label": project_meta.get(project, {}).get("label") or project_label(project, research_catalog),
+                    "label": project_meta.get(project, {}).get("label") or project_label(project, project_template_meta),
                     "regions": sorted(regs),
                     "claims": regs,
                 }
@@ -277,7 +359,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--region-map", default="data/generated/region_map.generated.json")
     parser.add_argument("--bilateral-template", required=True)
     parser.add_argument("--aliases", default="data/manual/region_aliases.json")
-    parser.add_argument("--research-catalog", help="Optional research_catalog.json for localized project labels.")
+    parser.add_argument("--templates-dir", help="Optional local Terra Invicta Templates directory used for project labels, costs, and prerequisites.")
+    parser.add_argument("--project-languages", default="kor,en", help="Comma-separated localization languages for --templates-dir project metadata.")
     parser.add_argument("--output", default="data/generated/claim_map.generated.json")
     return parser.parse_args()
 
@@ -287,12 +370,13 @@ def main() -> int:
     region_map = load_json(Path(args.region_map))
     bilateral_rows = load_json(Path(args.bilateral_template))
     aliases = load_json(Path(args.aliases)) if Path(args.aliases).exists() else {}
-    research_catalog = load_json(Path(args.research_catalog)) if args.research_catalog else None
+    templates_dir = resolve_templates_dir(args.templates_dir)
+    project_template_meta = load_project_metadata(templates_dir, parse_languages(args.project_languages))
     data = build_claim_data(
         region_map=region_map,
         bilateral_rows=bilateral_rows,
         aliases=aliases,
-        research_catalog=research_catalog,
+        project_template_meta=project_template_meta,
     )
     write_json(Path(args.output), data, compact=True)
     print(f"Wrote {args.output}")

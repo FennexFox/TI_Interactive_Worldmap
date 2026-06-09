@@ -38,9 +38,12 @@ Pass the local template directory and either a Unity `regionoutlines` asset or a
 python .\tools\rebuild_pages.py `
   --templates-dir "C:\Program Files (x86)\Steam\steamapps\common\Terra Invicta\TerraInvicta_Data\StreamingAssets\Templates" `
   --region-outlines "C:\Program Files (x86)\Steam\steamapps\common\Terra Invicta\TerraInvicta_Data\StreamingAssets\AssetBundles\regionoutlines" `
-  --research-catalog .\data\generated\research_catalog.json `
   --no-commit
 ```
+
+`rebuild_pages.py` passes the local Templates directory to the claim builder, which reads
+`TIProjectTemplate.json` and localization files directly for project labels, costs, and
+prerequisites.
 
 For development fixtures, use:
 
@@ -48,7 +51,6 @@ For development fixtures, use:
 python .\tools\rebuild_pages.py `
   --bilateral-template .\fixtures\TIBilateralTemplate.json `
   --region-map-json .\fixtures\region_outlines.raw.json `
-  --research-catalog .\data\generated\research_catalog.json `
   --no-commit
 ```
 

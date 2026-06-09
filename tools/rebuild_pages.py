@@ -63,6 +63,15 @@ def template_file(templates_dir: Path, name: str) -> Path:
     return path
 
 
+def infer_templates_dir(path: Path | None) -> Path | None:
+    if not path:
+        return None
+    candidate = path if path.is_dir() else path.parent
+    if (candidate / "TIBilateralTemplate.json").is_file():
+        return candidate
+    return None
+
+
 def build_pages(args: argparse.Namespace) -> None:
     python = sys.executable
 
@@ -72,8 +81,8 @@ def build_pages(args: argparse.Namespace) -> None:
         if not templates_dir:
             raise SystemExit("Pass --templates-dir or --bilateral-template.")
         bilateral_template = template_file(templates_dir, "TIBilateralTemplate.json")
-
-    research_catalog = args.research_catalog
+    if not templates_dir:
+        templates_dir = infer_templates_dir(bilateral_template)
 
     if args.region_map_json:
         run([
@@ -110,8 +119,8 @@ def build_pages(args: argparse.Namespace) -> None:
         "--output",
         "data/generated/claim_map.generated.json",
     ]
-    if research_catalog:
-        claim_command.extend(["--research-catalog", research_catalog])
+    if templates_dir and (templates_dir / "TIProjectTemplate.json").is_file():
+        claim_command.extend(["--templates-dir", str(templates_dir)])
     run(claim_command)
     run([python, "tools/build_pages.py"])
 
@@ -170,7 +179,6 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--templates-dir", help="Path to TerraInvicta_Data/StreamingAssets/Templates.")
     parser.add_argument("--bilateral-template", help="Explicit path to TIBilateralTemplate.json.")
-    parser.add_argument("--research-catalog", help="Optional generated research_catalog.json for localized project labels.")
     parser.add_argument("--region-outlines", help="Path to Terra Invicta regionoutlines Unity asset bundle.")
     parser.add_argument("--region-map-json", help="Pre-extracted raw region outline JSON fixture.")
     parser.add_argument("--skip-verify", action="store_true", help="Skip npm verify.")
