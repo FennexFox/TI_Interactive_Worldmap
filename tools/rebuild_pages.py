@@ -14,8 +14,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 GENERATED_PATHS = (
+    "data/nations.catalog.json",
+    "data/research.catalog.json",
     "data/generated/region_map.generated.json",
     "data/generated/claim_map.generated.json",
+    "docs/data/nations.catalog.json",
+    "docs/data/research.catalog.json",
     "docs/data/region_map.generated.json",
     "docs/data/claim_map.generated.json",
     "docs/assets/data.generated.js",
@@ -107,6 +111,59 @@ def build_pages(args: argparse.Namespace) -> None:
     elif not Path("data/generated/region_map.generated.json").exists():
         raise SystemExit("No region map data exists. Pass --region-outlines or --region-map-json.")
 
+    if templates_dir and (templates_dir / "TIRegionTemplate.json").is_file():
+        run([
+            python,
+            "tools/build_region_outline_data.py",
+            "--raw-json",
+            "data/generated/region_map.generated.json",
+            "--output",
+            "data/generated/region_map.generated.json",
+            "--templates-dir",
+            str(templates_dir),
+            "--scenario-year",
+            args.scenario_year,
+            "--languages",
+            args.catalog_languages,
+        ])
+
+    if templates_dir and (templates_dir / "TINationTemplate.json").is_file():
+        run([
+            python,
+            "tools/build_nation_catalog.py",
+            "--templates-dir",
+            str(templates_dir),
+            "--languages",
+            args.catalog_languages,
+            "--region-map",
+            "data/generated/region_map.generated.json",
+            "--bilateral-template",
+            str(bilateral_template),
+            "--scenario-year",
+            args.scenario_year,
+            "--output",
+            "data/nations.catalog.json",
+        ])
+    if (
+        templates_dir
+        and (templates_dir / "TITechTemplate.json").is_file()
+        and (templates_dir / "TIProjectTemplate.json").is_file()
+    ):
+        run([
+            python,
+            "tools/build_research_catalog.py",
+            "--templates-dir",
+            str(templates_dir),
+            "--languages",
+            args.catalog_languages,
+            "--bilateral-template",
+            str(bilateral_template),
+            "--aliases",
+            "data/manual/region_aliases.json",
+            "--output",
+            "data/research.catalog.json",
+        ])
+
     claim_command = [
         python,
         "tools/build_claim_data.py",
@@ -116,11 +173,13 @@ def build_pages(args: argparse.Namespace) -> None:
         str(bilateral_template),
         "--aliases",
         "data/manual/region_aliases.json",
+        "--nation-catalog",
+        "data/nations.catalog.json",
+        "--research-catalog",
+        "data/research.catalog.json",
         "--output",
         "data/generated/claim_map.generated.json",
     ]
-    if templates_dir and (templates_dir / "TIProjectTemplate.json").is_file():
-        claim_command.extend(["--templates-dir", str(templates_dir)])
     run(claim_command)
     run([python, "tools/build_pages.py"])
 
@@ -181,6 +240,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--bilateral-template", help="Explicit path to TIBilateralTemplate.json.")
     parser.add_argument("--region-outlines", help="Path to Terra Invicta regionoutlines Unity asset bundle.")
     parser.add_argument("--region-map-json", help="Pre-extracted raw region outline JSON fixture.")
+    parser.add_argument("--scenario-year", default="2026", choices=("2022", "2026", "2070"), help="Scenario start year used for template-derived region and nation metadata.")
+    parser.add_argument("--catalog-languages", default="kor,en", help="Comma-separated localization languages for generated catalogs.")
     parser.add_argument("--skip-verify", action="store_true", help="Skip npm verify.")
     parser.add_argument("--no-commit", action="store_true", help="Build and verify without committing generated changes.")
     parser.add_argument("--no-push", action="store_true", help="Do not push after committing generated changes.")

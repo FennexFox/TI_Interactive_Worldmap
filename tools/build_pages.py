@@ -33,10 +33,14 @@ def build_pages() -> None:
 
     region_map = load_json(ROOT / "data" / "generated" / "region_map.generated.json")
     claim_map = load_json(ROOT / "data" / "generated" / "claim_map.generated.json")
+    nation_catalog = load_json(ROOT / "data" / "nations.catalog.json")
+    research_catalog = load_json(ROOT / "data" / "research.catalog.json")
+    shutil.copyfile(ROOT / "data" / "nations.catalog.json", docs / "data" / "nations.catalog.json")
+    shutil.copyfile(ROOT / "data" / "research.catalog.json", docs / "data" / "research.catalog.json")
     shutil.copyfile(ROOT / "data" / "generated" / "region_map.generated.json", docs / "data" / "region_map.generated.json")
     shutil.copyfile(ROOT / "data" / "generated" / "claim_map.generated.json", docs / "data" / "claim_map.generated.json")
 
-    packed = {"regionMap": region_map, "claimMap": claim_map}
+    packed = {"regionMap": region_map, "claimMap": claim_map, "catalogs": {"nations": nation_catalog, "research": research_catalog}}
     payload = json.dumps(packed, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     encoded = base64.b64encode(gzip.compress(payload, compresslevel=9)).decode("ascii")
     chunks = [encoded[i : i + 12000] for i in range(0, len(encoded), 12000)]

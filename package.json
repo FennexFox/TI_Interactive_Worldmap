@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "python tools/build_pages.py",
-    "verify": "python -m compileall -q tools && node --check docs/assets/data.generated.js && node --check docs/assets/app.js && python tools/verify_generated_outputs.py",
+    "verify": "python -m compileall -q tools && python -m unittest discover -s tests -p \"test_*.py\" && node --check docs/assets/data.generated.js && node --check docs/assets/app.js && python tools/verify_generated_outputs.py",
     "test:e2e": "playwright test",
     "deploy": "python tools/rebuild_pages.py"
   },

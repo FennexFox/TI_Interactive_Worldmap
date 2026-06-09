@@ -1,0 +1,48 @@
+name: Feedback
+description: Share feedback about usability, information architecture, or data presentation.
+title: "[Feedback]: "
+labels: ["feedback", "needs-triage"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Briefly describe what should improve or what is working well.
+      placeholder: Example: Region filters should be easier to find in the claim list.
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: Choose the closest feedback category.
+      options:
+        - Usability improvement
+        - Data presentation
+        - Documentation or copy
+        - Performance or accessibility
+        - Other feedback
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Note the screen, data, or workflow where this feedback came up.
+      placeholder: Example: Reviewing the details panel after selecting a nation on mobile.
+    validations:
+      required: false
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggestion
+      description: Describe the desired change or any references that would help.
+    validations:
+      required: false
+  - type: textarea
+    id: impact
+    attributes:
+      label: Expected impact
+      description: Who benefits if this feedback is addressed, and how?
+    validations:
+      required: false
