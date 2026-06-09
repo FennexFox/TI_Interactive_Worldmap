@@ -21,6 +21,7 @@ The generated Pages site lives in `docs/index.html`.
 ```powershell
 python -m pip install -r requirements.txt
 npm ci
+npx playwright install chromium
 ```
 
 ## Rebuild locally from checked-in generated data
@@ -28,7 +29,10 @@ npm ci
 ```powershell
 npm run build
 npm run verify
+npm run test:e2e
 ```
+
+`npm run test:e2e` runs Playwright against the generated `docs/` site and verifies the language selector updates both static shell copy and dynamic UI text.
 
 ## Rebuild from a local Terra Invicta install
 

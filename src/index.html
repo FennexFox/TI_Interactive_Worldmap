@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -9,54 +9,54 @@
 <body>
 <div class="app">
   <aside>
-    <h1>Claim / Unification Map MVP</h1>
-    <div class="desc">국가 위에 hover하면 현재 영토와 모든 claim 범위를 보여줍니다. 연구로 열리는 claim뿐 아니라 기본 claim도 포함하고, 평화적/적대적 영유권을 구분합니다.</div>
+    <h1 data-i18n="app.title">Terra Invicta Claim / Unification Map</h1>
+    <div class="desc" data-i18n="app.description">Hover a nation or region to show current territory and available claim ranges. The map includes both baseline claims and research-unlocked claims, with peaceful and hostile claims separated.</div>
 
-    <h2>탐색 / 선택</h2>
-    <label for="search">국가/region 검색 · 선택</label>
+    <h2 data-i18n="section.explore">Explore and Select</h2>
+    <label for="search" data-i18n="search.label">Search and select nation/region</label>
     <div class="searchCombo" id="nationSearchCombo">
-      <input id="search" placeholder="국가 tag 또는 region명 입력: CHN, Korea, Taiwan..." autocomplete="off" role="combobox" aria-expanded="false" aria-controls="nationDropdown" aria-autocomplete="list" />
+      <input id="search" data-i18n-placeholder="search.placeholder" placeholder="Enter a nation tag or region name: CHN, Korea, Taiwan..." autocomplete="off" role="combobox" aria-expanded="false" aria-controls="nationDropdown" aria-autocomplete="list" />
       <div class="searchDropdown" id="nationDropdown" role="listbox" hidden></div>
     </div>
-    <div class="small" style="margin-top:6px;">입력창을 클릭하면 국가 목록이 열립니다. 입력하면 국가와 region 목록이 필터링되고, 항목을 클릭하면 선택됩니다. 빈 지도 공간을 클릭하면 선택이 해제됩니다.</div>
+    <div class="small" style="margin-top:6px;" data-i18n="search.help">Click the field to open the nation list. Typing filters nations and regions; click an item to select it. Click empty map space to clear the selection.</div>
 
     <div class="row">
-      <div><label for="claimMode">Claim 표시</label><select id="claimMode"><option value="all">전체 claim</option><option value="project">선택 project만</option><option value="off">끄기</option></select></div>
-      <div><label for="claimKind">영유권 유형</label><select id="claimKind"><option value="all">평화+적대</option><option value="peaceful">평화적만</option><option value="hostile">적대적만</option></select></div>
+      <div><label for="claimMode" data-i18n="claimMode.label">Claim display</label><select id="claimMode"><option value="all" data-i18n="claimMode.all">All claims</option><option value="project" data-i18n="claimMode.project">Selected project only</option><option value="off" data-i18n="claimMode.off">Off</option></select></div>
+      <div><label for="claimKind" data-i18n="claimKind.label">Claim type</label><select id="claimKind"><option value="all" data-i18n="claimKind.all">Peaceful + hostile</option><option value="peaceful" data-i18n="claimKind.peaceful">Peaceful only</option><option value="hostile" data-i18n="claimKind.hostile">Hostile only</option></select></div>
     </div>
     <div class="row">
-      <div><label for="projectSel">Project</label><select id="projectSel"><option value="">자동/전체</option></select></div>
-      <div><label for="baseMode">기본 지도 색</label><select id="baseMode"><option value="nation">Nation별</option><option value="plain">단색</option><option value="points">경계 복잡도</option></select></div>
+      <div><label for="projectSel" data-i18n="project.label">Project</label><select id="projectSel"><option value="" data-i18n="project.all">Auto/all</option></select></div>
+      <div><label for="baseMode" data-i18n="baseMode.label">Base map color</label><select id="baseMode"><option value="nation" data-i18n="baseMode.nation">By nation</option><option value="plain" data-i18n="baseMode.plain">Plain</option><option value="points" data-i18n="baseMode.points">Boundary complexity</option></select></div>
     </div>
     <div class="row" style="margin-top:10px;">
-      <button id="showLabels">라벨 토글</button>
-      <button id="onlyClaimsBtn">claim 대상만 보기</button>
+      <button id="showLabels" data-i18n="button.toggleLabels">Toggle region labels</button>
+      <button id="onlyClaimsBtn" data-i18n="button.onlyClaims">Show claim targets only</button>
     </div>
 
-    <h2>선택 국가</h2>
-    <div class="panel" id="nationInfo">지도에서 국가/region 위에 마우스를 올리세요.</div>
+    <h2 data-i18n="section.selectedNation">Selected Nation</h2>
+    <div class="panel" id="nationInfo" data-i18n="nationInfo.empty">Hover a nation or region on the map.</div>
 
 
-    <div class="note">
-      이 MVP는 <code>TIBilateralTemplate.json</code>의 <code>relationType=Claim</code>, <code>projectUnlockName</code>, <code>nation1</code>, <code>region1</code>을 사용합니다. 연구가 즉시 병합을 수행한다기보다 “병합/정복/통합 가능성의 전제인 claim을 부여”한다는 의미로 표시합니다. <code>projectUnlockName</code>이 없는 claim도 기본/상시 claim으로 포함합니다.
+    <div class="note" data-i18n-html="note.claimSource">
+      This map uses <code>relationType=Claim</code>, <code>projectUnlockName</code>, <code>nation1</code>, and <code>region1</code> from <code>TIBilateralTemplate.json</code>. Research is shown as granting claims, which are prerequisites for merger, conquest, or unification possibilities, rather than as performing those actions immediately. Claims without <code>projectUnlockName</code> are included as baseline claims.
     </div>
   </aside>
   <main>
     <div class="mapbar">
       <div class="left">
-        <span class="pill" id="hoverPill">Hover nation: -</span>
+        <span class="pill" id="hoverPill">Hover: -</span>
         <span class="pill" id="claimPill">Claims: -</span>
         <span class="pill warn" id="warnPill" style="display:none"></span>
       </div>
-      <div class="mapActions" aria-label="External links and language">
+      <div class="mapActions" data-i18n-aria-label="mapActions.aria" aria-label="External links and language">
         <a class="mapAction" href="https://github.com/FennexFox/TI_Interactive_Worldmap" target="_blank" rel="noopener noreferrer">GitHub</a>
         <a class="mapAction kofiAction" href="https://ko-fi.com/fennexfox" target="_blank" rel="noopener noreferrer">Ko-fi</a>
-        <label class="srOnly" for="languageSel">Language</label>
-        <select id="languageSel" class="languageSelect" title="Language"><option value="ko">한국어</option><option value="en" disabled>English later</option></select>
+        <label class="srOnly" for="languageSel" data-i18n="language.label">Language</label>
+        <select id="languageSel" class="languageSelect" data-i18n-title="language.label" title="Language"><option value="ko" data-i18n="language.ko">한국어</option><option value="en" data-i18n="language.en" selected>English</option></select>
       </div>
     </div>
     <div class="svgwrap">
-      <svg id="map" viewBox="-3.174091 -1.543560 6.525687 2.588890" preserveAspectRatio="xMidYMid meet" aria-label="Terra Invicta claim research segmented map">
+      <svg id="map" viewBox="-3.174091 -1.543560 6.525687 2.588890" preserveAspectRatio="xMidYMid meet" data-i18n-aria-label="map.aria" aria-label="Terra Invicta claim research map">
         <g id="grid"></g>
         <g id="regions"></g>
         <g id="claimOverlays"></g>

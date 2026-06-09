@@ -3,4 +3,6 @@ __pycache__/
 .pytest_cache/
 .DS_Store
 node_modules/
+playwright-report/
+test-results/
 data/generated/region_outlines.raw.json
