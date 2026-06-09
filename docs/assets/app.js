@@ -32,6 +32,10 @@ const regionPathElements = [];
 const labelTextElements = [];
 
 const LANGUAGE_STORAGE_KEY = 'ti-map-language';
+const ASIDE_CARD_ORDER_STORAGE_KEY = 'ti-map-aside-card-order';
+const ASIDE_CARD_COLLAPSE_STORAGE_KEY = 'ti-map-aside-card-collapsed';
+const NATION_INFO_SECTION_STORAGE_KEY = 'ti-map-nation-info-sections';
+const DEFAULT_ASIDE_CARD_ORDER = ['explore', 'selected'];
 const I18N = {
   ko: {
     'document.title': 'Terra Invicta 영유권 / 통합 지도',
@@ -60,6 +64,11 @@ const I18N = {
     'button.onlyClaims': '영유권 대상만 보기',
     'button.showAllMap': '전체 지도 보기',
     'section.selectedNation': '선택한 국가',
+    'sectionCard.moveUp': '카드 위로 이동',
+    'sectionCard.moveDown': '카드 아래로 이동',
+    'sectionCard.collapse': '카드 접기',
+    'sectionCard.expand': '카드 펼치기',
+    'nationInfo.basic.title': '국가 기본정보',
     'nationInfo.empty': '지도에서 국가나 지역 위에 마우스를 올리세요.',
     'note.claimSource': '이 지도는 <code>TIBilateralTemplate.json</code>의 <code>relationType=Claim</code>, <code>projectUnlockName</code>, <code>nation1</code>, <code>region1</code> 데이터를 사용합니다. 연구가 즉시 병합을 수행한다기보다 병합/정복/통합 가능성의 전제인 영유권을 부여한다는 의미로 표시합니다. <code>projectUnlockName</code>이 없는 항목도 기본/상시 영유권으로 포함합니다.',
     'mapActions.aria': '외부 링크 및 언어',
@@ -95,9 +104,9 @@ const I18N = {
     'source.inheritedFrom': '{project}에서 상속',
     'source.basicClaim': '기본 영유권',
     'source.direct': '직접',
-    'claimSection.outgoing.title': '이 국가가 주장하는 영유권',
+    'claimSection.outgoing.title': '주장하는 영유권',
     'claimSection.outgoing.empty': '이 국가가 추가로 주장하는 영유권이 없습니다.',
-    'claimSection.incoming.title': '이 지역을 목표로 하는 다른 영유권',
+    'claimSection.incoming.title': '목표가 되는 영유권',
     'claimSection.incoming.empty': '선택한 지역을 목표로 하는 다른 영유권이 없습니다.',
     'claimDirection.incoming': '대상: {targets} · 형성 결과 {regions}',
     'claimDirection.outgoing': '영유권: {targets}',
@@ -155,6 +164,11 @@ const I18N = {
     'button.onlyClaims': 'Show claim targets only',
     'button.showAllMap': 'Show full map',
     'section.selectedNation': 'Selected Nation',
+    'sectionCard.moveUp': 'Move card up',
+    'sectionCard.moveDown': 'Move card down',
+    'sectionCard.collapse': 'Collapse card',
+    'sectionCard.expand': 'Expand card',
+    'nationInfo.basic.title': 'Basic Nation Info',
     'nationInfo.empty': 'Hover a nation or region on the map.',
     'note.claimSource': 'This map uses <code>relationType=Claim</code>, <code>projectUnlockName</code>, <code>nation1</code>, and <code>region1</code> from <code>TIBilateralTemplate.json</code>. Research is shown as granting claims, which are prerequisites for merger, conquest, or unification possibilities, rather than as performing those actions immediately. Claims without <code>projectUnlockName</code> are included as baseline claims.',
     'mapActions.aria': 'External links and language',
@@ -190,9 +204,9 @@ const I18N = {
     'source.inheritedFrom': 'inherited from {project}',
     'source.basicClaim': 'baseline claim',
     'source.direct': 'direct',
-    'claimSection.outgoing.title': 'Claims Led By This Nation',
+    'claimSection.outgoing.title': 'Claims Asserted By This Nation',
     'claimSection.outgoing.empty': 'This nation has no additional led claims.',
-    'claimSection.incoming.title': 'Other Claims Targeting This Region',
+    'claimSection.incoming.title': 'Claims Targeting This Territory',
     'claimSection.incoming.empty': 'No other claims target the selected region.',
     'claimDirection.incoming': 'targets: {targets} · resulting country {regions}',
     'claimDirection.outgoing': 'claims: {targets}',
@@ -235,6 +249,97 @@ function readSavedLanguage() {
 function saveLanguage(language) {
   try { window.localStorage?.setItem(LANGUAGE_STORAGE_KEY, language); }
   catch (_) {}
+}
+function readJsonSetting(key, fallback) {
+  try {
+    const raw = window.localStorage?.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw);
+  } catch (_) {
+    return fallback;
+  }
+}
+function saveJsonSetting(key, value) {
+  try { window.localStorage?.setItem(key, JSON.stringify(value)); }
+  catch (_) {}
+}
+function infoSectionOpenAttribute(key) {
+  const state = readJsonSetting(NATION_INFO_SECTION_STORAGE_KEY, {});
+  return state[key] === false ? '' : ' open';
+}
+function bindNationInfoSectionToggles() {
+  nationInfo.querySelectorAll('.infoSubsection[data-info-section]').forEach(section => {
+    section.addEventListener('toggle', () => {
+      const state = readJsonSetting(NATION_INFO_SECTION_STORAGE_KEY, {});
+      state[section.dataset.infoSection] = section.open;
+      saveJsonSetting(NATION_INFO_SECTION_STORAGE_KEY, state);
+    });
+  });
+}
+function setAsideCardCollapsed(card, collapsed) {
+  card.dataset.collapsed = collapsed ? 'true' : 'false';
+  const body = card.querySelector('.sideCardBody');
+  const toggle = card.querySelector('[data-card-toggle]');
+  if (body) body.hidden = !!collapsed;
+  if (toggle) toggle.setAttribute('aria-expanded', String(!collapsed));
+}
+function saveAsideCardState() {
+  const cards = [...document.querySelectorAll('#asideCardList .sideCard[data-aside-card]')];
+  saveJsonSetting(ASIDE_CARD_ORDER_STORAGE_KEY, cards.map(card => card.dataset.asideCard));
+  saveJsonSetting(ASIDE_CARD_COLLAPSE_STORAGE_KEY, Object.fromEntries(cards.map(card => [card.dataset.asideCard, card.dataset.collapsed === 'true'])));
+}
+function updateAsideCardControls() {
+  const cards = [...document.querySelectorAll('#asideCardList .sideCard[data-aside-card]')];
+  cards.forEach((card, index) => {
+    const up = card.querySelector('[data-card-move="up"]');
+    const down = card.querySelector('[data-card-move="down"]');
+    const toggle = card.querySelector('[data-card-toggle]');
+    if (up) {
+      up.disabled = index === 0;
+      up.title = t('sectionCard.moveUp');
+      up.setAttribute('aria-label', t('sectionCard.moveUp'));
+    }
+    if (down) {
+      down.disabled = index === cards.length - 1;
+      down.title = t('sectionCard.moveDown');
+      down.setAttribute('aria-label', t('sectionCard.moveDown'));
+    }
+    if (toggle) {
+      const collapsed = card.dataset.collapsed === 'true';
+      toggle.textContent = collapsed ? '+' : '−';
+      toggle.title = collapsed ? t('sectionCard.expand') : t('sectionCard.collapse');
+      toggle.setAttribute('aria-label', collapsed ? t('sectionCard.expand') : t('sectionCard.collapse'));
+      toggle.setAttribute('aria-expanded', String(!collapsed));
+    }
+  });
+}
+function initAsideCards() {
+  const list = document.getElementById('asideCardList');
+  if (!list) return;
+  const cardsByKey = new Map([...list.querySelectorAll('.sideCard[data-aside-card]')].map(card => [card.dataset.asideCard, card]));
+  const savedOrder = readJsonSetting(ASIDE_CARD_ORDER_STORAGE_KEY, DEFAULT_ASIDE_CARD_ORDER);
+  const order = [...savedOrder.filter(key => cardsByKey.has(key)), ...DEFAULT_ASIDE_CARD_ORDER.filter(key => !savedOrder.includes(key))];
+  order.forEach(key => list.appendChild(cardsByKey.get(key)));
+  const collapsed = readJsonSetting(ASIDE_CARD_COLLAPSE_STORAGE_KEY, {});
+  cardsByKey.forEach((card, key) => setAsideCardCollapsed(card, !!collapsed[key]));
+  list.addEventListener('click', e => {
+    const card = e.target.closest('.sideCard[data-aside-card]');
+    if (!card || !list.contains(card)) return;
+    if (e.target.closest('[data-card-toggle]')) {
+      setAsideCardCollapsed(card, card.dataset.collapsed !== 'true');
+      saveAsideCardState();
+      updateAsideCardControls();
+      return;
+    }
+    const moveButton = e.target.closest('[data-card-move]');
+    if (!moveButton) return;
+    const direction = moveButton.dataset.cardMove;
+    if (direction === 'up' && card.previousElementSibling) list.insertBefore(card, card.previousElementSibling);
+    if (direction === 'down' && card.nextElementSibling) list.insertBefore(card.nextElementSibling, card);
+    saveAsideCardState();
+    updateAsideCardControls();
+  });
+  updateAsideCardControls();
 }
 let currentLanguage = normalizeLanguage(readSavedLanguage() || languageSel?.value || document.documentElement.lang || 'en');
 
@@ -282,6 +387,7 @@ function applyStaticTranslations() {
   document.querySelectorAll('[data-i18n-aria-label]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAriaLabel)); });
   if (languageSel) languageSel.value = currentLanguage;
   updateOnlyClaimsButtonLabel();
+  updateAsideCardControls();
 }
 
 const regionByName = Object.fromEntries(REGIONS.map(r => [r.regionName, r]));
@@ -919,7 +1025,8 @@ function selectProjectFilter(value) {
   updateNationOverlay(getCurrentNation());
 }
 function renderClaimSection(title, items, emptyText, kind) {
-  if (!items.length) return `<div class="claimSection"><b>${escapeHtml(title)}</b><div class="small">${escapeHtml(emptyText)}</div></div>`;
+  const sectionKey = kind === 'incoming' ? 'incoming' : 'outgoing';
+  if (!items.length) return `<details class="infoSubsection claimSection" data-info-section="${sectionKey}"${infoSectionOpenAttribute(sectionKey)}><summary><span>${escapeHtml(title)}</span></summary><div class="infoSubsectionBody small">${escapeHtml(emptyText)}</div></details>`;
   const activeOutgoing = claimModeSel.value === 'project' ? projectFilter : '';
   const rows = items.map((item, i) => {
     const project = item.project || '';
@@ -946,7 +1053,7 @@ function renderClaimSection(title, items, emptyText, kind) {
     const regionDetails = active ? renderRegionList(detailRegions, detailClaims, kind === 'incoming' ? 'result' : 'claimed', item.regionSourceLabels || {}) : '';
     return `<div class="claimListGroup${active ? ' active' : ''}"><button type="button" class="claimListItem${active ? ' active' : ''}" data-claim-kind="${kind}" data-claim-index="${i}" data-claim-key="${escapeHtml(key)}" title="${escapeHtml(detailRegions.map(prettyRegion).join(', '))}"><b>${escapeHtml(who)} · ${escapeHtml(label)}</b><span>${escapeHtml(direction + cumulativeText + statsText)}</span></button>${regionDetails}</div>`;
   }).join('');
-  return `<div class="claimSection"><b>${escapeHtml(title)}</b><div class="claimList">${rows}</div></div>`;
+  return `<details class="infoSubsection claimSection" data-info-section="${sectionKey}"${infoSectionOpenAttribute(sectionKey)}><summary><span>${escapeHtml(title)}</span></summary><div class="infoSubsectionBody claimList">${rows}</div></details>`;
 }
 
 
@@ -1223,7 +1330,9 @@ function updateNationOverlay(nation) {
     [t('nationInfo.kv.claimProjects'), projectCountText(data.projectCount || 0)],
     [t('nationInfo.kv.displayMode'), claimModeLabel(claimModeSel.value)],
   ].map(([label, value]) => `<div>${escapeHtml(label)}</div><div>${escapeHtml(value)}</div>`).join('');
-  nationInfo.innerHTML = `<b>${escapeHtml(activeNationLabel)}</b> ${statusBadge(data.status)}<div class="small" style="margin:2px 0 10px">${escapeHtml(summaryText)}</div><div class="kv">${kvRows}</div><div class="claimSections">${renderClaimSection(t('claimSection.outgoing.title'), outgoingEntries, t('claimSection.outgoing.empty'), 'outgoing')}${renderClaimSection(t('claimSection.incoming.title'), incomingEntries, t('claimSection.incoming.empty'), 'incoming')}</div><div class="hint">${escapeHtml(t('nationInfo.hint'))}</div>`;
+  const basicInfo = `<details class="infoSubsection nationBasicSection" data-info-section="basic"${infoSectionOpenAttribute('basic')}><summary><span>${escapeHtml(t('nationInfo.basic.title'))}</span></summary><div class="infoSubsectionBody"><div class="nationTitle"><b>${escapeHtml(activeNationLabel)}</b> ${statusBadge(data.status)}</div><div class="small" style="margin:2px 0 10px">${escapeHtml(summaryText)}</div><div class="kv">${kvRows}</div><div class="hint">${escapeHtml(t('nationInfo.hint'))}</div></div></details>`;
+  nationInfo.innerHTML = `${basicInfo}<div class="claimSections">${renderClaimSection(t('claimSection.outgoing.title'), outgoingEntries, t('claimSection.outgoing.empty'), 'outgoing')}${renderClaimSection(t('claimSection.incoming.title'), incomingEntries, t('claimSection.incoming.empty'), 'incoming')}</div>`;
+  bindNationInfoSectionToggles();
   nationInfo.querySelectorAll('.claimListItem').forEach(el => el.addEventListener('click', () => {
     const kind = el.dataset.claimKind;
     const index = Number(el.dataset.claimIndex);
@@ -1380,6 +1489,7 @@ function refreshLanguage() {
 
 injectClaimOverlayStyles();
 applyStaticTranslations();
+initAsideCards();
 
 search.addEventListener('focus', () => openNationDropdown());
 search.addEventListener('click', () => openNationDropdown());

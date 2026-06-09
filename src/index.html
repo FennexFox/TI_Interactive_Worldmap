@@ -10,29 +10,53 @@
 <div class="app">
   <aside>
     <h1 data-i18n="app.title">Terra Invicta Claim / Unification Map</h1>
-    <h2 data-i18n="section.explore">Explore and Select</h2>
-    <label for="search" data-i18n="search.label">Search and select nation/region</label>
-    <div class="searchCombo" id="nationSearchCombo">
-      <input id="search" data-i18n-placeholder="search.placeholder" placeholder="Enter a nation tag or region name: CHN, Korea, Taiwan..." autocomplete="off" role="combobox" aria-expanded="false" aria-controls="nationDropdown" aria-autocomplete="list" />
-      <div class="searchDropdown" id="nationDropdown" role="listbox" hidden></div>
-    </div>
-    <div class="small" style="margin-top:6px;" data-i18n="search.help">Click the field to open the nation list. Typing filters nations and regions; click an item to select it. Click empty map space to clear the selection.</div>
+    <div class="sideCardList" id="asideCardList">
+      <section class="sideCard" data-aside-card="explore">
+        <div class="sideCardHeader">
+          <h2 data-i18n="section.explore">Explore and Select</h2>
+          <div class="sideCardActions">
+            <button type="button" class="sideCardAction" data-card-move="up">↑</button>
+            <button type="button" class="sideCardAction" data-card-move="down">↓</button>
+            <button type="button" class="sideCardAction sideCardToggle" data-card-toggle aria-expanded="true">−</button>
+          </div>
+        </div>
+        <div class="sideCardBody">
+          <label for="search" data-i18n="search.label">Search and select nation/region</label>
+          <div class="searchCombo" id="nationSearchCombo">
+            <input id="search" data-i18n-placeholder="search.placeholder" placeholder="Enter a nation tag or region name: CHN, Korea, Taiwan..." autocomplete="off" role="combobox" aria-expanded="false" aria-controls="nationDropdown" aria-autocomplete="list" />
+            <div class="searchDropdown" id="nationDropdown" role="listbox" hidden></div>
+          </div>
+          <div class="small" style="margin-top:6px;" data-i18n="search.help">Click the field to open the nation list. Typing filters nations and regions; click an item to select it. Click empty map space to clear the selection.</div>
 
-    <div class="row">
-      <div><label for="claimMode" data-i18n="claimMode.label">Claim display</label><select id="claimMode"><option value="all" data-i18n="claimMode.all">All claims</option><option value="project" data-i18n="claimMode.project">Selected project only</option><option value="off" data-i18n="claimMode.off">Off</option></select></div>
-      <div><label for="claimKind" data-i18n="claimKind.label">Claim type</label><select id="claimKind"><option value="all" data-i18n="claimKind.all">Peaceful + hostile</option><option value="peaceful" data-i18n="claimKind.peaceful">Peaceful only</option><option value="hostile" data-i18n="claimKind.hostile">Hostile only</option></select></div>
-    </div>
-    <div class="row">
-      <div><label for="projectSel" data-i18n="project.label">Project</label><select id="projectSel"><option value="" data-i18n="project.all">Auto/all</option></select></div>
-      <div><label for="baseMode" data-i18n="baseMode.label">Base map color</label><select id="baseMode"><option value="nation" data-i18n="baseMode.nation">By nation</option><option value="plain" data-i18n="baseMode.plain">Plain</option><option value="points" data-i18n="baseMode.points">Boundary complexity</option></select></div>
-    </div>
-    <div class="row" style="margin-top:10px;">
-      <button id="showLabels" data-i18n="button.toggleLabels">Toggle region labels</button>
-      <button id="onlyClaimsBtn" data-i18n="button.onlyClaims">Show claim targets only</button>
-    </div>
+          <div class="row">
+            <div><label for="claimMode" data-i18n="claimMode.label">Claim display</label><select id="claimMode"><option value="all" data-i18n="claimMode.all">All claims</option><option value="project" data-i18n="claimMode.project">Selected project only</option><option value="off" data-i18n="claimMode.off">Off</option></select></div>
+            <div><label for="claimKind" data-i18n="claimKind.label">Claim type</label><select id="claimKind"><option value="all" data-i18n="claimKind.all">Peaceful + hostile</option><option value="peaceful" data-i18n="claimKind.peaceful">Peaceful only</option><option value="hostile" data-i18n="claimKind.hostile">Hostile only</option></select></div>
+          </div>
+          <div class="row">
+            <div><label for="projectSel" data-i18n="project.label">Project</label><select id="projectSel"><option value="" data-i18n="project.all">Auto/all</option></select></div>
+            <div><label for="baseMode" data-i18n="baseMode.label">Base map color</label><select id="baseMode"><option value="nation" data-i18n="baseMode.nation">By nation</option><option value="plain" data-i18n="baseMode.plain">Plain</option><option value="points" data-i18n="baseMode.points">Boundary complexity</option></select></div>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <button id="showLabels" data-i18n="button.toggleLabels">Toggle region labels</button>
+            <button id="onlyClaimsBtn" data-i18n="button.onlyClaims">Show claim targets only</button>
+          </div>
+        </div>
+      </section>
 
-    <h2 data-i18n="section.selectedNation">Selected Nation</h2>
-    <div class="panel" id="nationInfo" data-i18n="nationInfo.empty">Hover a nation or region on the map.</div>
+      <section class="sideCard" data-aside-card="selected">
+        <div class="sideCardHeader">
+          <h2 data-i18n="section.selectedNation">Selected Nation</h2>
+          <div class="sideCardActions">
+            <button type="button" class="sideCardAction" data-card-move="up">↑</button>
+            <button type="button" class="sideCardAction" data-card-move="down">↓</button>
+            <button type="button" class="sideCardAction sideCardToggle" data-card-toggle aria-expanded="true">−</button>
+          </div>
+        </div>
+        <div class="sideCardBody">
+          <div class="panel" id="nationInfo" data-i18n="nationInfo.empty">Hover a nation or region on the map.</div>
+        </div>
+      </section>
+    </div>
 
   </aside>
   <main>
