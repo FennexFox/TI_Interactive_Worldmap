@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Terra Invicta Claim / Unification Map</title>
+<link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+<div class="app">
+  <aside>
+    <h1>Claim / Unification Map MVP</h1>
+    <div class="desc">국가 위에 hover하면 현재 영토와 모든 claim 범위를 보여줍니다. 연구로 열리는 claim뿐 아니라 기본 claim도 포함하고, 평화적/적대적 영유권을 구분합니다.</div>
+    <div class="statgrid" id="stats"></div>
+
+    <h2>Hover / 선택</h2>
+    <label for="nation">Nation Tag 직접 선택</label>
+    <select id="nation"><option value="">지도 hover 사용</option></select>
+    <div class="row" style="margin-top:10px;">
+      <button id="lockBtn">현재 hover 국가 고정</button>
+      <button id="clearBtn">초기화</button>
+    </div>
+    <div class="row">
+      <div><label for="claimMode">Claim 표시</label><select id="claimMode"><option value="all">전체 claim</option><option value="project">선택 project만</option><option value="off">끄기</option></select></div>
+      <div><label for="claimKind">영유권 유형</label><select id="claimKind"><option value="all">평화+적대</option><option value="peaceful">평화적만</option><option value="hostile">적대적만</option></select></div>
+    </div>
+    <div class="row">
+      <div><label for="projectSel">Project</label><select id="projectSel"><option value="">자동/전체</option></select></div>
+      <div><label for="baseMode">기본 지도 색</label><select id="baseMode"><option value="nation">Nation별</option><option value="plain">단색</option><option value="points">경계 복잡도</option></select></div>
+    </div>
+    <label for="search">검색</label><input id="search" placeholder="Korea, CHN, Taiwan..." />
+    <div class="row" style="margin-top:10px;">
+      <button id="showLabels">라벨 토글</button>
+      <button id="onlyClaimsBtn">claim 대상만 보기</button>
+    </div>
+
+    <h2>선택 국가</h2>
+    <div class="panel" id="nationInfo">지도에서 국가/region 위에 마우스를 올리세요.</div>
+
+    <h2>claim legend</h2>
+    <div class="legend" id="legend"><div class="small">hover한 국가의 claim 묶음이 여기에 표시됩니다.</div></div>
+
+    <h2>검색 결과</h2>
+    <div class="list" id="results"></div>
+
+    <div class="note">
+      이 MVP는 <code>TIBilateralTemplate.json</code>의 <code>relationType=Claim</code>, <code>projectUnlockName</code>, <code>nation1</code>, <code>region1</code>을 사용합니다. 연구가 즉시 병합을 수행한다기보다 “병합/정복/통합 가능성의 전제인 claim을 부여”한다는 의미로 표시합니다. <code>projectUnlockName</code>이 없는 claim도 기본/상시 claim으로 포함합니다.
+    </div>
+  </aside>
+  <main>
+    <div class="mapbar">
+      <div class="left">
+        <span class="pill" id="hoverPill">Hover nation: -</span>
+        <span class="pill" id="claimPill">Claims: -</span>
+        <span class="pill warn" id="warnPill" style="display:none"></span>
+      </div>
+      <span class="pill" id="visiblePill"></span>
+    </div>
+    <div class="svgwrap">
+      <svg id="map" viewBox="-3.174091 -1.543560 6.525687 2.588890" preserveAspectRatio="xMidYMid meet" aria-label="Terra Invicta claim research segmented map">
+        <g id="grid"></g>
+        <g id="regions"></g>
+        <g id="claimOverlays"></g>
+        <g id="labels"></g>
+        <g id="claimLabels"></g>
+      </svg>
+      <div class="tooltip" id="tip"></div>
+    </div>
+  </main>
+</div>
+<script src="assets/data.generated.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
