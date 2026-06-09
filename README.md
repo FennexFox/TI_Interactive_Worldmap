@@ -1,27 +1,84 @@
 # Terra Invicta Interactive Worldmap
 
-Standalone segmented world map viewer for Terra Invicta region, claim, unification, and megastate planning data.
+Standalone builder and GitHub Pages site for a Terra Invicta segmented world map.
 
-The intended first milestone is a browser-local **Claim / Unification Map** built from a local Terra Invicta install. The tool should visualize which nations have claims on which regions, which claims are unlocked by research, and which claims are hostile, peaceful, capital, formable, or breakaway-gated.
+The first pass is a browser-local **Claim / Unification Map**. It renders Terra Invicta regions as segmented polygons and visualizes direct nation claims from `TIBilateralTemplate.json`, including project-unlocked claims, projectless claims, hostile claims, capital claims, breakaway-gated claims, and initial territory anchors.
 
-## Initial direction
+The generated Pages site lives in `docs/index.html`.
 
-- Render Terra Invicta regions as a segmented world map.
-- Use extracted region outline data for map geometry.
-- Use `TIBilateralTemplate.json` as the canonical source for claim and breakaway relationships.
-- Keep the first MVP independent from save-file parsing.
-- Treat GitHub Pages as the primary deployment target.
+## Current scope
 
-## Repository workflow
+- Render extracted Terra Invicta region outlines as an SVG map.
+- Build direct claim profiles from `TIBilateralTemplate.json`.
+- Include projectless/basic claims as well as project-unlocked claims.
+- Distinguish hostile claims from peaceful claims.
+- Treat Taiwan-style cases as `breakaway_gated_existing` instead of pure formables.
+- Keep the first pass static and save-file independent.
+- Leave recursive megastate absorption closure for a later issue.
 
-Issues should be written in English and structured around:
+## Setup
 
-- Summary
-- Problem
-- Direction
-- Data/model requirements
-- UI requirements
-- Non-goals
-- Acceptance criteria
+```powershell
+python -m pip install -r requirements.txt
+npm ci
+npx playwright install chromium
+```
 
-Pull requests should describe user-visible behavior, data/model impact, UI impact, and verification steps.
+## Rebuild locally from checked-in generated data
+
+```powershell
+npm run build
+npm run verify
+npm run test:e2e
+```
+
+`npm run test:e2e` runs Playwright against the generated `docs/` site and verifies the language selector updates both static shell copy and dynamic UI text.
+
+## Rebuild from a local Terra Invicta install
+
+Pass the local template directory and either a Unity `regionoutlines` asset or a pre-extracted raw region outline JSON fixture:
+
+```powershell
+python .\tools\rebuild_pages.py `
+  --templates-dir "C:\Program Files (x86)\Steam\steamapps\common\Terra Invicta\TerraInvicta_Data\StreamingAssets\Templates" `
+  --region-outlines "C:\Program Files (x86)\Steam\steamapps\common\Terra Invicta\TerraInvicta_Data\StreamingAssets\AssetBundles\regionoutlines" `
+  --no-commit
+```
+
+`rebuild_pages.py` passes the local Templates directory to the claim builder, which reads
+`TIProjectTemplate.json` and localization files directly for project labels, costs, and
+prerequisites.
+
+For development fixtures, use:
+
+```powershell
+python .\tools\rebuild_pages.py `
+  --bilateral-template .\fixtures\TIBilateralTemplate.json `
+  --region-map-json .\fixtures\region_outlines.raw.json `
+  --no-commit
+```
+
+`TI_TEMPLATES_DIR` can also point to `TerraInvicta_Data/StreamingAssets/Templates`.
+
+## Deploy workflow
+
+Enable GitHub Pages for the repository with GitHub Actions as the source. The workflow in `.github/workflows/pages.yml` publishes the `docs/` directory on pushes to `main`, or when run manually.
+
+To rebuild, verify, commit generated changes, and push the current branch:
+
+```powershell
+python .\tools\rebuild_pages.py --templates-dir "<Templates>" --region-outlines "<regionoutlines>"
+```
+
+The deploy helper only stages generated paths:
+
+- `data/generated/region_map.generated.json`
+- `data/generated/claim_map.generated.json`
+- `docs/data/region_map.generated.json`
+- `docs/data/claim_map.generated.json`
+- `docs/assets/data.generated.js`
+- `docs/assets/app.js`
+- `docs/assets/styles.css`
+- `docs/index.html`
+
+Other local changes are left untouched.

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Terra Invicta Claim / Unification Map</title>
+<link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+<div class="app">
+  <aside>
+    <h1 data-i18n="app.title">Terra Invicta Claim / Unification Map</h1>
+    <div class="sideCardList" id="asideCardList">
+      <section class="sideCard" data-aside-card="explore">
+        <div class="sideCardHeader">
+          <h2 data-i18n="section.explore">Explore and Select</h2>
+          <div class="sideCardActions">
+            <button type="button" class="sideCardAction" data-card-move="up">↑</button>
+            <button type="button" class="sideCardAction" data-card-move="down">↓</button>
+            <button type="button" class="sideCardAction sideCardToggle" data-card-toggle aria-expanded="true">−</button>
+          </div>
+        </div>
+        <div class="sideCardBody">
+          <label for="search" data-i18n="search.label">Search and select nation/region</label>
+          <div class="searchCombo" id="nationSearchCombo">
+            <input id="search" data-i18n-placeholder="search.placeholder" placeholder="Enter a nation tag or region name: CHN, Korea, Taiwan..." autocomplete="off" role="combobox" aria-expanded="false" aria-controls="nationDropdown" aria-autocomplete="list" />
+            <div class="searchDropdown" id="nationDropdown" role="listbox" hidden></div>
+          </div>
+          <div class="small" style="margin-top:6px;" data-i18n="search.help">Click the field to open the nation list. Typing filters nations and regions; click an item to select it. Click empty map space to clear the selection.</div>
+
+          <div class="row">
+            <div><label for="claimMode" data-i18n="claimMode.label">Claim display</label><select id="claimMode"><option value="all" data-i18n="claimMode.all">All claims</option><option value="project" data-i18n="claimMode.project">Selected project only</option><option value="off" data-i18n="claimMode.off">Off</option></select></div>
+            <div><label for="claimKind" data-i18n="claimKind.label">Claim type</label><select id="claimKind"><option value="all" data-i18n="claimKind.all">Peaceful + hostile</option><option value="peaceful" data-i18n="claimKind.peaceful">Peaceful only</option><option value="hostile" data-i18n="claimKind.hostile">Hostile only</option></select></div>
+          </div>
+          <div class="row">
+            <div><label for="projectSel" data-i18n="project.label">Project</label><select id="projectSel"><option value="" data-i18n="project.all">Auto/all</option></select></div>
+            <div><label for="baseMode" data-i18n="baseMode.label">Base map color</label><select id="baseMode"><option value="nation" data-i18n="baseMode.nation">By nation</option><option value="plain" data-i18n="baseMode.plain">Plain</option><option value="points" data-i18n="baseMode.points">Boundary complexity</option></select></div>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <button id="showLabels" data-i18n="button.toggleLabels">Toggle region labels</button>
+            <button id="onlyClaimsBtn" data-i18n="button.onlyClaims">Show claim targets only</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="sideCard" data-aside-card="selected">
+        <div class="sideCardHeader">
+          <h2 data-i18n="section.selectedNation">Selected Nation</h2>
+          <div class="sideCardActions">
+            <button type="button" class="sideCardAction" data-card-move="up">↑</button>
+            <button type="button" class="sideCardAction" data-card-move="down">↓</button>
+            <button type="button" class="sideCardAction sideCardToggle" data-card-toggle aria-expanded="true">−</button>
+          </div>
+        </div>
+        <div class="sideCardBody">
+          <div class="panel" id="nationInfo" data-i18n="nationInfo.empty">Hover a nation or region on the map.</div>
+        </div>
+      </section>
+    </div>
+
+  </aside>
+  <main>
+    <div class="mapbar">
+      <div class="left">
+        <span class="pill" id="hoverPill">Hover: -</span>
+        <span class="pill" id="claimPill">Claims: -</span>
+        <span class="pill warn" id="warnPill" style="display:none"></span>
+      </div>
+      <div class="mapActions" data-i18n-aria-label="mapActions.aria" aria-label="External links and language">
+        <a class="mapAction" href="https://github.com/FennexFox/TI_Interactive_Worldmap" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a class="mapAction kofiAction" href="https://ko-fi.com/fennexfox" target="_blank" rel="noopener noreferrer">Ko-fi</a>
+        <label class="srOnly" for="languageSel" data-i18n="language.label">Language</label>
+        <select id="languageSel" class="languageSelect" data-i18n-title="language.label" title="Language"><option value="ko" data-i18n="language.ko">한국어</option><option value="en" data-i18n="language.en" selected>English</option></select>
+      </div>
+    </div>
+    <div class="svgwrap">
+      <svg id="map" viewBox="-3.174091 -1.543560 6.525687 2.588890" preserveAspectRatio="xMidYMid meet" data-i18n-aria-label="map.aria" aria-label="Terra Invicta claim research map">
+        <g id="grid"></g>
+        <g id="regions"></g>
+        <g id="claimOverlays"></g>
+        <g id="labels"></g>
+        <g id="claimLabels"></g>
+        <g id="selectionOutlines"></g>
+      </svg>
+      <div class="tooltip" id="tip"></div>
+    </div>
+    <div class="mapNote" data-i18n-html="note.claimSource">
+      This map uses <code>relationType=Claim</code>, <code>projectUnlockName</code>, <code>nation1</code>, and <code>region1</code> from <code>TIBilateralTemplate.json</code>. Research is shown as granting claims, which are prerequisites for merger, conquest, or unification possibilities, rather than as performing those actions immediately. Claims without <code>projectUnlockName</code> are included as baseline claims.
+    </div>
+  </main>
+</div>
+<script src="assets/data.generated.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

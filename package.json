@@ -1,0 +1,15 @@
+{
+  "name": "ti-interactive-worldmap",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "python tools/build_pages.py",
+    "verify": "python -m compileall -q tools && node --check docs/assets/data.generated.js && node --check docs/assets/app.js && python tools/verify_generated_outputs.py",
+    "test:e2e": "playwright test",
+    "deploy": "python tools/rebuild_pages.py"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
+  }
+}
