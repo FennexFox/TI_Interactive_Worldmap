@@ -1,0 +1,58 @@
+name: Feature request
+description: Plan a new user-facing map or data feature
+title: ""
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What should be added or changed?
+      placeholder: Briefly describe the feature.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user problem or planning question does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: direction
+    attributes:
+      label: Direction
+      description: Describe the expected behavior and implementation direction.
+    validations:
+      required: true
+  - type: textarea
+    id: data_model
+    attributes:
+      label: Data / model requirements
+      description: List required game template files, generated data, normalization rules, and known edge cases.
+    validations:
+      required: false
+  - type: textarea
+    id: ui
+    attributes:
+      label: UI requirements
+      description: List map, panel, hover, click, filter, and tooltip requirements.
+    validations:
+      required: false
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: What should this issue explicitly avoid doing?
+    validations:
+      required: false
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Use checkboxes for verifiable outcomes.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true

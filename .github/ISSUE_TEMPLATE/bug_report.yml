@@ -1,0 +1,51 @@
+name: Bug report
+description: Report incorrect map rendering, data matching, or UI behavior
+title: ""
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: How can this be reproduced?
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should happen instead?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: data_context
+    attributes:
+      label: Data context
+      description: Note relevant Terra Invicta version, template file, generated data file, region, nation, or project.
+    validations:
+      required: false
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification notes
+      description: Any screenshots, console output, fixture names, or manual checks.
+    validations:
+      required: false
