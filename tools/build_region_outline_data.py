@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -27,8 +28,6 @@ def compact_region_outlines(raw: dict[str, Any]) -> dict[str, Any]:
             for point in poly:
                 x, y = point["anchor"]
                 points.append((x, y))
-                all_x.append(x)
-                all_y.append(y)
             deduped = []
             last_key = None
             for x, y in points:
@@ -39,6 +38,8 @@ def compact_region_outlines(raw: dict[str, Any]) -> dict[str, Any]:
             if len(deduped) >= 3:
                 paths.append("M " + " L ".join(f"{x:.6f} {y:.6f}" for x, y in deduped) + " Z")
                 total_points += len(deduped)
+                all_x.extend(x for x, _ in deduped)
+                all_y.extend(y for _, y in deduped)
         if not paths:
             continue
         labels = []
@@ -62,6 +63,9 @@ def compact_region_outlines(raw: dict[str, Any]) -> dict[str, Any]:
                 "labels": labels[:2],
             }
         )
+
+    if not regions or not all_x or not all_y:
+        raise ValueError("No usable polygon points found in raw region outline data.")
 
     min_x, max_x = min(all_x), max(all_x)
     min_y, max_y = min(all_y), max(all_y)
@@ -90,7 +94,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    data = compact_region_outlines(load_json(Path(args.raw_json)))
+    try:
+        data = compact_region_outlines(load_json(Path(args.raw_json)))
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

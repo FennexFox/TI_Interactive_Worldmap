@@ -58,7 +58,7 @@ python .\tools\rebuild_pages.py `
 
 ## Deploy workflow
 
-Enable GitHub Pages for the repository with GitHub Actions as the source. The workflow in `.github/workflows/pages.yml` publishes the `docs/` directory on pushes to `main` or `initial-pass`.
+Enable GitHub Pages for the repository with GitHub Actions as the source. The workflow in `.github/workflows/pages.yml` publishes the `docs/` directory on pushes to `main`, or when run manually.
 
 To rebuild, verify, commit generated changes, and push the current branch:
 
