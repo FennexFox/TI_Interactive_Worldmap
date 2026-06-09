@@ -11,15 +11,13 @@
   <aside>
     <h1>Claim / Unification Map MVP</h1>
     <div class="desc">국가 위에 hover하면 현재 영토와 모든 claim 범위를 보여줍니다. 연구로 열리는 claim뿐 아니라 기본 claim도 포함하고, 평화적/적대적 영유권을 구분합니다.</div>
-    <div class="statgrid" id="stats"></div>
 
-    <h2>Hover / 선택</h2>
-    <label for="nation">Nation Tag 직접 선택</label>
-    <select id="nation"><option value="">지도 hover 사용</option></select>
-    <div class="row" style="margin-top:10px;">
-      <button id="lockBtn">현재 hover 국가 고정</button>
-      <button id="clearBtn">초기화</button>
-    </div>
+    <h2>탐색 / 선택</h2>
+    <label for="search">국가/region 검색 · 선택</label>
+    <input id="search" list="nationOptions" placeholder="국가 tag 또는 region명 입력: CHN, Korea, Taiwan..." autocomplete="off" />
+    <datalist id="nationOptions"></datalist>
+    <div class="small" style="margin-top:6px;">입력창의 드롭다운에서 국가를 선택하면 고정됩니다. 빈 지도 공간을 클릭하면 선택이 해제됩니다.</div>
+
     <div class="row">
       <div><label for="claimMode">Claim 표시</label><select id="claimMode"><option value="all">전체 claim</option><option value="project">선택 project만</option><option value="off">끄기</option></select></div>
       <div><label for="claimKind">영유권 유형</label><select id="claimKind"><option value="all">평화+적대</option><option value="peaceful">평화적만</option><option value="hostile">적대적만</option></select></div>
@@ -28,7 +26,6 @@
       <div><label for="projectSel">Project</label><select id="projectSel"><option value="">자동/전체</option></select></div>
       <div><label for="baseMode">기본 지도 색</label><select id="baseMode"><option value="nation">Nation별</option><option value="plain">단색</option><option value="points">경계 복잡도</option></select></div>
     </div>
-    <label for="search">검색</label><input id="search" placeholder="Korea, CHN, Taiwan..." />
     <div class="row" style="margin-top:10px;">
       <button id="showLabels">라벨 토글</button>
       <button id="onlyClaimsBtn">claim 대상만 보기</button>
@@ -52,8 +49,10 @@
       <div class="left">
         <span class="pill" id="hoverPill">Hover nation: -</span>
         <span class="pill" id="claimPill">Claims: -</span>
+        <span class="pill selected" id="selectedPill" style="display:none"></span>
         <span class="pill warn" id="warnPill" style="display:none"></span>
       </div>
+      <div class="mapStats" id="stats" aria-label="Map dataset summary"></div>
       <span class="pill" id="visiblePill"></span>
     </div>
     <div class="svgwrap">
@@ -63,6 +62,7 @@
         <g id="claimOverlays"></g>
         <g id="labels"></g>
         <g id="claimLabels"></g>
+        <g id="selectionOutlines"></g>
       </svg>
       <div class="tooltip" id="tip"></div>
     </div>

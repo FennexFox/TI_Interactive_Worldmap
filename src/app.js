@@ -12,9 +12,10 @@ const gLabels = document.getElementById('labels');
 const gClaimLabels = document.getElementById('claimLabels');
 const gGrid = document.getElementById('grid');
 const gClaimOverlays = document.getElementById('claimOverlays');
+const gSelectionOutlines = document.getElementById('selectionOutlines');
 const tip = document.getElementById('tip');
 const search = document.getElementById('search');
-const nationSel = document.getElementById('nation');
+const nationOptions = document.getElementById('nationOptions');
 const baseModeSel = document.getElementById('baseMode');
 const claimModeSel = document.getElementById('claimMode');
 const projectSel = document.getElementById('projectSel');
@@ -22,6 +23,7 @@ const claimKindSel = document.getElementById('claimKind');
 const results = document.getElementById('results');
 const nationInfo = document.getElementById('nationInfo');
 const legend = document.getElementById('legend');
+const selectedPill = document.getElementById('selectedPill');
 
 const regionByName = Object.fromEntries(REGIONS.map(r => [r.regionName, r]));
 const pathByRegion = new Map();
@@ -36,6 +38,11 @@ let lockedNation = '';
 let labelsVisible = false;
 let onlyClaims = false;
 let selectedRegionId = null;
+let selectedRegionNames = new Set();
+let projectFilter = '';
+let nationChoices = [];
+const nationChoiceByValue = new Map();
+const incomingClaimsByRegion = new Map();
 
 const CLAIM_GRADIENT_START_HUE = 155;
 const CLAIM_GRADIENT_END_HUE = 290;
@@ -98,6 +105,43 @@ function injectClaimOverlayStyles() {
     .claim-overlay.basic-claim,
     .claim-overlay.research-claim {
       stroke-width:.016;
+    }
+    .selection-fill {
+      pointer-events:none;
+      fill:oklch(0.86 0.17 95 / .26);
+      stroke:none;
+      mix-blend-mode:screen;
+    }
+    .selection-outline-glow {
+      pointer-events:none;
+      fill:none;
+      stroke:oklch(0.87 0.18 92 / .92);
+      stroke-width:.082;
+      vector-effect:non-scaling-stroke;
+    }
+    .selection-outline {
+      pointer-events:none;
+      fill:none;
+      stroke:white;
+      stroke-width:.034;
+      vector-effect:non-scaling-stroke;
+    }
+    .selection-dot {
+      pointer-events:none;
+      fill:oklch(0.91 0.17 92 / .96);
+      stroke:rgba(0,0,0,.8);
+      stroke-width:.01;
+      vector-effect:non-scaling-stroke;
+    }
+    .selection-label {
+      pointer-events:none;
+      font-size:.055px;
+      font-weight:800;
+      fill:#fff7b8;
+      text-anchor:middle;
+      paint-order:stroke;
+      stroke:rgba(0,0,0,.82);
+      stroke-width:.015;
     }
   `;
   document.head.appendChild(style);
@@ -174,11 +218,240 @@ function statusLabel(status) {
 function statusBadge(status) {
   return `<span class="status ${escapeHtml(status || 'existing')}">${escapeHtml(statusLabel(status))}</span>`;
 }
+function isAlienMasterClaim(claimant, project, label='') {
+  const p = String(project || '');
+  const l = String(label || projectDisplay(project) || '');
+  return claimant === 'ALN' || p === 'Project_AlienMasterProject' || /alien master project/i.test(l);
+}
 function labelPosition(r) {
   if (r.labels && r.labels[0]) return r.labels[0];
   // Fallback center from first path numbers is expensive; skip.
   return null;
 }
+
+function humanizeNationLabel(tag) {
+  const d = CLAIMS_BY_NATION[tag] || {};
+  const candidates = [
+    ...(nationRegions.get(tag) || []),
+    ...(d.baseRegions || []),
+    ...(d.capitalRegions || []),
+    ...((d.projects || [])[0]?.regions || []),
+  ].filter(Boolean);
+  const primary = candidates[0] ? prettyRegion(candidates[0]) : statusLabel(d.status);
+  const regionCount = (nationRegions.get(tag) || d.baseRegions || []).length;
+  const techText = d.projectCount ? ` · ${d.projectCount} techs` : '';
+  const statusText = d.status && d.status !== 'existing' ? ` · ${statusLabel(d.status)}` : '';
+  const countText = regionCount ? ` · ${regionCount} regions` : '';
+  return `${tag} · ${primary}${statusText}${techText}${countText}`;
+}
+function buildNationChoices() {
+  const tags = [...new Set([...REGIONS.map(r => r.nationTag), ...Object.keys(CLAIMS_BY_NATION)])].filter(Boolean).sort();
+  nationChoices = tags.map(tag => {
+    const d = CLAIMS_BY_NATION[tag] || {};
+    const regions = [...new Set([...(nationRegions.get(tag) || []), ...(d.baseRegions || []), ...(d.capitalRegions || []), ...((d.projects || [])[0]?.regions || [])])];
+    const label = humanizeNationLabel(tag);
+    return {tag, label, searchText: `${tag} ${label} ${regions.map(prettyRegion).join(' ')}`.toLowerCase()};
+  });
+  nationChoiceByValue.clear();
+  for (const c of nationChoices) {
+    nationChoiceByValue.set(c.label.toLowerCase(), c.tag);
+    nationChoiceByValue.set(c.tag.toLowerCase(), c.tag);
+  }
+}
+function parseNationSearchValue(value) {
+  const v = String(value || '').trim();
+  if (!v) return '';
+  const direct = nationChoiceByValue.get(v.toLowerCase());
+  if (direct) return direct;
+  const tag = v.split(/[\s·-]+/, 1)[0]?.toUpperCase();
+  if (tag && nationChoiceByValue.get(tag.toLowerCase())) return tag;
+  return '';
+}
+function isSelectedNationSearch() {
+  const tag = search.dataset.selectedNation || '';
+  return !!tag && parseNationSearchValue(search.value) === tag;
+}
+function searchFilterText() {
+  return isSelectedNationSearch() ? '' : search.value.trim().toLowerCase();
+}
+function buildIncomingClaimIndex() {
+  incomingClaimsByRegion.clear();
+  for (const [claimant, data] of Object.entries(CLAIMS_BY_NATION)) {
+    for (const entry of data.projects || []) {
+      const label = entry.label || projectDisplay(entry.project);
+      if (isAlienMasterClaim(claimant, entry.project, label)) continue;
+      for (const rn of entry.regions || []) {
+        const claim = entry.claims?.[rn] || {};
+        if (!incomingClaimsByRegion.has(rn)) incomingClaimsByRegion.set(rn, []);
+        incomingClaimsByRegion.get(rn).push({claimant, project:entry.project || '', label, region:rn, claim});
+      }
+    }
+  }
+}
+function incomingTargetRegions(data, baseSet) {
+  const selected = [...selectedRegionNames].filter(Boolean);
+  if (selected.length) return new Set(selected);
+  const targetRegions = new Set(baseSet);
+  if (!targetRegions.size) {
+    for (const rn of data.capitalRegions || []) targetRegions.add(rn);
+    for (const rn of data.gatedRegions || []) targetRegions.add(rn);
+  }
+  return targetRegions;
+}
+function incomingClaimsForTarget(activeNation, data, baseSet) {
+  const targetRegions = incomingTargetRegions(data, baseSet);
+  const grouped = new Map();
+  for (const rn of targetRegions) {
+    for (const item of incomingClaimsByRegion.get(rn) || []) {
+      if (item.claimant === activeNation) continue;
+      const key = `${item.claimant}|${item.project || '__base__'}`;
+      if (!grouped.has(key)) grouped.set(key, {...item, regions:[], hostile:0, gated:0});
+      const g = grouped.get(key);
+      if (!g.regions.includes(rn)) g.regions.push(rn);
+      if (item.claim?.hostileClaim) g.hostile += 1;
+      if (item.claim?.gatedClaim) g.gated += 1;
+    }
+  }
+  return [...grouped.values()].sort((a,b) => a.claimant.localeCompare(b.claimant) || projectSortLabel(a.project).localeCompare(projectSortLabel(b.project)));
+}
+function selectedRegionSummary() {
+  const names = [...selectedRegionNames].filter(Boolean);
+  if (!names.length) return '';
+  if (names.length === 1) {
+    const rn = names[0];
+    const r = regionByName[rn];
+    return `Selected region: ${prettyRegion(rn)}${r?.nationTag ? ' · '+r.nationTag : ''}`;
+  }
+  return `Selected regions: ${names.length}`;
+}
+function renderSelectionOutlines() {
+  if (!gSelectionOutlines) return;
+  gSelectionOutlines.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  for (const rn of selectedRegionNames) {
+    const r = regionByName[rn];
+    if (!r) continue;
+    for (const cls of ['selection-fill', 'selection-outline-glow', 'selection-outline']) {
+      const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+      p.setAttribute('d', r.path);
+      p.setAttribute('class', cls);
+      p.dataset.region = rn;
+      frag.appendChild(p);
+    }
+    const lab = labelPosition(r);
+    if (lab) {
+      const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      dot.setAttribute('class', 'selection-dot');
+      dot.setAttribute('cx', lab.x);
+      dot.setAttribute('cy', lab.y);
+      dot.setAttribute('r', '.032');
+      dot.dataset.region = rn;
+      frag.appendChild(dot);
+      const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+      text.setAttribute('class', 'selection-label');
+      text.setAttribute('x', lab.x);
+      text.setAttribute('y', lab.y - 0.052);
+      text.textContent = prettyRegion(rn);
+      text.dataset.region = rn;
+      frag.appendChild(text);
+    }
+  }
+  gSelectionOutlines.appendChild(frag);
+}
+function updateSelectedRegions() {
+  document.querySelectorAll('.region').forEach(p => p.classList.toggle('selected', selectedRegionNames.has(p.dataset.region)));
+  renderSelectionOutlines();
+  const label = selectedRegionSummary();
+  if (selectedPill) {
+    selectedPill.textContent = label;
+    selectedPill.style.display = label ? '' : 'none';
+  }
+}
+function claimRegionSummary(claim) {
+  const parts = [];
+  parts.push(claim?.hostileClaim ? 'hostile' : 'peaceful');
+  if (claim?.capitalClaim) parts.push('capital');
+  if (claim?.gatedClaim) parts.push('gated');
+  return parts.join(' · ');
+}
+function renderRegionList(regionNames, claims={}, prefix='targets') {
+  const rows = (regionNames || []).slice(0, 80).map((rn, i) => {
+    const claim = claims?.[rn] || {};
+    const meta = claimRegionSummary(claim);
+    const region = regionByName[rn];
+    const owner = region?.nationTag ? ` · ${region.nationTag}` : '';
+    const active = selectedRegionNames.has(rn);
+    return `<button type="button" class="legendRegionItem${active ? ' active' : ''}" data-region-name="${escapeHtml(rn)}"><b>${escapeHtml(prettyRegion(rn))}</b><span>${escapeHtml(prefix)} region${owner}${meta ? ' · '+meta : ''}</span></button>`;
+  }).join('');
+  const more = (regionNames || []).length > 80 ? `<div class="small">+ ${(regionNames || []).length - 80} more regions not shown</div>` : '';
+  return `<div class="legendRegionList">${rows}${more}</div>`;
+}
+function highlightRegions(regionNames) {
+  selectedRegionNames = new Set(regionNames.filter(Boolean));
+  selectedRegionId = null;
+  updateSelectedRegions();
+}
+function clearSelection({clearSearch=true} = {}) {
+  activeNation = '';
+  hoverNation = '';
+  lockedNation = '';
+  selectedRegionId = null;
+  selectedRegionNames = new Set();
+  projectFilter = '';
+  projectSel.value = '';
+  claimModeSel.value = 'all';
+  if (clearSearch) {
+    search.value = '';
+    search.dataset.selectedNation = '';
+  }
+  onlyClaims = false;
+  document.getElementById('onlyClaimsBtn').textContent = 'claim 대상만 보기';
+  document.getElementById('hoverPill').textContent = 'Hover nation: -';
+  tip.style.display = 'none';
+  updateNationOverlay('');
+  applyFilters(true);
+  updateSelectedRegions();
+}
+function focusNation(nation, {fillSearch=true} = {}) {
+  if (!nation) { clearSelection({clearSearch:fillSearch}); return; }
+  lockedNation = nation;
+  hoverNation = '';
+  projectFilter = '';
+  if (fillSearch) {
+    search.value = humanizeNationLabel(nation);
+    search.dataset.selectedNation = nation;
+  }
+  projectSel.value = '';
+  if (claimModeSel.value === 'project') claimModeSel.value = 'all';
+  updateNationOverlay(nation);
+  applyFilters(true);
+  updateSelectedRegions();
+}
+function selectProjectFilter(value) {
+  projectFilter = value || '';
+  claimModeSel.value = projectFilter ? 'project' : 'all';
+  if (projectFilter && projectFilter !== '__base__') projectSel.value = projectFilter;
+  else projectSel.value = '';
+  updateNationOverlay(getCurrentNation());
+}
+function renderClaimSection(title, items, emptyText, kind) {
+  if (!items.length) return `<div class="claimSection"><b>${escapeHtml(title)}</b><div class="small">${escapeHtml(emptyText)}</div></div>`;
+  const rows = items.slice(0, 40).map((item, i) => {
+    const project = item.project || '';
+    const label = projectDisplay(project);
+    const regions = item.regions || [];
+    const hostile = item.hostile ?? regions.filter(rn => item.claims?.[rn]?.hostileClaim).length;
+    const gated = item.gated ?? regions.filter(rn => item.claims?.[rn]?.gatedClaim).length;
+    const who = kind === 'incoming' ? item.claimant : activeNation;
+    const regionNames = regions.map(prettyRegion);
+    const preview = regionNames.slice(0, 4).join(', ') + (regionNames.length > 4 ? `, +${regionNames.length - 4}` : '');
+    const direction = kind === 'incoming' ? `targets: ${preview}` : `claims: ${preview}`;
+    return `<button type="button" class="claimListItem" data-claim-kind="${kind}" data-claim-index="${i}" title="${escapeHtml(regionNames.join(', '))}"><b>${escapeHtml(who)} · ${escapeHtml(label)}</b><span>${escapeHtml(direction)} · ${regions.length} region${regions.length === 1 ? '' : 's'}${hostile ? ' · hostile '+hostile : ''}${gated ? ' · gated '+gated : ''}</span></button>`;
+  }).join('');
+  const more = items.length > 40 ? `<div class="small">+ ${items.length - 40} more not shown</div>` : '';
+  return `<div class="claimSection"><b>${escapeHtml(title)}</b><div class="claimList">${rows}</div>${more}</div>`;
+}
+
 
 function renderGrid() {
   const [x,y,w,h] = SUMMARY.viewBox;
@@ -201,7 +474,7 @@ function renderRegions() {
     p.dataset.nation = r.nationTag;
     p.addEventListener('mousemove', e => onRegionMove(e, r));
     p.addEventListener('mouseleave', () => onRegionLeave());
-    p.addEventListener('click', () => selectRegion(r));
+    p.addEventListener('click', e => { e.stopPropagation(); selectRegion(r); });
     pathByRegion.set(r.regionName, p);
     frag.appendChild(p);
   }
@@ -229,7 +502,7 @@ function renderLabels() {
 }
 function onRegionMove(e, r) {
   hoverNation = r.nationTag;
-  if (!lockedNation && !nationSel.value) updateNationOverlay(hoverNation);
+  if (!lockedNation) updateNationOverlay(hoverNation);
   document.getElementById('hoverPill').textContent = `Hover nation: ${r.nationTag} · ${prettyRegion(r.regionName)}`;
   const d = CLAIMS_BY_NATION[r.nationTag];
   const claimCount = d ? d.totalClaimRegions : 0;
@@ -242,13 +515,13 @@ function onRegionMove(e, r) {
 }
 function onRegionLeave() {
   tip.style.display='none';
-  if (!lockedNation && !nationSel.value) {
+  if (!lockedNation) {
     hoverNation = '';
     document.getElementById('hoverPill').textContent = 'Hover nation: -';
     updateNationOverlay('');
   }
 }
-function getCurrentNation() { return nationSel.value || lockedNation || hoverNation || ''; }
+function getCurrentNation() { return lockedNation || hoverNation || ''; }
 function claimKindPass(claim) {
   const k = claimKindSel.value;
   if (k === 'all') return true;
@@ -261,7 +534,7 @@ function getVisibleProjectEntries(nation) {
   if (!d) return [];
   let entries = d.projects || [];
   if (claimModeSel.value === 'off') return [];
-  if (claimModeSel.value === 'project' && projectSel.value) entries = entries.filter(e => e.project === projectSel.value);
+  if (claimModeSel.value === 'project' && projectFilter) entries = entries.filter(e => projectFilter === '__base__' ? !e.project : e.project === projectFilter);
   entries = entries.map(e => {
     const claims = e.claims || {};
     const regions = (e.regions || []).filter(rn => claimKindPass(claims[rn] || {}));
@@ -282,6 +555,7 @@ function updateNationOverlay(nation) {
     legend.innerHTML = '<div class="small">hover한 국가의 claim 묶음이 여기에 표시됩니다.</div>';
     document.getElementById('claimPill').textContent = 'Claims: -';
     applyFilters(false);
+    updateSelectedRegions();
     return;
   }
   const data = CLAIMS_BY_NATION[activeNation] || {nation:activeNation, baseRegions:nationRegions.get(activeNation)||[], projects:[], totalClaimRegions:0, projectCount:0};
@@ -345,44 +619,67 @@ function updateNationOverlay(nation) {
   document.getElementById('claimPill').textContent = `${activeNation}: base ${ownedCount}, claim ${claimCount}, tech ${projectCount}`;
   const breakawayText = data.breakawayFrom ? ` · breakaway from ${escapeHtml(data.breakawayFrom)}` : '';
   const gatedCount = (data.gatedRegions || []).length;
-  nationInfo.innerHTML = `<b>${escapeHtml(activeNation)}</b> ${statusBadge(data.status)}<div class="small" style="margin:2px 0 10px">현재/시작 territory ${ownedCount} regions · 표시 중 claim ${claimCount} regions · project ${projectCount}${breakawayText}</div><div class="kv"><div>상태</div><div>${escapeHtml(statusLabel(data.status))}</div><div>기본 영토</div><div>${ownedCount} regions</div><div>직접 claim</div><div>${data.totalClaimRegions || 0} unique regions</div><div>conditional</div><div>${gatedCount} gated regions</div><div>claim projects</div><div>${data.projectCount || 0}</div><div>표시 모드</div><div>${claimModeSel.value}</div></div><div class="hint">지도에서 가장 밝은 시작색은 초기/현재 영토이며, claim 색상은 같은 hue 축에서 비연구 claim → 연구 tier 1 → 연구 tier 2 순서로 단계적으로 표시됩니다. 푸른 테두리는 평화적 claim, 붉은 테두리는 hostile claim, 점선은 capital claim, 보라색/잠금 스타일은 breakaway-gated conditional claim입니다.</div>`;
+  const outgoingEntries = entries.map(e => ({...e, regions:(e.regions || []).filter(rn => !baseSet.has(rn))})).filter(e => e.regions.length);
+  const incomingEntries = incomingClaimsForTarget(activeNation, data, baseSet);
+  nationInfo.innerHTML = `<b>${escapeHtml(activeNation)}</b> ${statusBadge(data.status)}<div class="small" style="margin:2px 0 10px">현재/시작 territory ${ownedCount} regions · 표시 중 claim ${claimCount} regions · project ${projectCount}${breakawayText}</div><div class="kv"><div>상태</div><div>${escapeHtml(statusLabel(data.status))}</div><div>기본 영토</div><div>${ownedCount} regions</div><div>직접 claim</div><div>${data.totalClaimRegions || 0} unique regions</div><div>targeted regions</div><div>${incomingTargetRegions(data, baseSet).size} region(s) · ${incomingEntries.length} claim groups</div><div>conditional</div><div>${gatedCount} gated regions</div><div>claim projects</div><div>${data.projectCount || 0}</div><div>표시 모드</div><div>${claimModeSel.value}</div></div><div class="claimSections">${renderClaimSection('Outgoing / led claims', outgoingEntries, '이 국가가 주도하는 추가 claim이 없습니다.', 'outgoing')}${renderClaimSection('Incoming / targeting claims by region', incomingEntries, '선택된 region을 목표로 하는 다른 claim이 없습니다.', 'incoming')}</div><div class="hint">지도에서 가장 밝은 시작색은 초기/현재 영토이며, claim 색상은 같은 hue 축에서 비연구 claim → 연구 tier 1 → 연구 tier 2 순서로 단계적으로 표시됩니다. 푸른 테두리는 평화적 claim, 붉은 테두리는 hostile claim, 점선은 capital claim, 보라색/잠금 스타일은 breakaway-gated conditional claim입니다.</div>`;
+  nationInfo.querySelectorAll('.claimListItem').forEach(el => el.addEventListener('click', () => {
+    const kind = el.dataset.claimKind;
+    const index = Number(el.dataset.claimIndex);
+    const source = kind === 'incoming' ? incomingEntries[index] : outgoingEntries[index];
+    if (source) highlightRegions(source.regions || []);
+  }));
   renderLegend(baseSet, entries, tierByProject);
   applyFilters(false);
+  updateSelectedRegions();
 }
 function renderLegend(baseSet, entries, tierByProject) {
   const claimEntries = entries.map(e => ({...e, regions:(e.regions || []).filter(rn => !baseSet.has(rn))})).filter(e => e.regions.length);
   if (!baseSet.size && !claimEntries.length) { legend.innerHTML = '<div class="small">이 국가에 표시 가능한 추가 claim project가 없습니다.</div>'; return; }
-  const initial = baseSet.size ? `<div class="legendItem" title="initial territory"><span class="swatch" style="background:${BASE_TERRITORY_COLOR}"></span><div><b>초기 영토 / starting territory</b><div class="small">현재/시작 영토 · claim research 필요 없음</div></div><span class="tag">${baseSet.size}</span></div>` : '';
-  const claims = claimEntries.map((e,i) => {
+  const activeFilter = claimModeSel.value === 'project' ? projectFilter : '';
+  const initial = baseSet.size ? `<div class="legendGroup"><button type="button" class="legendItem${!activeFilter ? ' active' : ''}" data-project-filter="" title="show all claims"><span class="swatch" style="background:${BASE_TERRITORY_COLOR}"></span><div><b>초기 영토 / starting territory</b><div class="small">현재/시작 영토 · 클릭하면 전체 claim으로 돌아갑니다</div></div><span class="tag">${baseSet.size}</span></button></div>` : '';
+  const claims = claimEntries.map((e) => {
     const meta = PROJECT_META[e.project] || {};
     const cost = meta.researchCost != null && meta.researchCost >= 0 ? meta.researchCost.toLocaleString() : '';
     const label = projectDisplay(e.project);
     const hostile = e.regions.filter(rn => e.claims?.[rn]?.hostileClaim).length;
     const peaceful = e.regions.length - hostile;
     const gated = e.regions.filter(rn => e.claims?.[rn]?.gatedClaim).length;
+    const capital = e.regions.filter(rn => e.claims?.[rn]?.capitalClaim).length;
     const tier = countryProjectTier(e, tierByProject);
+    const filterValue = e.project || '__base__';
+    const active = activeFilter === filterValue;
     const researchText = e.project ? `research tier ${tier + 1}${cost ? ' · cost '+cost : ''}` : 'claim tier 0 · no research · 초기 영토 아님';
-    return `<div class="legendItem" title="${escapeHtml(e.project || 'base')}"><span class="swatch" style="background:${projectColor(e.project,tier)}"></span><div><b>${escapeHtml(label)}</b><div class="small">${escapeHtml(e.project || 'No project')} · ${researchText} · 평화 ${peaceful} / 적대 ${hostile}${gated ? ' · gated '+gated : ''}</div></div><span class="tag">${e.regions.length}</span></div>`;
+    const regionDetails = active ? renderRegionList(e.regions, e.claims || {}, 'claimed') : '';
+    return `<div class="legendGroup${active ? ' active' : ''}"><button type="button" class="legendItem${active ? ' active' : ''}" data-project-filter="${escapeHtml(filterValue)}" title="${escapeHtml(e.project || 'base')}"><span class="swatch" style="background:${projectColor(e.project,tier)}"></span><div><b>${escapeHtml(label)}</b><div class="small">${escapeHtml(e.project || 'No project')} · ${researchText} · regions ${e.regions.length} · 평화 ${peaceful} / 적대 ${hostile}${capital ? ' · capital '+capital : ''}${gated ? ' · gated '+gated : ''}</div></div><span class="tag">${e.regions.length}</span></button>${regionDetails}</div>`;
   }).join('');
   legend.innerHTML = initial + claims;
+  legend.querySelectorAll('.legendItem[data-project-filter]').forEach(el => el.addEventListener('click', () => {
+    const value = el.dataset.projectFilter || '';
+    selectProjectFilter(activeFilter === value ? '' : value);
+  }));
+  legend.querySelectorAll('.legendRegionItem[data-region-name]').forEach(el => el.addEventListener('click', e => {
+    e.stopPropagation();
+    const rn = el.dataset.regionName;
+    if (rn) highlightRegions([rn]);
+  }));
 }
+
 function updateProjectOptions(nation) {
-  const current = projectSel.value;
+  const current = projectFilter && projectFilter !== '__base__' ? projectFilter : '';
   const d = CLAIMS_BY_NATION[nation];
-  const entries = d ? sortedProjectEntries(d.projects.filter(e => e.project)) : [];
+  const entries = d ? sortedProjectEntries((d.projects || []).filter(e => e.project)) : [];
   const opts = ['<option value="">자동/전체</option>'].concat(entries.map(e => `<option value="${escapeHtml(e.project)}">${escapeHtml(projectDisplay(e.project))} (${e.regions.length})</option>`));
   projectSel.innerHTML = opts.join('');
   if ([...projectSel.options].some(o => o.value === current)) projectSel.value = current;
+  else projectSel.value = '';
 }
 function selectRegion(r) {
   selectedRegionId = r.id;
-  document.querySelectorAll('.region').forEach(p => p.classList.toggle('selected', Number(p.dataset.id) === r.id));
-  lockedNation = r.nationTag;
-  nationSel.value = '';
-  updateNationOverlay(lockedNation);
+  selectedRegionNames = new Set([r.regionName]);
+  focusNation(r.nationTag);
 }
 function applyFilters(rerenderResults=true) {
-  const q = search.value.trim().toLowerCase();
+  const q = searchFilterText();
   const currentNation = getCurrentNation();
   const entries = getVisibleProjectEntries(currentNation);
   const claimSet = new Set();
@@ -406,36 +703,66 @@ function applyFilters(rerenderResults=true) {
   });
   document.getElementById('visiblePill').textContent = `Visible ${visible} / ${REGIONS.length}`;
   if (rerenderResults) {
-    results.innerHTML = matches.map(r => `<div class="item" data-id="${r.id}"><b>${escapeHtml(prettyRegion(r.regionName))}</b><div class="small">${escapeHtml(r.name)} · ${escapeHtml(r.nationTag)}</div></div>`).join('') || '<div class="item small">검색 결과 없음</div>';
+    const nationMatches = q ? nationChoices.filter(c => c.searchText.includes(q)).slice(0, 25) : [];
+    const nationHtml = nationMatches.map(c => `<div class="item nationResult" data-nation="${escapeHtml(c.tag)}"><b>${escapeHtml(c.label)}</b><div class="small">Nation 선택 · tag ${escapeHtml(c.tag)}</div></div>`).join('');
+    const regionHtml = matches.map(r => `<div class="item" data-id="${r.id}"><b>${escapeHtml(prettyRegion(r.regionName))}</b><div class="small">${escapeHtml(r.name)} · ${escapeHtml(r.nationTag)}</div></div>`).join('');
+    const empty = !nationHtml && !regionHtml ? '<div class="item small">검색 결과 없음</div>' : '';
+    results.innerHTML = nationHtml + regionHtml + empty;
+    results.querySelectorAll('.item[data-nation]').forEach(el => el.addEventListener('click', () => focusNation(el.dataset.nation)));
     results.querySelectorAll('.item[data-id]').forEach(el => el.addEventListener('click', () => selectRegion(REGIONS[Number(el.dataset.id)])));
   }
 }
 function populate() {
   document.getElementById('stats').innerHTML = `
-    <div class="stat"><b>${SUMMARY.regions}</b><span>map regions</span></div>
-    <div class="stat"><b>${CLAIM_STATS.projectCount}</b><span>claim projects</span></div>
-    <div class="stat"><b>${CLAIM_STATS.projectClaimRowsNormalized.toLocaleString()}</b><span>research claims</span></div>
-    <div class="stat"><b>${CLAIM_STATS.noResearchClaimRowsNormalized.toLocaleString()}</b><span>basic claims</span></div>
-    <div class="stat"><b>${CLAIM_STATS.formableNationCount || 0}</b><span>formable tags</span></div>
-    <div class="stat"><b>${CLAIM_STATS.breakawayGatedExistingNationCount || 0}</b><span>breakaway-gated</span></div>`;
-  const nations = [...new Set([...REGIONS.map(r=>r.nationTag), ...Object.keys(CLAIMS_BY_NATION)])].filter(Boolean).sort();
-  nationSel.innerHTML = '<option value="">지도 hover 사용</option>' + nations.map(t => { const d = CLAIMS_BY_NATION[t]; const suffix = d ? ` · ${statusLabel(d.status)}${d.projectCount ? ' · '+d.projectCount+' techs' : ''}` : ''; return `<option value="${escapeHtml(t)}">${escapeHtml(t)}${escapeHtml(suffix)}</option>`; }).join('');
+    <span><b>${SUMMARY.regions}</b> regions</span>
+    <span><b>${CLAIM_STATS.projectCount}</b> projects</span>
+    <span><b>${CLAIM_STATS.projectClaimRowsNormalized.toLocaleString()}</b> research claims</span>
+    <span><b>${CLAIM_STATS.noResearchClaimRowsNormalized.toLocaleString()}</b> basic claims</span>
+    <span><b>${CLAIM_STATS.formableNationCount || 0}</b> formables</span>
+    <span><b>${CLAIM_STATS.breakawayGatedExistingNationCount || 0}</b> breakaway-gated</span>`;
+  buildNationChoices();
+  buildIncomingClaimIndex();
+  nationOptions.innerHTML = nationChoices.map(c => `<option value="${escapeHtml(c.label)}"></option>`).join('');
   const warn = document.getElementById('warnPill');
   if (CLAIM_STATS.regionsUnmatched) { warn.style.display=''; warn.textContent = `${CLAIM_STATS.regionsUnmatched} unmatched claim rows`; }
 }
 
 injectClaimOverlayStyles();
 
-search.addEventListener('input', () => applyFilters(true));
+search.addEventListener('input', () => {
+  const selectedNation = parseNationSearchValue(search.value);
+  if (selectedNation) {
+    selectedRegionNames = new Set();
+    focusNation(selectedNation);
+    return;
+  }
+  if (search.dataset.selectedNation) {
+    search.dataset.selectedNation = '';
+    lockedNation = '';
+    selectedRegionNames = new Set();
+    projectFilter = '';
+    updateNationOverlay(hoverNation || '');
+  }
+  applyFilters(true);
+});
 baseModeSel.addEventListener('change', renderRegions);
-claimModeSel.addEventListener('change', () => updateNationOverlay(getCurrentNation()));
+claimModeSel.addEventListener('change', () => {
+  if (claimModeSel.value !== 'project') projectFilter = '';
+  else if (!projectFilter) projectFilter = projectSel.value || '';
+  updateNationOverlay(getCurrentNation());
+});
 claimKindSel.addEventListener('change', () => updateNationOverlay(getCurrentNation()));
-projectSel.addEventListener('change', () => updateNationOverlay(getCurrentNation()));
-nationSel.addEventListener('change', () => { lockedNation=''; hoverNation=nationSel.value; updateNationOverlay(getCurrentNation()); });
+projectSel.addEventListener('change', () => {
+  projectFilter = projectSel.value || '';
+  claimModeSel.value = projectFilter ? 'project' : 'all';
+  updateNationOverlay(getCurrentNation());
+});
 document.getElementById('showLabels').addEventListener('click', () => { labelsVisible=!labelsVisible; renderLabels(); applyFilters(); });
 document.getElementById('onlyClaimsBtn').addEventListener('click', () => { onlyClaims=!onlyClaims; document.getElementById('onlyClaimsBtn').textContent = onlyClaims ? '전체 지도 보기' : 'claim 대상만 보기'; applyFilters(); });
-document.getElementById('lockBtn').addEventListener('click', () => { if (hoverNation) { lockedNation=hoverNation; nationSel.value=''; updateNationOverlay(lockedNation); } });
-document.getElementById('clearBtn').addEventListener('click', () => { lockedNation=''; hoverNation=''; nationSel.value=''; search.value=''; onlyClaims=false; document.getElementById('onlyClaimsBtn').textContent='claim 대상만 보기'; tip.style.display='none'; updateNationOverlay(''); applyFilters(); document.querySelectorAll('.region').forEach(p => p.classList.remove('selected')); });
+svg.addEventListener('click', e => {
+  const target = e.target;
+  if (target === svg || target === gGrid || target.classList?.contains('graticule')) clearSelection();
+});
 
 populate(); renderGrid(); renderRegions();
 // Start with China because it demonstrates multi-tech expansion well.
