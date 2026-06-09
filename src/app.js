@@ -1469,7 +1469,7 @@ populate(); renderGrid(); renderRegions();
 }).catch((error) => {
   console.error(error);
   let language = 'ko';
-  try { language = String(window.localStorage?.getItem('ti-map-language') || document.documentElement.lang || 'ko').toLowerCase().startsWith('en') ? 'en' : 'ko'; }
+  try { language = String(window.localStorage?.getItem(LANGUAGE_STORAGE_KEY) || document.documentElement.lang || 'ko').toLowerCase().startsWith('en') ? 'en' : 'ko'; }
   catch (_) {}
   const message = language === 'en' ? 'Failed to load generated Terra Invicta map data.' : 'Terra Invicta 지도 데이터를 불러오지 못했습니다.';
   document.body.innerHTML = `<pre style="white-space:pre-wrap;padding:24px;color:#f8fafc;background:#0b1020">${message}
