@@ -66,7 +66,30 @@
   .claim-overlay.peaceful { stroke:#9ee7ff; stroke-width:.015; }
   .claim-overlay.hostile { stroke:var(--hostile); stroke-width:.023; }
   .claim-overlay.capital { stroke-dasharray:.035 .018; stroke-width:.027; }
+
+  #capitalMarkers { pointer-events:none; opacity:1; mix-blend-mode:normal; }
+  .capital-marker { pointer-events:none; opacity:1; }
+  .capital-star-shadow { fill:rgba(45,25,0,.74); stroke:none; stroke-width:0; stroke-linejoin:round; vector-effect:non-scaling-stroke; }
+  .capital-star { fill:rgba(255,184,61,.12); stroke:#ffd84d; stroke-width:1.75px; stroke-linejoin:round; vector-effect:non-scaling-stroke; paint-order:stroke fill; filter:drop-shadow(0 0 1.25px rgba(255,216,77,.42)); }
+  .capital-marker.is-selected .capital-star-shadow { fill:rgba(59,33,0,.82); stroke:none; stroke-width:0; }
+  .capital-marker.is-selected .capital-star { fill:rgba(255,184,61,.86); stroke:#fff1a8; stroke-width:2px; filter:drop-shadow(0 0 2px rgba(255,184,61,.55)); }
   .claim-overlay.gated { stroke:var(--gated); stroke-dasharray:.02 .018; stroke-width:.024; opacity:.72; }
+  .hover-fill { pointer-events:none; fill:oklch(0.86 0.17 95 / .18); stroke:none; mix-blend-mode:screen; }
+  .hover-outline-glow { pointer-events:none; fill:none; stroke:oklch(0.87 0.18 92 / .68); stroke-width:.058; vector-effect:non-scaling-stroke; }
+  .hover-outline { pointer-events:none; fill:none; stroke:rgba(255,255,255,.82); stroke-width:.024; vector-effect:non-scaling-stroke; }
+  /* Foreign hover overlays intentionally avoid blend modes so claim outlines stay readable regardless of the underlying nation fill color. */
+  .foreign-hover-overlay {
+    pointer-events:none;
+    stroke:rgba(255,245,226,.52);
+    stroke-width:.01;
+    vector-effect:non-scaling-stroke;
+    mix-blend-mode:normal;
+    opacity:1;
+    filter:none;
+  }
+  .foreign-hover-base { stroke:rgba(255,251,235,.68); stroke-width:.014; }
+  .foreign-hover-basic,
+  .foreign-hover-research { stroke:rgba(255,245,226,.46); }
   .selection-fill { pointer-events:none; fill:oklch(0.86 0.17 95 / .26); stroke:none; mix-blend-mode:screen; }
   .selection-outline-glow { pointer-events:none; fill:none; stroke:oklch(0.87 0.18 92 / .92); stroke-width:.082; vector-effect:non-scaling-stroke; }
   .selection-outline { pointer-events:none; fill:none; stroke:white; stroke-width:.034; vector-effect:non-scaling-stroke; }
@@ -74,7 +97,8 @@
   .selection-label { pointer-events:none; font-size:.055px; font-weight:800; fill:#fff7b8; text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.82); stroke-width:.015; }
   .claim-label { pointer-events:none; font-size:.033px; fill:rgba(255,255,255,.88); text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.7); stroke-width:.008; }
   .label { pointer-events:none; font-size:.035px; fill:rgba(255,255,255,.78); text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.65); stroke-width:.008; }
-  .tooltip { position:absolute; pointer-events:none; z-index:5; display:none; width:max-content; max-width:min(260px, calc(100% - 16px)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:rgba(8,13,24,.9); border:1px solid rgba(255,255,255,.12); border-radius:7px; padding:3px 7px; box-shadow:0 6px 18px rgba(0,0,0,.28); color:rgba(245,248,255,.92); font-size:12px; line-height:1.25; }
+  .tooltip { position:absolute; pointer-events:none; z-index:5; display:block; visibility:hidden; opacity:0; left:0; top:0; transform:translate3d(-9999px,-9999px,0); will-change:transform; contain:layout style paint; width:max-content; max-width:min(260px, calc(100% - 16px)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:rgba(8,13,24,.9); border:1px solid rgba(255,255,255,.12); border-radius:7px; padding:3px 7px; box-shadow:0 6px 18px rgba(0,0,0,.28); color:rgba(245,248,255,.92); font-size:12px; line-height:1.25; transition:opacity .06s ease; }
+  .tooltip.visible { visibility:visible; opacity:1; }
   .panel { margin-top:10px; background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:12px; }
   .sideCardBody > .panel { margin-top:0; }
   .kv { display:grid; grid-template-columns:115px 1fr; gap:6px; font-size:13px; }

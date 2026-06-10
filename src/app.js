@@ -14,7 +14,10 @@ const gRegions = document.getElementById('regions');
 const gLabels = document.getElementById('labels');
 const gClaimLabels = document.getElementById('claimLabels');
 const gGrid = document.getElementById('grid');
+const gForeignHoverOverlays = document.getElementById('foreignHoverOverlays');
 const gClaimOverlays = document.getElementById('claimOverlays');
+const gCapitalMarkers = document.getElementById('capitalMarkers');
+const gHoverOutlines = document.getElementById('hoverOutlines');
 const gSelectionOutlines = document.getElementById('selectionOutlines');
 const tip = document.getElementById('tip');
 const search = document.getElementById('search');
@@ -133,13 +136,14 @@ const I18N = {
     'nationInfo.summary.breakaway': '분리 원국 {nation}',
     'nationInfo.breakaway': ' · 분리 원국 {nation}',
     'nationInfo.kv.status': '상태',
+    'nationInfo.kv.capitalRegion': '수도 지역',
     'nationInfo.kv.baseTerritory': '기본 영토',
     'nationInfo.kv.directClaims': '직접 영유권',
     'nationInfo.kv.targetedRegions': '대상 지역',
     'nationInfo.kv.conditional': '조건부',
     'nationInfo.kv.claimProjects': '연구 단계',
     'nationInfo.kv.displayMode': '표시 모드',
-    'nationInfo.hint': '가장 밝은 시작색은 초기/현재 영토입니다. 영유권 색상은 기본 영유권에서 연구 단계가 높아질수록 같은 색상 축을 따라 이동합니다. 푸른 테두리는 평화적 영유권, 붉은 테두리는 적대적 영유권, 점선은 수도 영유권, 보라색/잠금 스타일은 조건부 분리 영유권입니다.',
+    'nationInfo.hint': '가장 밝은 시작색은 초기/현재 영토입니다. 빈 노란 별은 수도 지역, 채워진 노란 별은 현재 선택된 수도 지역입니다. 영유권 색상은 기본 영유권에서 연구 단계가 높아질수록 같은 색상 축을 따라 이동합니다. 푸른 테두리는 평화적 영유권, 붉은 테두리는 적대적 영유권, 점선은 수도 영유권, 보라색/잠금 스타일은 조건부 분리 영유권입니다.',
     'results.nation': '국가 선택 · 태그 {tag}',
     'error.loadFailed': 'Terra Invicta 지도 데이터를 불러오지 못했습니다.',
   },
@@ -238,13 +242,14 @@ const I18N = {
     'nationInfo.summary.breakaway': 'Breakaway from {nation}',
     'nationInfo.breakaway': ' · breakaway from {nation}',
     'nationInfo.kv.status': 'Status',
+    'nationInfo.kv.capitalRegion': 'Capital region',
     'nationInfo.kv.baseTerritory': 'Base territory',
     'nationInfo.kv.directClaims': 'Direct claims',
     'nationInfo.kv.targetedRegions': 'Targeted regions',
     'nationInfo.kv.conditional': 'Conditional',
     'nationInfo.kv.claimProjects': 'Research tiers',
     'nationInfo.kv.displayMode': 'Display mode',
-    'nationInfo.hint': 'The brightest starting color marks initial/current territory. Claim colors move along one color scale from baseline claims through higher research tiers. Blue outlines are peaceful claims, red outlines are hostile claims, dashed outlines are capital claims, and purple/locked styling marks conditional breakaway claims.',
+    'nationInfo.hint': 'The brightest starting color marks initial/current territory. A hollow yellow star marks the capital region; a filled yellow star means the selected region is also the capital. Claim colors move along one color scale from baseline claims through higher research tiers. Blue outlines are peaceful claims, red outlines are hostile claims, dashed outlines are capital claims, and purple/locked styling marks conditional breakaway claims.',
     'results.nation': 'Select nation · tag {tag}',
     'error.loadFailed': 'Failed to load generated Terra Invicta map data.',
   },
@@ -427,9 +432,18 @@ let regionChoices = [];
 let activeIncomingClaimKey = '';
 let pendingHoverNation = '';
 let hoverPreviewFrame = 0;
+let hoverRegionName = '';
+let visibleNationRegionNames = new Set();
 let tooltipRegionId = null;
+let svgWrapRectCache = null;
+let tooltipSizeCache = {width: 160, height: 26, valid: false};
+let tooltipFrame = 0;
+let pendingTooltipPoint = null;
+let hoverVisualKey = '';
+let capitalMarkersKey = '';
 const nationChoiceByValue = new Map();
 const incomingClaimsByRegion = new Map();
+const regionCenterCache = new Map();
 
 const CLAIM_GRADIENT_START_HUE = 155;
 const CLAIM_GRADIENT_END_HUE = 290;
@@ -445,6 +459,18 @@ const CLAIM_TIER_COLORS = [
   claimGradientColor(4, 0.58, 0.20), // research tier 3
   claimGradientColor(5, 0.53, 0.21), // research tier 4
   claimGradientColor(6, 0.49, 0.22), // research tier 5+
+];
+// Reuse the same hue as the single-region hover fill, then fade it by tier.
+// The final hidden step is no overlay at all, which returns to the muted non-hover map.
+const HOVER_NATION_OVERLAY_COLOR = 'oklch(0.86 0.17 95)';
+const HOVER_NATION_BASE_TERRITORY_OPACITY = 0.18;
+const HOVER_NATION_TIER_OPACITIES = [
+  0.145, // no-research claim
+  0.120, // research tier 1
+  0.095, // research tier 2
+  0.070, // research tier 3
+  0.050, // research tier 4
+  0.032, // research tier 5+
 ];
 
 function injectClaimOverlayStyles() {
@@ -492,6 +518,26 @@ function injectClaimOverlayStyles() {
     .claim-overlay.basic-claim,
     .claim-overlay.research-claim {
       stroke-width:.016;
+    }
+    .hover-fill {
+      pointer-events:none;
+      fill:oklch(0.86 0.17 95 / .18);
+      stroke:none;
+      mix-blend-mode:screen;
+    }
+    .hover-outline-glow {
+      pointer-events:none;
+      fill:none;
+      stroke:oklch(0.87 0.18 92 / .68);
+      stroke-width:.058;
+      vector-effect:non-scaling-stroke;
+    }
+    .hover-outline {
+      pointer-events:none;
+      fill:none;
+      stroke:rgba(255,255,255,.82);
+      stroke-width:.024;
+      vector-effect:non-scaling-stroke;
     }
     .selection-fill {
       pointer-events:none;
@@ -615,6 +661,10 @@ function projectColor(project, i=0) {
   const tier = project ? i + 1 : 0;
   return CLAIM_TIER_COLORS[Math.min(Math.max(tier, 0), CLAIM_TIER_COLORS.length - 1)];
 }
+function hoverNationProjectOpacity(project, i=0) {
+  const tier = project ? i + 1 : 0;
+  return HOVER_NATION_TIER_OPACITIES[Math.min(Math.max(tier, 0), HOVER_NATION_TIER_OPACITIES.length - 1)];
+}
 function statusLabel(status) {
   if (status === 'breakaway_gated_existing') return t('status.breakaway_gated_existing');
   if (status === 'formable') return t('status.formable');
@@ -635,8 +685,129 @@ function isExcludedSystemClaim(claimant, project, label='') {
 }
 function labelPosition(r) {
   if (r.labels && r.labels[0]) return r.labels[0];
-  // Fallback center from first path numbers is expensive; skip.
-  return null;
+  return regionPathCenter(r);
+}
+function regionPathCenter(r) {
+  if (!r?.regionName || !r?.path) return null;
+  if (regionCenterCache.has(r.regionName)) return regionCenterCache.get(r.regionName);
+  const values = String(r.path).match(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi)?.map(Number) || [];
+  const points = [];
+  for (let i = 0; i + 1 < values.length; i += 2) {
+    const x = values[i];
+    const y = values[i + 1];
+    if (Number.isFinite(x) && Number.isFinite(y)) points.push([x, y]);
+  }
+  if (!points.length) {
+    regionCenterCache.set(r.regionName, null);
+    return null;
+  }
+  const xs = points.map(([x]) => x);
+  const ys = points.map(([, y]) => y);
+  const center = {
+    x: (Math.min(...xs) + Math.max(...xs)) / 2,
+    y: (Math.min(...ys) + Math.max(...ys)) / 2,
+  };
+  regionCenterCache.set(r.regionName, center);
+  return center;
+}
+function starPoints(cx, cy, outerRadius = 0.032, innerRadius = 0.014, points = 5) {
+  const coords = [];
+  const step = Math.PI / points;
+  for (let i = 0; i < points * 2; i += 1) {
+    const radius = i % 2 === 0 ? outerRadius : innerRadius;
+    const angle = -Math.PI / 2 + i * step;
+    coords.push(`${cx + Math.cos(angle) * radius},${cy + Math.sin(angle) * radius}`);
+  }
+  return coords.join(' ');
+}
+function capitalRegionNames(data) {
+  return [...new Set(data?.capitalRegions || [])].filter(rn => regionByName[rn]);
+}
+function capitalRegionNamesForNation(nation) {
+  return capitalRegionNames(CLAIMS_BY_NATION[nation] || null);
+}
+function capitalRegionsText(data) {
+  const names = capitalRegionNames(data).map(rn => localizedRegionName(regionByName[rn] || rn));
+  return names.length ? names.join(', ') : '-';
+}
+function isCapitalRegionForNation(nation, regionName) {
+  return !!nation && !!regionName && capitalRegionNamesForNation(nation).includes(regionName);
+}
+function selectedRegionIsCapital(regionName) {
+  if (isCapitalRegionForNation(activeNation, regionName)) return true;
+  const owner = regionByName[regionName]?.nationTag || '';
+  return isCapitalRegionForNation(owner, regionName);
+}
+function addCapitalMarkerNation(markers, nation, {selected=false} = {}) {
+  if (!nation) return;
+  for (const rn of capitalRegionNamesForNation(nation)) {
+    const existing = markers.get(rn);
+    markers.set(rn, {
+      regionName: rn,
+      nation,
+      selected: !!(selected || existing?.selected),
+    });
+  }
+}
+function collectCapitalMarkers() {
+  const markers = new Map();
+  const pinnedNation = lockedNation || activeNation;
+  if (pinnedNation) {
+    const selected = [...selectedRegionNames].some(rn => isCapitalRegionForNation(pinnedNation, rn))
+      || isCapitalRegionForNation(pinnedNation, hoverRegionName);
+    addCapitalMarkerNation(markers, pinnedNation, {selected});
+  }
+
+  for (const rn of selectedRegionNames) {
+    const owner = regionByName[rn]?.nationTag || '';
+    if (isCapitalRegionForNation(owner, rn)) addCapitalMarkerNation(markers, owner, {selected:true});
+  }
+
+  const hovered = hoverRegionName ? regionByName[hoverRegionName] : null;
+  if (hovered) {
+    if (activeNation && visibleNationRegionNames.has(hovered.regionName)) {
+      addCapitalMarkerNation(markers, activeNation, {selected:isCapitalRegionForNation(activeNation, hovered.regionName)});
+    }
+    addCapitalMarkerNation(markers, hovered.nationTag, {selected:isCapitalRegionForNation(hovered.nationTag, hovered.regionName)});
+  }
+
+  if (!markers.size) addCapitalMarkerNation(markers, hoverNation);
+  return [...markers.values()];
+}
+function renderCapitalMarkers({force=false} = {}) {
+  if (!gCapitalMarkers) return;
+  const markers = collectCapitalMarkers()
+    .sort((a, b) => a.regionName.localeCompare(b.regionName) || a.nation.localeCompare(b.nation));
+  const key = `${currentLanguage}|${markers.map(m => `${m.regionName}:${m.nation}:${m.selected ? 1 : 0}`).join('|')}`;
+  if (!force && key === capitalMarkersKey) return;
+  capitalMarkersKey = key;
+  gCapitalMarkers.replaceChildren();
+  if (!markers.length) return;
+  const frag = document.createDocumentFragment();
+  for (const markerInfo of markers) {
+    const region = regionByName[markerInfo.regionName];
+    const lab = labelPosition(region);
+    if (!lab) continue;
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    group.setAttribute('class', `capital-marker${markerInfo.selected ? ' is-selected' : ' is-idle'}`);
+    group.dataset.region = markerInfo.regionName;
+    group.dataset.nation = markerInfo.nation;
+    group.setAttribute('aria-label', `${t('nationInfo.kv.capitalRegion')}: ${localizedRegionName(region)}`);
+
+    const points = starPoints(lab.x, lab.y);
+    const shadow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    shadow.setAttribute('class', 'capital-star-shadow');
+    shadow.setAttribute('points', points);
+    shadow.setAttribute('aria-hidden', 'true');
+    group.appendChild(shadow);
+
+    const star = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    star.setAttribute('class', 'capital-star');
+    star.setAttribute('points', points);
+    group.appendChild(star);
+    frag.appendChild(group);
+  }
+  gCapitalMarkers.appendChild(frag);
 }
 
 function localizedDisplayName(displayName) {
@@ -873,7 +1044,6 @@ function setHoverPreviewNation(nation) {
   resetTransientClaimState();
   selectedRegionNames = new Set();
   updateNationOverlay(hoverNation);
-  updateSelectedRegions();
 }
 function scheduleHoverPreviewNation(nation) {
   if (lockedNation) return;
@@ -890,11 +1060,13 @@ function scheduleHoverPreviewNation(nation) {
 }
 function clearHoverPreview() {
   cancelPendingHoverPreview();
-  tooltipRegionId = null;
-  tip.style.display = 'none';
+  hideRegionTooltip();
   setHoverPill();
+  hoverRegionName = '';
+  renderHoverOutlines();
   if (lockedNation) {
     hoverNation = '';
+    renderCapitalMarkers();
     return;
   }
   if (!hoverNation && !activeNation) return;
@@ -1006,6 +1178,124 @@ function selectedRegionSummary() {
   }
   return t('selected.regions', {count: names.length});
 }
+function appendRegionHighlight(frag, r, classPrefix) {
+  for (const suffix of ['fill', 'outline-glow', 'outline']) {
+    const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('d', r.path);
+    p.setAttribute('class', `${classPrefix}-${suffix}`);
+    p.dataset.region = r.regionName;
+    frag.appendChild(p);
+  }
+}
+function appendSelectedRegionMarker(frag, r, {showDot=true} = {}) {
+  const lab = labelPosition(r);
+  if (!lab) return;
+  if (showDot) {
+    const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    dot.setAttribute('class', 'selection-dot');
+    dot.setAttribute('cx', lab.x);
+    dot.setAttribute('cy', lab.y);
+    dot.setAttribute('r', '.032');
+    dot.dataset.region = r.regionName;
+    frag.appendChild(dot);
+  }
+  const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+  text.setAttribute('class', 'selection-label');
+  text.setAttribute('x', lab.x);
+  text.setAttribute('y', lab.y - 0.052);
+  text.textContent = localizedRegionName(r);
+  text.dataset.region = r.regionName;
+  frag.appendChild(text);
+}
+function shouldShowForeignHoverNationOverlay(region) {
+  if (!region?.nationTag) return false;
+  const pinnedNation = lockedNation || activeNation;
+  if (!pinnedNation) return false;
+  if (visibleNationRegionNames.has(region.regionName)) return false;
+  return region.nationTag !== pinnedNation;
+}
+function appendForeignHoverRegion(frag, region, className, attrs={}) {
+  if (!region?.path) return;
+  const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+  p.setAttribute('d', region.path);
+  p.setAttribute('class', className);
+  p.setAttribute('fill', HOVER_NATION_OVERLAY_COLOR);
+  p.setAttribute('fill-opacity', String(attrs.fillOpacity ?? HOVER_NATION_BASE_TERRITORY_OPACITY));
+  p.dataset.region = region.regionName;
+  Object.entries(attrs).forEach(([key, value]) => {
+    if (key === 'fillOpacity' || value == null || value === '') return;
+    p.dataset[key] = String(value);
+  });
+  frag.appendChild(p);
+}
+function queueForeignHoverRegion(candidates, region, className, attrs={}) {
+  if (!region?.path) return;
+  const fillOpacity = attrs.fillOpacity ?? HOVER_NATION_BASE_TERRITORY_OPACITY;
+  const existing = candidates.get(region.regionName);
+  if (existing && existing.fillOpacity >= fillOpacity) return;
+  candidates.set(region.regionName, {region, className, attrs:{...attrs, fillOpacity}, fillOpacity});
+}
+function appendForeignHoverNationOverlay(frag, nation) {
+  if (!nation || claimModeSel.value === 'off') return;
+  const data = CLAIMS_BY_NATION[nation] || {nation, baseRegions:nationRegions.get(nation)||[], projects:[]};
+  const baseSet = new Set(data.baseRegions || nationRegions.get(nation) || []);
+  const tierByProject = countryProjectTierMap(nation, baseSet);
+  const candidates = new Map();
+  for (const rn of baseSet) {
+    queueForeignHoverRegion(
+      candidates,
+      regionByName[rn],
+      'foreign-hover-overlay foreign-hover-base',
+      {nation, tier:'base', fillOpacity:HOVER_NATION_BASE_TERRITORY_OPACITY}
+    );
+  }
+  for (const entry of getClaimKindFilteredProjectEntries(nation)) {
+    const visibleClaimRegions = (entry.regions || []).filter(rn => !baseSet.has(rn));
+    if (!visibleClaimRegions.length) continue;
+    const tier = countryProjectTier(entry, tierByProject);
+    const fillOpacity = hoverNationProjectOpacity(entry.project, tier);
+    const tierLabel = entry.project ? String(tier + 1) : 'basic';
+    for (const rn of visibleClaimRegions) {
+      queueForeignHoverRegion(
+        candidates,
+        regionByName[rn],
+        `foreign-hover-overlay ${entry.project ? 'foreign-hover-research' : 'foreign-hover-basic'}`,
+        {nation, tier:tierLabel, project:entry.project || 'base', fillOpacity}
+      );
+    }
+  }
+  for (const item of candidates.values()) {
+    appendForeignHoverRegion(frag, item.region, item.className, item.attrs);
+  }
+}
+function clearHoverVisualLayers() {
+  gForeignHoverOverlays?.replaceChildren();
+  gHoverOutlines?.replaceChildren();
+}
+function renderHoverOutlines({force=false} = {}) {
+  const rn = hoverRegionName;
+  const r = rn ? regionByName[rn] : null;
+  const hidden = !rn || selectedRegionNames.has(rn) || !r;
+  const foreign = !hidden && shouldShowForeignHoverNationOverlay(r);
+  const key = hidden
+    ? 'empty'
+    : foreign
+      ? `foreign|${r.nationTag}|${claimModeSel.value}|${claimKindSel.value}|${lockedNation || activeNation}|${visibleNationRegionNames.has(rn) ? 1 : 0}`
+      : `region|${rn}|${lockedNation || activeNation}|${selectedRegionNames.has(rn) ? 1 : 0}`;
+  if (!force && key === hoverVisualKey) return;
+  hoverVisualKey = key;
+  clearHoverVisualLayers();
+  if (hidden) return;
+
+  const frag = document.createDocumentFragment();
+  if (foreign) {
+    appendForeignHoverNationOverlay(frag, r.nationTag);
+    gForeignHoverOverlays?.appendChild(frag);
+    return;
+  }
+  appendRegionHighlight(frag, r, 'hover');
+  gHoverOutlines?.appendChild(frag);
+}
 function renderSelectionOutlines() {
   if (!gSelectionOutlines) return;
   gSelectionOutlines.innerHTML = '';
@@ -1013,36 +1303,16 @@ function renderSelectionOutlines() {
   for (const rn of selectedRegionNames) {
     const r = regionByName[rn];
     if (!r) continue;
-    for (const cls of ['selection-fill', 'selection-outline-glow', 'selection-outline']) {
-      const p = document.createElementNS('http://www.w3.org/2000/svg','path');
-      p.setAttribute('d', r.path);
-      p.setAttribute('class', cls);
-      p.dataset.region = rn;
-      frag.appendChild(p);
-    }
-    const lab = labelPosition(r);
-    if (lab) {
-      const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
-      dot.setAttribute('class', 'selection-dot');
-      dot.setAttribute('cx', lab.x);
-      dot.setAttribute('cy', lab.y);
-      dot.setAttribute('r', '.032');
-      dot.dataset.region = rn;
-      frag.appendChild(dot);
-      const text = document.createElementNS('http://www.w3.org/2000/svg','text');
-      text.setAttribute('class', 'selection-label');
-      text.setAttribute('x', lab.x);
-      text.setAttribute('y', lab.y - 0.052);
-      text.textContent = localizedRegionName(r);
-      text.dataset.region = rn;
-      frag.appendChild(text);
-    }
+    appendRegionHighlight(frag, r, 'selection');
+    appendSelectedRegionMarker(frag, r, {showDot: !selectedRegionIsCapital(rn)});
   }
   gSelectionOutlines.appendChild(frag);
 }
 function updateSelectedRegions() {
   regionPathElements.forEach(p => p.classList.toggle('selected', selectedRegionNames.has(p.dataset.region)));
+  renderHoverOutlines();
   renderSelectionOutlines();
+  renderCapitalMarkers();
   const label = selectedRegionSummary();
   if (selectedPill) {
     selectedPill.textContent = label;
@@ -1101,6 +1371,7 @@ function focusRegions(regionNames, {selectSingle=false, preserveNation=false, re
 function clearSelection({clearSearch=true} = {}) {
   activeNation = '';
   hoverNation = '';
+  hoverRegionName = '';
   lockedNation = '';
   selectedRegionNames = new Set();
   projectFilter = '';
@@ -1108,7 +1379,7 @@ function clearSelection({clearSearch=true} = {}) {
   projectSel.value = '';
   claimModeSel.value = 'all';
   cancelPendingHoverPreview();
-  tooltipRegionId = null;
+  hideRegionTooltip();
   if (clearSearch) {
     search.value = '';
     search.dataset.selectedNation = '';
@@ -1116,7 +1387,6 @@ function clearSelection({clearSearch=true} = {}) {
   onlyClaims = false;
   updateOnlyClaimsButtonLabel();
   setHoverPill();
-  tip.style.display = 'none';
   updateNationOverlay('');
   applyFilters(true);
   updateSelectedRegions();
@@ -1225,33 +1495,77 @@ function renderLabels() {
   }
   gLabels.appendChild(frag);
 }
+function invalidateTooltipLayout() {
+  svgWrapRectCache = null;
+  tooltipSizeCache.valid = false;
+}
+function svgWrapRect() {
+  if (!svgWrapRectCache) svgWrapRectCache = svgWrap.getBoundingClientRect();
+  return svgWrapRectCache;
+}
+function measureTooltipSize() {
+  if (tooltipSizeCache.valid) return tooltipSizeCache;
+  tip.classList.add('visible');
+  tooltipSizeCache = {
+    width: tip.offsetWidth || 160,
+    height: tip.offsetHeight || 26,
+    valid: true,
+  };
+  return tooltipSizeCache;
+}
+function applyTooltipPosition() {
+  tooltipFrame = 0;
+  if (!pendingTooltipPoint) return;
+  const {clientX, clientY} = pendingTooltipPoint;
+  const rect = svgWrapRect();
+  const {width, height} = measureTooltipSize();
+  const x = Math.max(8, Math.min(rect.width - width - 8, clientX - rect.left + 10));
+  const y = Math.max(8, Math.min(rect.height - height - 8, clientY - rect.top + 10));
+  tip.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+  tip.classList.add('visible');
+}
+function scheduleTooltipPosition(e) {
+  pendingTooltipPoint = {clientX: e.clientX, clientY: e.clientY};
+  if (!tooltipFrame) tooltipFrame = window.requestAnimationFrame(applyTooltipPosition);
+}
+function hideRegionTooltip() {
+  pendingTooltipPoint = null;
+  tooltipRegionId = null;
+  if (tooltipFrame) {
+    window.cancelAnimationFrame(tooltipFrame);
+    tooltipFrame = 0;
+  }
+  tip.classList.remove('visible');
+}
 function showRegionTooltip(e, r) {
   if (tooltipRegionId !== r.id) {
     tip.textContent = `${localizedRegionName(r)} (${nationDisplayName(r.nationTag)})`;
     tooltipRegionId = r.id;
+    tooltipSizeCache.valid = false;
   }
-  tip.style.display = 'block';
-  const rect = svgWrap.getBoundingClientRect();
-  const tipWidth = tip.offsetWidth || 160;
-  const tipHeight = tip.offsetHeight || 26;
-  tip.style.left = Math.max(8, Math.min(rect.width - tipWidth - 8, e.clientX - rect.left + 10)) + 'px';
-  tip.style.top = Math.max(8, Math.min(rect.height - tipHeight - 8, e.clientY - rect.top + 10)) + 'px';
+  scheduleTooltipPosition(e);
 }
-function onRegionEnter(e, r) {
+function updateHoveredRegion(r, {force=false} = {}) {
+  const regionChanged = hoverRegionName !== r.regionName;
+  const nationChanged = hoverNation !== r.nationTag;
+  if (!force && !regionChanged && (!lockedNation || !nationChanged)) return;
+  hoverRegionName = r.regionName;
   if (!lockedNation) scheduleHoverPreviewNation(r.nationTag);
   else hoverNation = r.nationTag;
+  renderHoverOutlines();
+  renderCapitalMarkers();
   setHoverPill(r);
+}
+function onRegionEnter(e, r) {
+  updateHoveredRegion(r, {force:true});
   showRegionTooltip(e, r);
 }
 function onRegionMove(e, r) {
-  if (lockedNation) hoverNation = r.nationTag;
-  else if (hoverNation !== r.nationTag || activeNation !== r.nationTag) scheduleHoverPreviewNation(r.nationTag);
-  setHoverPill(r);
+  updateHoveredRegion(r);
   showRegionTooltip(e, r);
 }
 function onRegionLeave(e) {
-  tooltipRegionId = null;
-  tip.style.display='none';
+  hideRegionTooltip();
   const next = e?.relatedTarget;
   if (next?.classList?.contains('region')) return;
   clearHoverPreview();
@@ -1259,7 +1573,9 @@ function onRegionLeave(e) {
 function onMapMove(e) {
   const target = e.target;
   if (target?.classList?.contains('region')) return;
-  if (target === svg || target === gGrid || target?.classList?.contains('graticule')) clearHoverPreview();
+  const isBlankMap = target === svg || target === gGrid || target?.classList?.contains('graticule');
+  if (!isBlankMap) return;
+  if (hoverRegionName || hoverNation || tooltipRegionId != null || pendingTooltipPoint) clearHoverPreview();
 }
 function onMapLeave() {
   clearHoverPreview();
@@ -1347,6 +1663,7 @@ function updateNationOverlay(nation) {
   gClaimLabels.innerHTML = '';
   updateProjectOptions(activeNation);
   if (!activeNation) {
+    visibleNationRegionNames = new Set();
     nationInfo.textContent = t('nationInfo.empty');
     setClaimsPillEmpty();
     applyFilters(false);
@@ -1368,6 +1685,7 @@ function updateNationOverlay(nation) {
   const claimSet = new Set();
   entries.forEach(e => e.regions.forEach(r => { if (!displayBaseSet.has(r)) claimSet.add(r); }));
   const resultSet = activeIncoming ? new Set([...(activeIncoming.resultRegions || []), ...(activeIncoming.claimantBaseRegions || [])]) : new Set([...displayBaseSet, ...claimSet]);
+  visibleNationRegionNames = new Set(resultSet);
   regionPathElements.forEach(p => {
     const rn = p.dataset.region;
     if (displayBaseSet.has(rn)) p.classList.add('owned-highlight');
@@ -1417,6 +1735,7 @@ function updateNationOverlay(nation) {
   });
   gClaimOverlays.appendChild(frag);
   gClaimLabels.appendChild(labFrag);
+  renderCapitalMarkers();
   const ownedCount = displayBaseSet.size;
   const claimCount = claimSet.size;
   const projectCount = entries.filter(e => e.project && (e.regions || []).some(rn => !displayBaseSet.has(rn))).length;
@@ -1437,6 +1756,7 @@ function updateNationOverlay(nation) {
   const summaryHtml = summaryLines.map(line => `<div class="small nationSummaryLine">${escapeHtml(line)}</div>`).join('');
   const kvRows = [
     [t('nationInfo.kv.status'), statusLabel(data.status)],
+    [t('nationInfo.kv.capitalRegion'), capitalRegionsText(data)],
     [t('nationInfo.kv.baseTerritory'), regionCountText(ownedCount)],
     [t('nationInfo.kv.directClaims'), uniqueRegionCountText(data.totalClaimRegions || 0)],
     [t('nationInfo.kv.targetedRegions'), `${regionCountText(incomingTargetRegions(data, baseSet).size)} · ${claimGroupCountText(incomingEntries.length)}`],
@@ -1446,6 +1766,7 @@ function updateNationOverlay(nation) {
   ].map(([label, value]) => `<div>${escapeHtml(label)}</div><div>${escapeHtml(value)}</div>`).join('');
   const basicInfo = `<details class="infoSubsection nationBasicSection" data-info-section="basic"${infoSectionOpenAttribute('basic')}><summary><span>${escapeHtml(t('nationInfo.basic.title'))}</span></summary><div class="infoSubsectionBody"><div class="nationTitle"><b>${escapeHtml(activeNationName)}</b> <span class="status tierBadge">${escapeHtml(activeNationTierText)}</span> ${statusBadge(data.status)}</div><div class="nationSummary">${summaryHtml}</div><div class="kv">${kvRows}</div><div class="hint">${escapeHtml(t('nationInfo.hint'))}</div></div></details>`;
   nationInfo.innerHTML = `${basicInfo}<div class="claimSections">${renderClaimSection(t('claimSection.outgoing.title'), outgoingEntries, t('claimSection.outgoing.empty'), 'outgoing')}${renderClaimSection(t('claimSection.incoming.title'), incomingEntries, t('claimSection.incoming.empty'), 'incoming')}</div>`;
+  renderCapitalMarkers();
   bindNationInfoSectionToggles();
   nationInfo.querySelectorAll('.claimListItem').forEach(el => el.addEventListener('click', () => {
     const kind = el.dataset.claimKind;
@@ -1504,6 +1825,7 @@ function updateProjectOptions(nation) {
   else projectSel.value = '';
 }
 function selectRegion(r) {
+  hoverRegionName = r.regionName;
   selectedRegionNames = new Set([r.regionName]);
   focusNation(r.nationTag);
 }
@@ -1644,6 +1966,9 @@ svg.addEventListener('click', e => {
   if (target === svg || target === gGrid || target.classList?.contains('graticule')) clearSelection();
 });
 svg.addEventListener('mouseleave', onMapLeave);
+window.addEventListener('resize', invalidateTooltipLayout);
+window.addEventListener('scroll', invalidateTooltipLayout, true);
+if ('ResizeObserver' in window) new ResizeObserver(invalidateTooltipLayout).observe(svgWrap);
 
 setHoverPill();
 setClaimsPillEmpty();
