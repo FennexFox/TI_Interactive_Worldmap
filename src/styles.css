@@ -85,7 +85,8 @@
   .selection-label { pointer-events:none; font-size:.055px; font-weight:800; fill:#fff7b8; text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.82); stroke-width:.015; }
   .claim-label { pointer-events:none; font-size:.033px; fill:rgba(255,255,255,.88); text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.7); stroke-width:.008; }
   .label { pointer-events:none; font-size:.035px; fill:rgba(255,255,255,.78); text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.65); stroke-width:.008; }
-  .tooltip { position:absolute; pointer-events:none; z-index:5; display:none; width:max-content; max-width:min(260px, calc(100% - 16px)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:rgba(8,13,24,.9); border:1px solid rgba(255,255,255,.12); border-radius:7px; padding:3px 7px; box-shadow:0 6px 18px rgba(0,0,0,.28); color:rgba(245,248,255,.92); font-size:12px; line-height:1.25; }
+  .tooltip { position:absolute; pointer-events:none; z-index:5; display:block; visibility:hidden; opacity:0; left:0; top:0; transform:translate3d(-9999px,-9999px,0); will-change:transform; contain:layout style paint; width:max-content; max-width:min(260px, calc(100% - 16px)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:rgba(8,13,24,.9); border:1px solid rgba(255,255,255,.12); border-radius:7px; padding:3px 7px; box-shadow:0 6px 18px rgba(0,0,0,.28); color:rgba(245,248,255,.92); font-size:12px; line-height:1.25; transition:opacity .06s ease; }
+  .tooltip.visible { visibility:visible; opacity:1; }
   .panel { margin-top:10px; background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:12px; }
   .sideCardBody > .panel { margin-top:0; }
   .kv { display:grid; grid-template-columns:115px 1fr; gap:6px; font-size:13px; }

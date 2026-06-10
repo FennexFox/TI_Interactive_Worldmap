@@ -435,6 +435,12 @@ let hoverPreviewFrame = 0;
 let hoverRegionName = '';
 let visibleNationRegionNames = new Set();
 let tooltipRegionId = null;
+let svgWrapRectCache = null;
+let tooltipSizeCache = {width: 160, height: 26, valid: false};
+let tooltipFrame = 0;
+let pendingTooltipPoint = null;
+let hoverVisualKey = '';
+let capitalMarkersKey = '';
 const nationChoiceByValue = new Map();
 const incomingClaimsByRegion = new Map();
 const regionCenterCache = new Map();
@@ -785,10 +791,14 @@ function collectCapitalMarkers() {
   if (!markers.size) addCapitalMarkerNation(markers, hoverNation);
   return [...markers.values()];
 }
-function renderCapitalMarkers() {
+function renderCapitalMarkers({force=false} = {}) {
   if (!gCapitalMarkers) return;
-  gCapitalMarkers.innerHTML = '';
-  const markers = collectCapitalMarkers();
+  const markers = collectCapitalMarkers()
+    .sort((a, b) => a.regionName.localeCompare(b.regionName) || a.nation.localeCompare(b.nation));
+  const key = `${currentLanguage}|${markers.map(m => `${m.regionName}:${m.nation}:${m.selected ? 1 : 0}`).join('|')}`;
+  if (!force && key === capitalMarkersKey) return;
+  capitalMarkersKey = key;
+  gCapitalMarkers.replaceChildren();
   if (!markers.length) return;
   const frag = document.createDocumentFragment();
   for (const markerInfo of markers) {
@@ -1051,7 +1061,6 @@ function setHoverPreviewNation(nation) {
   resetTransientClaimState();
   selectedRegionNames = new Set();
   updateNationOverlay(hoverNation);
-  updateSelectedRegions();
 }
 function scheduleHoverPreviewNation(nation) {
   if (lockedNation) return;
@@ -1068,8 +1077,7 @@ function scheduleHoverPreviewNation(nation) {
 }
 function clearHoverPreview() {
   cancelPendingHoverPreview();
-  tooltipRegionId = null;
-  tip.style.display = 'none';
+  hideRegionTooltip();
   setHoverPill();
   hoverRegionName = '';
   renderHoverOutlines();
@@ -1277,28 +1285,33 @@ function appendForeignHoverNationOverlay(frag, nation) {
     appendForeignHoverRegion(frag, item.region, item.className, item.attrs);
   }
 }
-function renderForeignHoverOverlays() {
-  if (!gForeignHoverOverlays) return;
-  gForeignHoverOverlays.innerHTML = '';
-  const rn = hoverRegionName;
-  if (!rn || selectedRegionNames.has(rn)) return;
-  const r = regionByName[rn];
-  if (!shouldShowForeignHoverNationOverlay(r)) return;
-  const frag = document.createDocumentFragment();
-  appendForeignHoverNationOverlay(frag, r.nationTag);
-  gForeignHoverOverlays.appendChild(frag);
+function clearHoverVisualLayers() {
+  gForeignHoverOverlays?.replaceChildren();
+  gHoverOutlines?.replaceChildren();
 }
-function renderHoverOutlines() {
-  renderForeignHoverOverlays();
-  if (!gHoverOutlines) return;
-  gHoverOutlines.innerHTML = '';
+function renderHoverOutlines({force=false} = {}) {
   const rn = hoverRegionName;
-  if (!rn || selectedRegionNames.has(rn)) return;
-  const r = regionByName[rn];
-  if (!r || shouldShowForeignHoverNationOverlay(r)) return;
+  const r = rn ? regionByName[rn] : null;
+  const hidden = !rn || selectedRegionNames.has(rn) || !r;
+  const foreign = !hidden && shouldShowForeignHoverNationOverlay(r);
+  const key = hidden
+    ? 'empty'
+    : foreign
+      ? `foreign|${r.nationTag}|${claimModeSel.value}|${claimKindSel.value}|${lockedNation || activeNation}|${visibleNationRegionNames.has(rn) ? 1 : 0}`
+      : `region|${rn}|${lockedNation || activeNation}|${selectedRegionNames.has(rn) ? 1 : 0}`;
+  if (!force && key === hoverVisualKey) return;
+  hoverVisualKey = key;
+  clearHoverVisualLayers();
+  if (hidden) return;
+
   const frag = document.createDocumentFragment();
+  if (foreign) {
+    appendForeignHoverNationOverlay(frag, r.nationTag);
+    gForeignHoverOverlays?.appendChild(frag);
+    return;
+  }
   appendRegionHighlight(frag, r, 'hover');
-  gHoverOutlines.appendChild(frag);
+  gHoverOutlines?.appendChild(frag);
 }
 function renderSelectionOutlines() {
   if (!gSelectionOutlines) return;
@@ -1383,7 +1396,7 @@ function clearSelection({clearSearch=true} = {}) {
   projectSel.value = '';
   claimModeSel.value = 'all';
   cancelPendingHoverPreview();
-  tooltipRegionId = null;
+  hideRegionTooltip();
   if (clearSearch) {
     search.value = '';
     search.dataset.selectedNation = '';
@@ -1391,7 +1404,6 @@ function clearSelection({clearSearch=true} = {}) {
   onlyClaims = false;
   updateOnlyClaimsButtonLabel();
   setHoverPill();
-  tip.style.display = 'none';
   updateNationOverlay('');
   applyFilters(true);
   updateSelectedRegions();
@@ -1500,39 +1512,77 @@ function renderLabels() {
   }
   gLabels.appendChild(frag);
 }
+function invalidateTooltipLayout() {
+  svgWrapRectCache = null;
+  tooltipSizeCache.valid = false;
+}
+function svgWrapRect() {
+  if (!svgWrapRectCache) svgWrapRectCache = svgWrap.getBoundingClientRect();
+  return svgWrapRectCache;
+}
+function measureTooltipSize() {
+  if (tooltipSizeCache.valid) return tooltipSizeCache;
+  tip.classList.add('visible');
+  tooltipSizeCache = {
+    width: tip.offsetWidth || 160,
+    height: tip.offsetHeight || 26,
+    valid: true,
+  };
+  return tooltipSizeCache;
+}
+function applyTooltipPosition() {
+  tooltipFrame = 0;
+  if (!pendingTooltipPoint) return;
+  const {clientX, clientY} = pendingTooltipPoint;
+  const rect = svgWrapRect();
+  const {width, height} = measureTooltipSize();
+  const x = Math.max(8, Math.min(rect.width - width - 8, clientX - rect.left + 10));
+  const y = Math.max(8, Math.min(rect.height - height - 8, clientY - rect.top + 10));
+  tip.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+  tip.classList.add('visible');
+}
+function scheduleTooltipPosition(e) {
+  pendingTooltipPoint = {clientX: e.clientX, clientY: e.clientY};
+  if (!tooltipFrame) tooltipFrame = window.requestAnimationFrame(applyTooltipPosition);
+}
+function hideRegionTooltip() {
+  pendingTooltipPoint = null;
+  tooltipRegionId = null;
+  if (tooltipFrame) {
+    window.cancelAnimationFrame(tooltipFrame);
+    tooltipFrame = 0;
+  }
+  tip.classList.remove('visible');
+}
 function showRegionTooltip(e, r) {
   if (tooltipRegionId !== r.id) {
     tip.textContent = `${localizedRegionName(r)} (${nationDisplayName(r.nationTag)})`;
     tooltipRegionId = r.id;
+    tooltipSizeCache.valid = false;
   }
-  tip.style.display = 'block';
-  const rect = svgWrap.getBoundingClientRect();
-  const tipWidth = tip.offsetWidth || 160;
-  const tipHeight = tip.offsetHeight || 26;
-  tip.style.left = Math.max(8, Math.min(rect.width - tipWidth - 8, e.clientX - rect.left + 10)) + 'px';
-  tip.style.top = Math.max(8, Math.min(rect.height - tipHeight - 8, e.clientY - rect.top + 10)) + 'px';
+  scheduleTooltipPosition(e);
 }
-function onRegionEnter(e, r) {
+function updateHoveredRegion(r, {force=false} = {}) {
+  const regionChanged = hoverRegionName !== r.regionName;
+  const nationChanged = hoverNation !== r.nationTag;
+  if (!force && !regionChanged && (!lockedNation || !nationChanged)) return;
   hoverRegionName = r.regionName;
   if (!lockedNation) scheduleHoverPreviewNation(r.nationTag);
   else hoverNation = r.nationTag;
   renderHoverOutlines();
   renderCapitalMarkers();
   setHoverPill(r);
+}
+function onRegionEnter(e, r) {
+  updateHoveredRegion(r, {force:true});
   showRegionTooltip(e, r);
 }
 function onRegionMove(e, r) {
-  hoverRegionName = r.regionName;
-  if (lockedNation) hoverNation = r.nationTag;
-  else if (hoverNation !== r.nationTag || activeNation !== r.nationTag) scheduleHoverPreviewNation(r.nationTag);
-  renderHoverOutlines();
-  renderCapitalMarkers();
-  setHoverPill(r);
+  updateHoveredRegion(r);
   showRegionTooltip(e, r);
 }
 function onRegionLeave(e) {
-  tooltipRegionId = null;
-  tip.style.display='none';
+  hideRegionTooltip();
   const next = e?.relatedTarget;
   if (next?.classList?.contains('region')) return;
   clearHoverPreview();
@@ -1540,7 +1590,9 @@ function onRegionLeave(e) {
 function onMapMove(e) {
   const target = e.target;
   if (target?.classList?.contains('region')) return;
-  if (target === svg || target === gGrid || target?.classList?.contains('graticule')) clearHoverPreview();
+  const isBlankMap = target === svg || target === gGrid || target?.classList?.contains('graticule');
+  if (!isBlankMap) return;
+  if (hoverRegionName || hoverNation || tooltipRegionId != null || pendingTooltipPoint) clearHoverPreview();
 }
 function onMapLeave() {
   clearHoverPreview();
@@ -1700,7 +1752,7 @@ function updateNationOverlay(nation) {
   });
   gClaimOverlays.appendChild(frag);
   gClaimLabels.appendChild(labFrag);
-  renderCapitalMarkers(data);
+  renderCapitalMarkers();
   const ownedCount = displayBaseSet.size;
   const claimCount = claimSet.size;
   const projectCount = entries.filter(e => e.project && (e.regions || []).some(rn => !displayBaseSet.has(rn))).length;
@@ -1931,6 +1983,9 @@ svg.addEventListener('click', e => {
   if (target === svg || target === gGrid || target.classList?.contains('graticule')) clearSelection();
 });
 svg.addEventListener('mouseleave', onMapLeave);
+window.addEventListener('resize', invalidateTooltipLayout);
+window.addEventListener('scroll', invalidateTooltipLayout, true);
+if ('ResizeObserver' in window) new ResizeObserver(invalidateTooltipLayout).observe(svgWrap);
 
 setHoverPill();
 setClaimsPillEmpty();
