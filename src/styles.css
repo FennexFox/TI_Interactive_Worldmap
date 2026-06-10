@@ -85,18 +85,11 @@
   .item:last-child { border-bottom:0; }
   .item:hover { background:rgba(255,255,255,.06); }
   .small { color:var(--muted); font-size:12px; }
-  .legend { display:flex; flex-direction:column; gap:6px; max-height:260px; overflow:auto; }
-  .legendItem { display:grid; grid-template-columns:18px 1fr auto; gap:8px; align-items:center; padding:6px 8px; border-radius:9px; background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.07); color:var(--text); font:inherit; text-align:left; cursor:pointer; }
-  .legendItem:hover { background:rgba(255,255,255,.08); border-color:rgba(145,183,255,.28); }
-  .legendItem.active { background:rgba(145,183,255,.14); border-color:rgba(145,183,255,.42); }
-  .legendGroup { display:flex; flex-direction:column; gap:5px; }
-  .legendGroup.active { border-radius:11px; background:rgba(145,183,255,.045); padding:3px; border:1px solid rgba(145,183,255,.18); }
   .legendRegionList { display:flex; flex-direction:column; gap:4px; margin-left:26px; padding-left:8px; border-left:1px solid rgba(255,255,255,.12); }
   .legendRegionItem { display:flex; flex-direction:column; align-items:flex-start; gap:1px; width:100%; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07); color:var(--text); font:inherit; text-align:left; cursor:pointer; }
   .legendRegionItem:hover { background:rgba(255,255,255,.075); border-color:rgba(255,255,255,.18); }
   .legendRegionItem.active { background:rgba(255,247,184,.12); border-color:rgba(255,247,184,.42); }
   .legendRegionItem span { color:var(--muted); font-size:12px; }
-  .swatch { width:16px; height:16px; border-radius:5px; border:1px solid rgba(255,255,255,.35); }
   .tag { font-size:11px; color:#cbd5e1; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); border-radius:999px; padding:2px 7px; }
   .status { display:inline-block; margin-left:6px; border:1px solid rgba(255,255,255,.14); border-radius:999px; padding:2px 7px; color:#cbd5e1; font-size:11px; font-weight:500; vertical-align:middle; }
   .status.formable { border-color:rgba(255,240,166,.35); color:#fff0a6; }
