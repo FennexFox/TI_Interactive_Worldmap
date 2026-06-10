@@ -519,26 +519,6 @@ function injectClaimOverlayStyles() {
     .claim-overlay.research-claim {
       stroke-width:.016;
     }
-    .hover-fill {
-      pointer-events:none;
-      fill:oklch(0.86 0.17 95 / .18);
-      stroke:none;
-      mix-blend-mode:screen;
-    }
-    .hover-outline-glow {
-      pointer-events:none;
-      fill:none;
-      stroke:oklch(0.87 0.18 92 / .68);
-      stroke-width:.058;
-      vector-effect:non-scaling-stroke;
-    }
-    .hover-outline {
-      pointer-events:none;
-      fill:none;
-      stroke:rgba(255,255,255,.82);
-      stroke-width:.024;
-      vector-effect:non-scaling-stroke;
-    }
     .selection-fill {
       pointer-events:none;
       fill:oklch(0.86 0.17 95 / .26);
