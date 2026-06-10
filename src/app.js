@@ -728,8 +728,14 @@ function addCapitalMarkerNation(markers, nation, {selected=false} = {}) {
 }
 function collectCapitalMarkers() {
   const markers = new Map();
+  const pinnedNation = lockedNation || activeNation;
+  if (pinnedNation) {
+    const selected = [...selectedRegionNames].some(rn => isCapitalRegionForNation(pinnedNation, rn))
+      || isCapitalRegionForNation(pinnedNation, hoverRegionName);
+    addCapitalMarkerNation(markers, pinnedNation, {selected});
+  }
+
   for (const rn of selectedRegionNames) {
-    if (isCapitalRegionForNation(activeNation, rn)) addCapitalMarkerNation(markers, activeNation, {selected:true});
     const owner = regionByName[rn]?.nationTag || '';
     if (isCapitalRegionForNation(owner, rn)) addCapitalMarkerNation(markers, owner, {selected:true});
   }
@@ -742,7 +748,7 @@ function collectCapitalMarkers() {
     addCapitalMarkerNation(markers, hovered.nationTag, {selected:isCapitalRegionForNation(hovered.nationTag, hovered.regionName)});
   }
 
-  if (!markers.size) addCapitalMarkerNation(markers, lockedNation || activeNation || hoverNation);
+  if (!markers.size) addCapitalMarkerNation(markers, hoverNation);
   return [...markers.values()];
 }
 function renderCapitalMarkers() {
