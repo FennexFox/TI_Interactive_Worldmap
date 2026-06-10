@@ -14,6 +14,7 @@ const gRegions = document.getElementById('regions');
 const gLabels = document.getElementById('labels');
 const gClaimLabels = document.getElementById('claimLabels');
 const gGrid = document.getElementById('grid');
+const gForeignHoverOverlays = document.getElementById('foreignHoverOverlays');
 const gClaimOverlays = document.getElementById('claimOverlays');
 const gCapitalMarkers = document.getElementById('capitalMarkers');
 const gHoverOutlines = document.getElementById('hoverOutlines');
@@ -453,6 +454,20 @@ const CLAIM_TIER_COLORS = [
   claimGradientColor(5, 0.53, 0.21), // research tier 4
   claimGradientColor(6, 0.49, 0.22), // research tier 5+
 ];
+const HOVER_NATION_GRADIENT_START = {lightness:0.54, chroma:0.09, hue:95};
+const HOVER_NATION_GRADIENT_END = {lightness:0.32, chroma:0.026, hue:260};
+const HOVER_NATION_GRADIENT_TARGET_STEP = CLAIM_GRADIENT_STEPS + 1;
+const hoverNationGradientComponent = (start, end, step) => start + (end - start) * (step / HOVER_NATION_GRADIENT_TARGET_STEP);
+const hoverNationGradientColor = step => `oklch(${hoverNationGradientComponent(HOVER_NATION_GRADIENT_START.lightness, HOVER_NATION_GRADIENT_END.lightness, step).toFixed(3)} ${hoverNationGradientComponent(HOVER_NATION_GRADIENT_START.chroma, HOVER_NATION_GRADIENT_END.chroma, step).toFixed(3)} ${hoverNationGradientComponent(HOVER_NATION_GRADIENT_START.hue, HOVER_NATION_GRADIENT_END.hue, step).toFixed(1)})`;
+const HOVER_NATION_BASE_TERRITORY_COLOR = hoverNationGradientColor(0);
+const HOVER_NATION_TIER_COLORS = [
+  hoverNationGradientColor(1), // no-research claim
+  hoverNationGradientColor(2), // research tier 1
+  hoverNationGradientColor(3), // research tier 2
+  hoverNationGradientColor(4), // research tier 3
+  hoverNationGradientColor(5), // research tier 4
+  hoverNationGradientColor(6), // research tier 5+
+];
 
 function injectClaimOverlayStyles() {
   const style = document.createElement('style');
@@ -519,6 +534,23 @@ function injectClaimOverlayStyles() {
       stroke:rgba(255,255,255,.82);
       stroke-width:.024;
       vector-effect:non-scaling-stroke;
+    }
+    .foreign-hover-overlay {
+      pointer-events:none;
+      stroke:rgba(255,245,226,.52);
+      stroke-width:.01;
+      vector-effect:non-scaling-stroke;
+      mix-blend-mode:normal;
+      opacity:1;
+      filter:none;
+    }
+    .foreign-hover-base {
+      stroke:rgba(255,251,235,.68);
+      stroke-width:.014;
+    }
+    .foreign-hover-basic,
+    .foreign-hover-research {
+      stroke:rgba(255,245,226,.46);
     }
     .selection-fill {
       pointer-events:none;
@@ -641,6 +673,10 @@ function countryProjectTier(entry, tierByProject) {
 function projectColor(project, i=0) {
   const tier = project ? i + 1 : 0;
   return CLAIM_TIER_COLORS[Math.min(Math.max(tier, 0), CLAIM_TIER_COLORS.length - 1)];
+}
+function hoverNationProjectColor(project, i=0) {
+  const tier = project ? i + 1 : 0;
+  return HOVER_NATION_TIER_COLORS[Math.min(Math.max(tier, 0), HOVER_NATION_TIER_COLORS.length - 1)];
 }
 function statusLabel(status) {
   if (status === 'breakaway_gated_existing') return t('status.breakaway_gated_existing');
@@ -1182,13 +1218,76 @@ function appendSelectedRegionMarker(frag, r, {showDot=true} = {}) {
   text.dataset.region = r.regionName;
   frag.appendChild(text);
 }
+function shouldShowForeignHoverNationOverlay(region) {
+  if (!region?.nationTag) return false;
+  const pinnedNation = lockedNation || activeNation;
+  if (!pinnedNation) return false;
+  if (visibleNationRegionNames.has(region.regionName)) return false;
+  return region.nationTag !== pinnedNation;
+}
+function appendForeignHoverRegion(frag, region, fill, className, attrs={}) {
+  if (!region?.path) return;
+  const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+  p.setAttribute('d', region.path);
+  p.setAttribute('class', className);
+  p.setAttribute('fill', fill);
+  p.dataset.region = region.regionName;
+  Object.entries(attrs).forEach(([key, value]) => {
+    if (value == null || value === '') return;
+    p.dataset[key] = String(value);
+  });
+  frag.appendChild(p);
+}
+function appendForeignHoverNationOverlay(frag, nation) {
+  if (!nation || claimModeSel.value === 'off') return;
+  const data = CLAIMS_BY_NATION[nation] || {nation, baseRegions:nationRegions.get(nation)||[], projects:[]};
+  const baseSet = new Set(data.baseRegions || nationRegions.get(nation) || []);
+  const tierByProject = countryProjectTierMap(nation, baseSet);
+  for (const rn of baseSet) {
+    appendForeignHoverRegion(
+      frag,
+      regionByName[rn],
+      HOVER_NATION_BASE_TERRITORY_COLOR,
+      'foreign-hover-overlay foreign-hover-base',
+      {nation, tier:'base'}
+    );
+  }
+  for (const entry of getClaimKindFilteredProjectEntries(nation)) {
+    const visibleClaimRegions = (entry.regions || []).filter(rn => !baseSet.has(rn));
+    if (!visibleClaimRegions.length) continue;
+    const tier = countryProjectTier(entry, tierByProject);
+    const fill = hoverNationProjectColor(entry.project, tier);
+    const tierLabel = entry.project ? String(tier + 1) : 'basic';
+    for (const rn of visibleClaimRegions) {
+      appendForeignHoverRegion(
+        frag,
+        regionByName[rn],
+        fill,
+        `foreign-hover-overlay ${entry.project ? 'foreign-hover-research' : 'foreign-hover-basic'}`,
+        {nation, tier:tierLabel, project:entry.project || 'base'}
+      );
+    }
+  }
+}
+function renderForeignHoverOverlays() {
+  if (!gForeignHoverOverlays) return;
+  gForeignHoverOverlays.innerHTML = '';
+  const rn = hoverRegionName;
+  if (!rn || selectedRegionNames.has(rn)) return;
+  const r = regionByName[rn];
+  if (!shouldShowForeignHoverNationOverlay(r)) return;
+  const frag = document.createDocumentFragment();
+  appendForeignHoverNationOverlay(frag, r.nationTag);
+  gForeignHoverOverlays.appendChild(frag);
+}
 function renderHoverOutlines() {
+  renderForeignHoverOverlays();
   if (!gHoverOutlines) return;
   gHoverOutlines.innerHTML = '';
   const rn = hoverRegionName;
   if (!rn || selectedRegionNames.has(rn)) return;
   const r = regionByName[rn];
-  if (!r) return;
+  if (!r || shouldShowForeignHoverNationOverlay(r)) return;
   const frag = document.createDocumentFragment();
   appendRegionHighlight(frag, r, 'hover');
   gHoverOutlines.appendChild(frag);
