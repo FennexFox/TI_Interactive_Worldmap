@@ -3,10 +3,29 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+INLINE_DATA_COMMENT_RE = re.compile(r"(^|\s)//")
+
+
+def strings_with_inline_comments(value: object, path: str = "$", limit: int = 5) -> list[str]:
+    hits: list[str] = []
+    if isinstance(value, dict):
+        for key, item in value.items():
+            hits.extend(strings_with_inline_comments(item, f"{path}.{key}", limit))
+            if len(hits) >= limit:
+                break
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            hits.extend(strings_with_inline_comments(item, f"{path}[{index}]", limit))
+            if len(hits) >= limit:
+                break
+    elif isinstance(value, str) and INLINE_DATA_COMMENT_RE.search(value):
+        hits.append(f"{path}: {value!r}")
+    return hits[:limit]
 
 
 def require(condition: bool, message: str) -> None:
@@ -69,6 +88,8 @@ def main() -> int:
     nations = object_value(nation_catalog.get("nations"))
     research_counts = object_value(research_catalog.get("counts"))
     claim_nation_meta = object_value(claim.get("nationMeta"))
+    comment_hits = strings_with_inline_comments(region)
+    require(not comment_hits, "inline data comments leaked into region map: " + "; ".join(comment_hits))
     require(number_value(region_summary, "regions") >= 300, "region map unexpectedly small")
     require(str(region_summary.get("scenarioYear")) in ("2022", "2026", "2070"), "region map scenarioYear must be one of 2022, 2026, or 2070")
     require(number_value(claim_stats, "claimRowsNormalized") >= 2000, "claim row count unexpectedly small")
