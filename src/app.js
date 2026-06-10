@@ -1237,14 +1237,22 @@ function appendForeignHoverRegion(frag, region, className, attrs={}) {
   });
   frag.appendChild(p);
 }
+function queueForeignHoverRegion(candidates, region, className, attrs={}) {
+  if (!region?.path) return;
+  const fillOpacity = attrs.fillOpacity ?? HOVER_NATION_BASE_TERRITORY_OPACITY;
+  const existing = candidates.get(region.regionName);
+  if (existing && existing.fillOpacity >= fillOpacity) return;
+  candidates.set(region.regionName, {region, className, attrs:{...attrs, fillOpacity}, fillOpacity});
+}
 function appendForeignHoverNationOverlay(frag, nation) {
   if (!nation || claimModeSel.value === 'off') return;
   const data = CLAIMS_BY_NATION[nation] || {nation, baseRegions:nationRegions.get(nation)||[], projects:[]};
   const baseSet = new Set(data.baseRegions || nationRegions.get(nation) || []);
   const tierByProject = countryProjectTierMap(nation, baseSet);
+  const candidates = new Map();
   for (const rn of baseSet) {
-    appendForeignHoverRegion(
-      frag,
+    queueForeignHoverRegion(
+      candidates,
       regionByName[rn],
       'foreign-hover-overlay foreign-hover-base',
       {nation, tier:'base', fillOpacity:HOVER_NATION_BASE_TERRITORY_OPACITY}
@@ -1257,13 +1265,16 @@ function appendForeignHoverNationOverlay(frag, nation) {
     const fillOpacity = hoverNationProjectOpacity(entry.project, tier);
     const tierLabel = entry.project ? String(tier + 1) : 'basic';
     for (const rn of visibleClaimRegions) {
-      appendForeignHoverRegion(
-        frag,
+      queueForeignHoverRegion(
+        candidates,
         regionByName[rn],
         `foreign-hover-overlay ${entry.project ? 'foreign-hover-research' : 'foreign-hover-basic'}`,
         {nation, tier:tierLabel, project:entry.project || 'base', fillOpacity}
       );
     }
+  }
+  for (const item of candidates.values()) {
+    appendForeignHoverRegion(frag, item.region, item.className, item.attrs);
   }
 }
 function renderForeignHoverOverlays() {

@@ -156,6 +156,10 @@ test('selected nation marks its capital region with a fillable star', async ({ p
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Ontario"]')).toHaveCount(1);
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Ontario"]')).toHaveClass(/is-selected/);
 
+  await page.locator('#regions .region[data-region="Bolivia"]').hover();
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Bolivia"]')).toHaveCount(0);
+  await expect(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="BOL"][data-region="Brasilia"]')).toHaveCount(1);
+
   await page.locator('#regions .region[data-region="Brasilia"]').hover();
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]')).toHaveClass(/is-selected/);
 
