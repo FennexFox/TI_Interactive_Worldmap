@@ -66,7 +66,17 @@
   .claim-overlay.peaceful { stroke:#9ee7ff; stroke-width:.015; }
   .claim-overlay.hostile { stroke:var(--hostile); stroke-width:.023; }
   .claim-overlay.capital { stroke-dasharray:.035 .018; stroke-width:.027; }
+
+  #capitalMarkers { pointer-events:none; opacity:1; mix-blend-mode:normal; }
+  .capital-marker { pointer-events:none; opacity:1; }
+  .capital-star-shadow { fill:rgba(45,25,0,.74); stroke:none; stroke-width:0; stroke-linejoin:round; vector-effect:non-scaling-stroke; }
+  .capital-star { fill:rgba(255,184,61,.12); stroke:#ffd84d; stroke-width:1.75px; stroke-linejoin:round; vector-effect:non-scaling-stroke; paint-order:stroke fill; filter:drop-shadow(0 0 1.25px rgba(255,216,77,.42)); }
+  .capital-marker.is-selected .capital-star-shadow { fill:rgba(59,33,0,.82); stroke:none; stroke-width:0; }
+  .capital-marker.is-selected .capital-star { fill:rgba(255,184,61,.86); stroke:#fff1a8; stroke-width:2px; filter:drop-shadow(0 0 2px rgba(255,184,61,.55)); }
   .claim-overlay.gated { stroke:var(--gated); stroke-dasharray:.02 .018; stroke-width:.024; opacity:.72; }
+  .hover-fill { pointer-events:none; fill:oklch(0.86 0.17 95 / .18); stroke:none; mix-blend-mode:screen; }
+  .hover-outline-glow { pointer-events:none; fill:none; stroke:oklch(0.87 0.18 92 / .68); stroke-width:.058; vector-effect:non-scaling-stroke; }
+  .hover-outline { pointer-events:none; fill:none; stroke:rgba(255,255,255,.82); stroke-width:.024; vector-effect:non-scaling-stroke; }
   .selection-fill { pointer-events:none; fill:oklch(0.86 0.17 95 / .26); stroke:none; mix-blend-mode:screen; }
   .selection-outline-glow { pointer-events:none; fill:none; stroke:oklch(0.87 0.18 92 / .92); stroke-width:.082; vector-effect:non-scaling-stroke; }
   .selection-outline { pointer-events:none; fill:none; stroke:white; stroke-width:.034; vector-effect:non-scaling-stroke; }
