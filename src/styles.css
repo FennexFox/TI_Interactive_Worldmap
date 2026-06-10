@@ -77,9 +77,7 @@
   .hover-fill { pointer-events:none; fill:oklch(0.86 0.17 95 / .18); stroke:none; mix-blend-mode:screen; }
   .hover-outline-glow { pointer-events:none; fill:none; stroke:oklch(0.87 0.18 92 / .68); stroke-width:.058; vector-effect:non-scaling-stroke; }
   .hover-outline { pointer-events:none; fill:none; stroke:rgba(255,255,255,.82); stroke-width:.024; vector-effect:non-scaling-stroke; }
-  .foreign-hover-overlay { pointer-events:none; stroke:rgba(255,245,226,.52); stroke-width:.01; vector-effect:non-scaling-stroke; mix-blend-mode:normal; opacity:1; filter:none; }
-  .foreign-hover-base { stroke:rgba(255,251,235,.68); stroke-width:.014; }
-  .foreign-hover-basic, .foreign-hover-research { stroke:rgba(255,245,226,.46); }
+  .foreign-hover-overlay { pointer-events:none; stroke:none; mix-blend-mode:screen; opacity:1; filter:none; }
   .selection-fill { pointer-events:none; fill:oklch(0.86 0.17 95 / .26); stroke:none; mix-blend-mode:screen; }
   .selection-outline-glow { pointer-events:none; fill:none; stroke:oklch(0.87 0.18 92 / .92); stroke-width:.082; vector-effect:non-scaling-stroke; }
   .selection-outline { pointer-events:none; fill:none; stroke:white; stroke-width:.034; vector-effect:non-scaling-stroke; }

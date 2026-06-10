@@ -454,19 +454,17 @@ const CLAIM_TIER_COLORS = [
   claimGradientColor(5, 0.53, 0.21), // research tier 4
   claimGradientColor(6, 0.49, 0.22), // research tier 5+
 ];
-const HOVER_NATION_GRADIENT_START = {lightness:0.54, chroma:0.09, hue:95};
-const HOVER_NATION_GRADIENT_END = {lightness:0.32, chroma:0.026, hue:260};
-const HOVER_NATION_GRADIENT_TARGET_STEP = CLAIM_GRADIENT_STEPS + 1;
-const hoverNationGradientComponent = (start, end, step) => start + (end - start) * (step / HOVER_NATION_GRADIENT_TARGET_STEP);
-const hoverNationGradientColor = step => `oklch(${hoverNationGradientComponent(HOVER_NATION_GRADIENT_START.lightness, HOVER_NATION_GRADIENT_END.lightness, step).toFixed(3)} ${hoverNationGradientComponent(HOVER_NATION_GRADIENT_START.chroma, HOVER_NATION_GRADIENT_END.chroma, step).toFixed(3)} ${hoverNationGradientComponent(HOVER_NATION_GRADIENT_START.hue, HOVER_NATION_GRADIENT_END.hue, step).toFixed(1)})`;
-const HOVER_NATION_BASE_TERRITORY_COLOR = hoverNationGradientColor(0);
-const HOVER_NATION_TIER_COLORS = [
-  hoverNationGradientColor(1), // no-research claim
-  hoverNationGradientColor(2), // research tier 1
-  hoverNationGradientColor(3), // research tier 2
-  hoverNationGradientColor(4), // research tier 3
-  hoverNationGradientColor(5), // research tier 4
-  hoverNationGradientColor(6), // research tier 5+
+// Reuse the same hue as the single-region hover fill, then fade it by tier.
+// The final hidden step is no overlay at all, which returns to the muted non-hover map.
+const HOVER_NATION_OVERLAY_COLOR = 'oklch(0.86 0.17 95)';
+const HOVER_NATION_BASE_TERRITORY_OPACITY = 0.18;
+const HOVER_NATION_TIER_OPACITIES = [
+  0.145, // no-research claim
+  0.120, // research tier 1
+  0.095, // research tier 2
+  0.070, // research tier 3
+  0.050, // research tier 4
+  0.032, // research tier 5+
 ];
 
 function injectClaimOverlayStyles() {
@@ -674,9 +672,9 @@ function projectColor(project, i=0) {
   const tier = project ? i + 1 : 0;
   return CLAIM_TIER_COLORS[Math.min(Math.max(tier, 0), CLAIM_TIER_COLORS.length - 1)];
 }
-function hoverNationProjectColor(project, i=0) {
+function hoverNationProjectOpacity(project, i=0) {
   const tier = project ? i + 1 : 0;
-  return HOVER_NATION_TIER_COLORS[Math.min(Math.max(tier, 0), HOVER_NATION_TIER_COLORS.length - 1)];
+  return HOVER_NATION_TIER_OPACITIES[Math.min(Math.max(tier, 0), HOVER_NATION_TIER_OPACITIES.length - 1)];
 }
 function statusLabel(status) {
   if (status === 'breakaway_gated_existing') return t('status.breakaway_gated_existing');
@@ -1225,15 +1223,16 @@ function shouldShowForeignHoverNationOverlay(region) {
   if (visibleNationRegionNames.has(region.regionName)) return false;
   return region.nationTag !== pinnedNation;
 }
-function appendForeignHoverRegion(frag, region, fill, className, attrs={}) {
+function appendForeignHoverRegion(frag, region, className, attrs={}) {
   if (!region?.path) return;
   const p = document.createElementNS('http://www.w3.org/2000/svg','path');
   p.setAttribute('d', region.path);
   p.setAttribute('class', className);
-  p.setAttribute('fill', fill);
+  p.setAttribute('fill', HOVER_NATION_OVERLAY_COLOR);
+  p.setAttribute('fill-opacity', String(attrs.fillOpacity ?? HOVER_NATION_BASE_TERRITORY_OPACITY));
   p.dataset.region = region.regionName;
   Object.entries(attrs).forEach(([key, value]) => {
-    if (value == null || value === '') return;
+    if (key === 'fillOpacity' || value == null || value === '') return;
     p.dataset[key] = String(value);
   });
   frag.appendChild(p);
@@ -1247,24 +1246,22 @@ function appendForeignHoverNationOverlay(frag, nation) {
     appendForeignHoverRegion(
       frag,
       regionByName[rn],
-      HOVER_NATION_BASE_TERRITORY_COLOR,
       'foreign-hover-overlay foreign-hover-base',
-      {nation, tier:'base'}
+      {nation, tier:'base', fillOpacity:HOVER_NATION_BASE_TERRITORY_OPACITY}
     );
   }
   for (const entry of getClaimKindFilteredProjectEntries(nation)) {
     const visibleClaimRegions = (entry.regions || []).filter(rn => !baseSet.has(rn));
     if (!visibleClaimRegions.length) continue;
     const tier = countryProjectTier(entry, tierByProject);
-    const fill = hoverNationProjectColor(entry.project, tier);
+    const fillOpacity = hoverNationProjectOpacity(entry.project, tier);
     const tierLabel = entry.project ? String(tier + 1) : 'basic';
     for (const rn of visibleClaimRegions) {
       appendForeignHoverRegion(
         frag,
         regionByName[rn],
-        fill,
         `foreign-hover-overlay ${entry.project ? 'foreign-hover-research' : 'foreign-hover-basic'}`,
-        {nation, tier:tierLabel, project:entry.project || 'base'}
+        {nation, tier:tierLabel, project:entry.project || 'base', fillOpacity}
       );
     }
   }
