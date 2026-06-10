@@ -539,23 +539,6 @@ function injectClaimOverlayStyles() {
       stroke-width:.024;
       vector-effect:non-scaling-stroke;
     }
-    .foreign-hover-overlay {
-      pointer-events:none;
-      stroke:rgba(255,245,226,.52);
-      stroke-width:.01;
-      vector-effect:non-scaling-stroke;
-      mix-blend-mode:normal;
-      opacity:1;
-      filter:none;
-    }
-    .foreign-hover-base {
-      stroke:rgba(255,251,235,.68);
-      stroke-width:.014;
-    }
-    .foreign-hover-basic,
-    .foreign-hover-research {
-      stroke:rgba(255,245,226,.46);
-    }
     .selection-fill {
       pointer-events:none;
       fill:oklch(0.86 0.17 95 / .26);
