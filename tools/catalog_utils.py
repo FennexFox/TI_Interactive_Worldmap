@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -25,8 +26,26 @@ def as_float(value: Any, default: float = 0.0) -> float:
         return default
 
 
+_INLINE_DATA_COMMENT_RE = re.compile(r"(^|\s)//.*$")
+
+
+def clean_data_string(value: str) -> str:
+    """Remove inline notes that are embedded in data/localization values."""
+    return _INLINE_DATA_COMMENT_RE.sub("", value).strip()
+
+
+def sanitize_data_value(value: Any) -> Any:
+    if isinstance(value, str):
+        return clean_data_string(value)
+    if isinstance(value, list):
+        return [sanitize_data_value(item) for item in value]
+    if isinstance(value, dict):
+        return {key: sanitize_data_value(item) for key, item in value.items()}
+    return value
+
+
 def load_json(path: Path) -> Any:
-    return json.loads(path.read_text(encoding="utf-8"))
+    return sanitize_data_value(json.loads(path.read_text(encoding="utf-8")))
 
 
 def write_json_output(path: Path, value: Any) -> Path:
@@ -45,7 +64,7 @@ def read_localization_file(path: Path) -> dict[str, str]:
             if not line or line.startswith("#") or "=" not in line:
                 continue
             key, value = line.split("=", 1)
-            values[key.strip()] = value.strip()
+            values[clean_data_string(key.strip())] = clean_data_string(value.strip())
     return values
 
 
@@ -109,7 +128,7 @@ def unique_strings(values: list[Any]) -> list[str]:
     for value in values:
         if value is None:
             continue
-        text = str(value).strip()
+        text = clean_data_string(str(value))
         if not text or text in seen:
             continue
         seen.add(text)

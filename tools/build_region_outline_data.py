@@ -12,10 +12,12 @@ from pathlib import Path
 from typing import Any
 
 from catalog_utils import (
+    clean_data_string,
     load_named_templates,
     parse_languages,
     read_localization_file,
     resolve_templates_dir,
+    sanitize_data_value,
     unique_strings,
 )
 
@@ -43,13 +45,13 @@ NATION_COLOR_PALETTE = [
 
 
 def load_json(path: Path) -> Any:
-    return json.loads(path.read_text(encoding="utf-8"))
+    return sanitize_data_value(json.loads(path.read_text(encoding="utf-8")))
 
 
 def norm_id(value: Any) -> str:
     if value is None:
         return ""
-    return re.sub(r"^(?:2022|2026|2070)_", "", str(value))
+    return re.sub(r"^(?:2022|2026|2070)_", "", clean_data_string(str(value)))
 
 
 def normalize_match_key(value: Any) -> str:
@@ -192,7 +194,12 @@ def parse_path_points(path: str) -> list[tuple[float, float]]:
 def compact_region_geometry(region: dict[str, Any]) -> tuple[list[str], list[tuple[float, float]], int, list[dict[str, Any]]]:
     if isinstance(region.get("path"), str):
         points = parse_path_points(region["path"])
-        return [region["path"]], points, int(region.get("points") or len(points)), list(region.get("labels") or [])
+        labels = [
+            {**label, "name": clean_data_string(str(label.get("name") or region.get("regionName") or ""))}
+            for label in list(region.get("labels") or [])
+            if isinstance(label, dict)
+        ]
+        return [region["path"]], points, int(region.get("points") or len(points)), labels
 
     paths: list[str] = []
     points_for_bounds: list[tuple[float, float]] = []
@@ -221,7 +228,7 @@ def compact_region_geometry(region: dict[str, Any]) -> tuple[list[str], list[tup
             x, y = label["pos"]["anchor"]
         except Exception:
             continue
-        labels.append({"name": label.get("name") or region["regionName"], "x": x, "y": y})
+        labels.append({"name": clean_data_string(str(label.get("name") or region["regionName"])), "x": x, "y": y})
     return paths, points_for_bounds, total_points, labels
 
 
@@ -302,19 +309,20 @@ def compact_region_outlines(
         all_y.extend(y for _, y in points_for_bounds)
         region_name = norm_id(region["regionName"])
         metadata = (region_metadata or {}).get(region_name, {})
-        display_name = metadata.get("displayName") if isinstance(metadata.get("displayName"), dict) else {}
-        display_en = display_name.get("en") or metadata.get("primaryCity") or region_name
-        nation_tag = metadata.get("nationTag") or region.get("nationTag") or ""
+        raw_display_name = metadata.get("displayName") if isinstance(metadata.get("displayName"), dict) else {}
+        display_name = {str(lang): clean_data_string(str(value)) for lang, value in raw_display_name.items()}
+        display_en = clean_data_string(str(display_name.get("en") or metadata.get("primaryCity") or region_name))
+        nation_tag = clean_data_string(str(metadata.get("nationTag") or region.get("nationTag") or ""))
         enriched_labels = [{**label, "name": display_en} for label in labels[:2]]
         entry = {
             "id": int(region.get("id", index)),
-            "name": f"{nation_tag} - {display_en}" if nation_tag else str(region.get("name") or region_name),
+            "name": f"{nation_tag} - {display_en}" if nation_tag else clean_data_string(str(region.get("name") or region_name)),
             "regionName": region_name,
             "displayName": display_name,
-            "primaryCity": metadata.get("primaryCity") or display_en,
+            "primaryCity": clean_data_string(str(metadata.get("primaryCity") or display_en)),
             "nationTag": nation_tag,
-            "outlineNationTag": region.get("outlineNationTag") or region.get("nationTag"),
-            "ownerName": metadata.get("ownerName") or metadata.get("sortNation") or "",
+            "outlineNationTag": clean_data_string(str(region.get("outlineNationTag") or region.get("nationTag") or "")),
+            "ownerName": clean_data_string(str(metadata.get("ownerName") or metadata.get("sortNation") or "")),
             "path": " ".join(paths),
             "polygons": int(region.get("polygons") or len(paths)),
             "points": total_points,
@@ -324,8 +332,8 @@ def compact_region_outlines(
         }
         if metadata.get("sourceDataName"):
             entry["source"] = {
-                "regionTemplate": metadata.get("sourceDataName"),
-                "mapRegionTemplate": metadata.get("mapRegionName"),
+                "regionTemplate": clean_data_string(str(metadata.get("sourceDataName"))),
+                "mapRegionTemplate": clean_data_string(str(metadata.get("mapRegionName"))),
             }
         regions.append(entry)
         point_sets.append(quantized_points(points_for_bounds))

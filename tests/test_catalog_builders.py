@@ -96,6 +96,65 @@ class CatalogBuilderTests(unittest.TestCase):
             self.assertEqual(by_name["Guatemala"]["nationTag"], "GTM")
             self.assertEqual(by_name["Guatemala"]["outlineNationTag"], "GUA")
 
+    def test_region_map_strips_inline_data_comments_from_display_names(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            templates_dir = root / "Templates"
+            write_json(
+                templates_dir / "TINationTemplate.json",
+                [{"dataName": "2026_ETH", "friendlyName": "2026_Ethiopia"}],
+            )
+            write_json(
+                templates_dir / "TIRegionTemplate.json",
+                [
+                    {
+                        "dataName": "2026_DireDiwa",
+                        "mapRegionName": "map_DireDiwa",
+                        "primaryCity": "Dire Dawa",
+                        "sortNation": "Ethiopia",
+                    }
+                ],
+            )
+            write_json(
+                templates_dir / "TIMapRegionTemplate.json",
+                [{"dataName": "map_DireDiwa", "friendlyNationName": "Ethiopia"}],
+            )
+            write_text(
+                root / "Localization" / "en" / "TIRegionTemplate.en",
+                "TIRegionTemplate.displayName.DireDiwa=Dire Dawa\t\t// dataname misspelled\n",
+            )
+            write_text(
+                root / "Localization" / "kor" / "TIRegionTemplate.kor",
+                "TIRegionTemplate.displayName.DireDiwa=디레다와 // / dataname misspelled\n",
+            )
+            write_text(
+                root / "Localization" / "en" / "TINationTemplate.en",
+                "TINationTemplate.displayName.ETH=Ethiopia\n",
+            )
+            raw = {
+                "collectionName": "fixture",
+                "width": 10,
+                "height": 10,
+                "regions": [
+                    {
+                        "regionName": "DireDiwa",
+                        "nationTag": "ETH",
+                        "path": "M 0 0 L 1 0 L 0 1 Z",
+                        "labels": [{"name": "Dire Dawa  // dataname misspelled", "x": 0.5, "y": 0.5}],
+                    }
+                ],
+            }
+
+            metadata = ro.load_region_metadata(templates_dir, ["kor", "en"], "2026")
+            region_map = ro.compact_region_outlines(raw, region_metadata=metadata, scenario_year="2026")
+            row = region_map["regions"][0]
+
+            self.assertEqual(row["displayName"]["en"], "Dire Dawa")
+            self.assertEqual(row["displayName"]["kor"], "디레다와")
+            self.assertEqual(row["name"], "ETH - Dire Dawa")
+            self.assertEqual(row["labels"][0]["name"], "Dire Dawa")
+            self.assertNotIn("//", json.dumps(row, ensure_ascii=False))
+
     def test_nation_catalog_uses_template_names_not_region_names(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

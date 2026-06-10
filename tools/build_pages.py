@@ -10,11 +10,17 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+from catalog_utils import sanitize_data_value
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def load_json(path: Path) -> Any:
-    return json.loads(path.read_text(encoding="utf-8"))
+    return sanitize_data_value(json.loads(path.read_text(encoding="utf-8")))
+
+
+def write_compact_json(path: Path, value: Any) -> None:
+    write_text(path, json.dumps(value, ensure_ascii=False, separators=(",", ":")))
 
 
 def write_text(path: Path, text: str) -> None:
@@ -35,10 +41,12 @@ def build_pages() -> None:
     claim_map = load_json(ROOT / "data" / "generated" / "claim_map.generated.json")
     nation_catalog = load_json(ROOT / "data" / "nations.catalog.json")
     research_catalog = load_json(ROOT / "data" / "research.catalog.json")
+    write_compact_json(ROOT / "data" / "generated" / "region_map.generated.json", region_map)
+    write_compact_json(ROOT / "data" / "generated" / "claim_map.generated.json", claim_map)
     shutil.copyfile(ROOT / "data" / "nations.catalog.json", docs / "data" / "nations.catalog.json")
     shutil.copyfile(ROOT / "data" / "research.catalog.json", docs / "data" / "research.catalog.json")
-    shutil.copyfile(ROOT / "data" / "generated" / "region_map.generated.json", docs / "data" / "region_map.generated.json")
-    shutil.copyfile(ROOT / "data" / "generated" / "claim_map.generated.json", docs / "data" / "claim_map.generated.json")
+    write_compact_json(docs / "data" / "region_map.generated.json", region_map)
+    write_compact_json(docs / "data" / "claim_map.generated.json", claim_map)
 
     packed = {"regionMap": region_map, "claimMap": claim_map, "catalogs": {"nations": nation_catalog, "research": research_catalog}}
     payload = json.dumps(packed, ensure_ascii=False, separators=(",", ":")).encode("utf-8")

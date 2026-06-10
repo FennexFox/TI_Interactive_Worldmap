@@ -1,0 +1,6 @@
+docs/assets/data.generated.js linguist-generated=true
+docs/data/*.json linguist-generated=true
+docs/assets/app.js linguist-generated=true
+docs/assets/styles.css linguist-generated=true
+docs/index.html linguist-generated=true
+data/generated/*.json linguist-generated=true

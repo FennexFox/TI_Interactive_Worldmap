@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import re
-from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -139,53 +138,6 @@ def requirement_nodes(requirement: dict[str, Any]) -> list[str]:
 
     visit(requirement)
     return sorted(nodes)
-
-
-def context_values(context: dict[str, Any] | None, *keys: str) -> set[str]:
-    if not context:
-        return set()
-    values: set[str] = set()
-    for key in keys:
-        raw = context.get(key)
-        if isinstance(raw, str) and raw:
-            values.add(raw)
-        elif isinstance(raw, Iterable) and not isinstance(raw, (str, bytes, dict)):
-            values.update(str(item) for item in raw if item)
-    return values
-
-
-def requirement_satisfied(
-    requirement: dict[str, Any],
-    completed_nodes: Iterable[str],
-    context: dict[str, Any] | None = None,
-) -> bool:
-    completed = set(completed_nodes)
-
-    def satisfied(item: Any) -> bool:
-        if not isinstance(item, dict):
-            return True
-        if "all" in item:
-            return all(satisfied(child) for child in nonempty_list(item.get("all")))
-        if "any" in item:
-            return any(satisfied(child) for child in nonempty_list(item.get("any")))
-        if "node" in item:
-            return str(item["node"]) in completed
-        if "objective" in item:
-            objectives = context_values(context, "objectives", "completedObjectives")
-            return str(item["objective"]) in objectives
-        if "milestone" in item:
-            milestones = context_values(context, "milestones", "completedMilestones")
-            return str(item["milestone"]) in milestones
-        if "factionAny" in item:
-            factions = set(normalize_string_list(item.get("factionAny")))
-            current = context_values(context, "faction", "factionTemplate", "template")
-            return bool(factions & current)
-        if "nation" in item:
-            nations = context_values(context, "nations", "availableNations", "controlledNations")
-            return str(item["nation"]) in nations
-        return False
-
-    return satisfied(requirement)
 
 
 def localized_fields(

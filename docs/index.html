@@ -23,10 +23,10 @@
         <div class="sideCardBody">
           <label for="search" data-i18n="search.label">Search and select nation/region</label>
           <div class="searchCombo" id="nationSearchCombo">
-            <input id="search" data-i18n-placeholder="search.placeholder" placeholder="Enter a nation tag or region name: CHN, Korea, Taiwan..." autocomplete="off" role="combobox" aria-expanded="false" aria-controls="nationDropdown" aria-autocomplete="list" />
+            <input id="search" data-i18n-placeholder="search.placeholder" placeholder="Enter a nation tag, region, or project: CHN, Korea, Greater India..." autocomplete="off" role="combobox" aria-expanded="false" aria-controls="nationDropdown" aria-autocomplete="list" />
             <div class="searchDropdown" id="nationDropdown" role="listbox" hidden></div>
           </div>
-          <div class="small" style="margin-top:6px;" data-i18n="search.help">Click the field to open the nation list. Typing filters nations and regions; click an item to select it. Click empty map space to clear the selection.</div>
+          <div class="small" style="margin-top:6px;" data-i18n="search.help">Click the field to open the nation list. Typing filters nations, regions, and claim projects; click an item to select it. Click empty map space to clear the selection.</div>
 
           <div class="row">
             <div><label for="claimMode" data-i18n="claimMode.label">Claim display</label><select id="claimMode"><option value="all" data-i18n="claimMode.all">All claims</option><option value="project" data-i18n="claimMode.project">Selected project only</option><option value="off" data-i18n="claimMode.off">Off</option></select></div>
@@ -77,10 +77,13 @@
       <svg id="map" viewBox="-3.174091 -1.543560 6.525687 2.588890" preserveAspectRatio="xMidYMid meet" data-i18n-aria-label="map.aria" aria-label="Terra Invicta claim research map">
         <g id="grid"></g>
         <g id="regions"></g>
+        <g id="foreignHoverOverlays"></g>
         <g id="claimOverlays"></g>
         <g id="labels"></g>
         <g id="claimLabels"></g>
+        <g id="hoverOutlines"></g>
         <g id="selectionOutlines"></g>
+        <g id="capitalMarkers"></g>
       </svg>
       <div class="tooltip" id="tip"></div>
     </div>
