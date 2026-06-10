@@ -86,13 +86,13 @@ const I18N = {
     'status.existing': '기존 국가',
     'count.regions': '{count}개 지역',
     'count.uniqueRegions': '고유 지역 {count}개',
-    'count.techs': '연구 {count}개',
-    'count.projects': '프로젝트 {count}개',
+    'count.claimTiers': '연구 단계 {count}개',
+    'count.claimTiersShort': '단계 {count}개',
     'count.claimGroups': '영유권 묶음 {count}개',
     'pill.hoverEmpty': '호버: -',
     'pill.hoverRegion': '호버: {nation} · {region}',
     'pill.claimsEmpty': '영유권: -',
-    'pill.claimSummary': '{nation}: 영토 {owned}, 영유권 {claims}, 프로젝트 {projects}',
+    'pill.claimSummary': '{nation}: 영토 {owned}, 영유권 {claims}, 연구 단계 {projects}',
     'warn.unmatchedClaimRows': '미매칭 영유권 행 {count}개',
     'selected.region': '선택 지역: {region}{nation}',
     'selected.regions': '선택 지역: {count}개',
@@ -120,23 +120,26 @@ const I18N = {
     'claimCard.fieldTag': '코드',
     'claimCard.fieldNation': '국가',
     'claimCard.fieldProject': '프로젝트',
-    'claimCard.fieldResearch': '연구',
+    'claimCard.fieldResearch': '단계',
     'claimCard.projectBaseline': '기본 영유권',
     'claimCard.researchTier': '연구 단계 {tier}',
     'claimCard.researchBaseline': '연구 불필요',
-    'claimCard.researchTierValue': '단계 {tier}',
-    'claimCard.researchBaselineValue': '불필요',
+    'claimCard.researchTierValue': '{tier}',
+    'claimCard.researchBaselineValue': '기본',
     'claimStat.hostile': ' · 적대 {count}',
     'claimStat.capital': ' · 수도 {count}',
     'claimStat.gated': ' · 조건부 {count}',
     'nationInfo.summary': '현재/시작 영토 {owned} · 표시 중인 영유권 {claims} · {projects}{breakaway}',
+    'nationInfo.summary.baseTerritory': '현재/시작 영토 {owned}',
+    'nationInfo.summary.visibleClaims': '표시 중인 영유권 {claims}',
+    'nationInfo.summary.breakaway': '분리 원국 {nation}',
     'nationInfo.breakaway': ' · 분리 원국 {nation}',
     'nationInfo.kv.status': '상태',
     'nationInfo.kv.baseTerritory': '기본 영토',
     'nationInfo.kv.directClaims': '직접 영유권',
     'nationInfo.kv.targetedRegions': '대상 지역',
     'nationInfo.kv.conditional': '조건부',
-    'nationInfo.kv.claimProjects': '영유권 프로젝트',
+    'nationInfo.kv.claimProjects': '연구 단계',
     'nationInfo.kv.displayMode': '표시 모드',
     'nationInfo.hint': '가장 밝은 시작색은 초기/현재 영토입니다. 영유권 색상은 기본 영유권에서 연구 단계가 높아질수록 같은 색상 축을 따라 이동합니다. 푸른 테두리는 평화적 영유권, 붉은 테두리는 적대적 영유권, 점선은 수도 영유권, 보라색/잠금 스타일은 조건부 분리 영유권입니다.',
     'legend.noClaims': '이 국가에 표시 가능한 추가 영유권 프로젝트가 없습니다.',
@@ -196,13 +199,13 @@ const I18N = {
     'status.existing': 'existing nation',
     'count.regions': '{count} regions',
     'count.uniqueRegions': '{count} unique regions',
-    'count.techs': '{count} techs',
-    'count.projects': '{count} projects',
+    'count.claimTiers': '{count} research tiers',
+    'count.claimTiersShort': '{count} tiers',
     'count.claimGroups': '{count} claim groups',
     'pill.hoverEmpty': 'Hover: -',
     'pill.hoverRegion': 'Hover: {nation} · {region}',
     'pill.claimsEmpty': 'Claims: -',
-    'pill.claimSummary': '{nation}: territory {owned}, claims {claims}, projects {projects}',
+    'pill.claimSummary': '{nation}: territory {owned}, claims {claims}, research tiers {projects}',
     'warn.unmatchedClaimRows': '{count} unmatched claim rows',
     'selected.region': 'Selected region: {region}{nation}',
     'selected.regions': 'Selected regions: {count}',
@@ -230,23 +233,26 @@ const I18N = {
     'claimCard.fieldTag': 'Code',
     'claimCard.fieldNation': 'Nation',
     'claimCard.fieldProject': 'Project',
-    'claimCard.fieldResearch': 'Research',
+    'claimCard.fieldResearch': 'Tier',
     'claimCard.projectBaseline': 'baseline claim',
     'claimCard.researchTier': 'research tier {tier}',
     'claimCard.researchBaseline': 'no research',
-    'claimCard.researchTierValue': 'tier {tier}',
-    'claimCard.researchBaselineValue': 'none',
+    'claimCard.researchTierValue': '{tier}',
+    'claimCard.researchBaselineValue': 'base',
     'claimStat.hostile': ' · hostile {count}',
     'claimStat.capital': ' · capital {count}',
     'claimStat.gated': ' · conditional {count}',
     'nationInfo.summary': 'Current/starting territory {owned} · visible claims {claims} · {projects}{breakaway}',
+    'nationInfo.summary.baseTerritory': 'Current/starting territory {owned}',
+    'nationInfo.summary.visibleClaims': 'Visible claims {claims}',
+    'nationInfo.summary.breakaway': 'Breakaway from {nation}',
     'nationInfo.breakaway': ' · breakaway from {nation}',
     'nationInfo.kv.status': 'Status',
     'nationInfo.kv.baseTerritory': 'Base territory',
     'nationInfo.kv.directClaims': 'Direct claims',
     'nationInfo.kv.targetedRegions': 'Targeted regions',
     'nationInfo.kv.conditional': 'Conditional',
-    'nationInfo.kv.claimProjects': 'Claim projects',
+    'nationInfo.kv.claimProjects': 'Research tiers',
     'nationInfo.kv.displayMode': 'Display mode',
     'nationInfo.hint': 'The brightest starting color marks initial/current territory. Claim colors move along one color scale from baseline claims through higher research tiers. Blue outlines are peaceful claims, red outlines are hostile claims, dashed outlines are capital claims, and purple/locked styling marks conditional breakaway claims.',
     'legend.noClaims': 'This nation has no additional claim projects to display.',
@@ -385,8 +391,8 @@ function englishCount(count, singular, plural=`${singular}s`) {
 }
 function regionCountText(count) { return currentLanguage === 'ko' ? t('count.regions', {count: formatNumber(count)}) : englishCount(count, 'region'); }
 function uniqueRegionCountText(count) { return currentLanguage === 'ko' ? t('count.uniqueRegions', {count: formatNumber(count)}) : `${formatNumber(count)} unique ${Number(count) === 1 ? 'region' : 'regions'}`; }
-function techCountText(count) { return currentLanguage === 'ko' ? t('count.techs', {count: formatNumber(count)}) : englishCount(count, 'tech'); }
-function projectCountText(count) { return currentLanguage === 'ko' ? t('count.projects', {count: formatNumber(count)}) : englishCount(count, 'project'); }
+function claimTierCountText(count) { return currentLanguage === 'ko' ? t('count.claimTiers', {count: formatNumber(count)}) : `${formatNumber(count)} research ${Number(count) === 1 ? 'tier' : 'tiers'}`; }
+function claimTierCountShortText(count) { return currentLanguage === 'ko' ? t('count.claimTiersShort', {count: formatNumber(count)}) : `${formatNumber(count)} ${Number(count) === 1 ? 'tier' : 'tiers'}`; }
 function claimGroupCountText(count) { return currentLanguage === 'ko' ? t('count.claimGroups', {count: formatNumber(count)}) : englishCount(count, 'claim group'); }
 function claimModeLabel(value) { return t(`claimMode.${value || 'all'}`); }
 function setHoverPill(region=null) {
@@ -615,6 +621,11 @@ function countryProjectTierMap(nation, baseSet) {
   }
   return tiers;
 }
+function nationClaimTierCount(nation) {
+  const d = CLAIMS_BY_NATION[nation] || {};
+  const baseSet = new Set(d.baseRegions || nationRegions.get(nation) || []);
+  return countryProjectTierMap(nation, baseSet).size;
+}
 function countryProjectTier(entry, tierByProject) {
   if (!entry.project) return -1;
   return tierByProject.get(entry.project) ?? 0;
@@ -706,13 +717,8 @@ function nationClaimProjectSearchAliases(tag) {
   return uniqueSearchTerms(terms);
 }
 function humanizeNationLabel(tag) {
-  const d = CLAIMS_BY_NATION[tag] || {};
-  const regionCount = (nationRegions.get(tag) || d.baseRegions || []).length;
-  const techText = d.projectCount ? ` · ${techCountText(d.projectCount)}` : '';
-  const statusText = d.status && d.status !== 'existing' ? ` · ${statusLabel(d.status)}` : '';
-  const regionText = regionCount ? ` · ${regionCountText(regionCount)}` : '';
   const displayName = nationDisplayName(tag);
-  return `${tag}${displayName !== tag ? ' · ' + displayName : ''}${statusText}${techText}${regionText}`;
+  return `${displayName} / ${claimTierCountShortText(nationClaimTierCount(tag))}`;
 }
 function claimCardResearchLabel(entry, nation, {compact=false} = {}) {
   if (!entry?.project) return t(compact ? 'claimCard.researchBaselineValue' : 'claimCard.researchBaseline');
@@ -1458,23 +1464,24 @@ function updateNationOverlay(nation) {
   });
   const breakawayText = data.breakawayFrom ? t('nationInfo.breakaway', {nation: data.breakawayFrom}) : '';
   const gatedCount = (data.gatedRegions || []).length;
-  const activeNationLabel = humanizeNationLabel(activeNation);
-  const summaryText = t('nationInfo.summary', {
-    owned: regionCountText(ownedCount),
-    claims: regionCountText(claimCount),
-    projects: projectCountText(projectCount),
-    breakaway: breakawayText,
-  });
+  const activeNationName = nationDisplayName(activeNation);
+  const activeNationTierText = claimTierCountShortText(nationClaimTierCount(activeNation));
+  const summaryLines = [
+    t('nationInfo.summary.baseTerritory', {owned: regionCountText(ownedCount)}),
+    t('nationInfo.summary.visibleClaims', {claims: regionCountText(claimCount)}),
+  ];
+  if (data.breakawayFrom) summaryLines.push(t('nationInfo.summary.breakaway', {nation: data.breakawayFrom}));
+  const summaryHtml = summaryLines.map(line => `<div class="small nationSummaryLine">${escapeHtml(line)}</div>`).join('');
   const kvRows = [
     [t('nationInfo.kv.status'), statusLabel(data.status)],
     [t('nationInfo.kv.baseTerritory'), regionCountText(ownedCount)],
     [t('nationInfo.kv.directClaims'), uniqueRegionCountText(data.totalClaimRegions || 0)],
     [t('nationInfo.kv.targetedRegions'), `${regionCountText(incomingTargetRegions(data, baseSet).size)} · ${claimGroupCountText(incomingEntries.length)}`],
     [t('nationInfo.kv.conditional'), regionCountText(gatedCount)],
-    [t('nationInfo.kv.claimProjects'), projectCountText(data.projectCount || 0)],
+    [t('nationInfo.kv.claimProjects'), claimTierCountText(nationClaimTierCount(activeNation))],
     [t('nationInfo.kv.displayMode'), claimModeLabel(claimModeSel.value)],
   ].map(([label, value]) => `<div>${escapeHtml(label)}</div><div>${escapeHtml(value)}</div>`).join('');
-  const basicInfo = `<details class="infoSubsection nationBasicSection" data-info-section="basic"${infoSectionOpenAttribute('basic')}><summary><span>${escapeHtml(t('nationInfo.basic.title'))}</span></summary><div class="infoSubsectionBody"><div class="nationTitle"><b>${escapeHtml(activeNationLabel)}</b> ${statusBadge(data.status)}</div><div class="small" style="margin:2px 0 10px">${escapeHtml(summaryText)}</div><div class="kv">${kvRows}</div><div class="hint">${escapeHtml(t('nationInfo.hint'))}</div></div></details>`;
+  const basicInfo = `<details class="infoSubsection nationBasicSection" data-info-section="basic"${infoSectionOpenAttribute('basic')}><summary><span>${escapeHtml(t('nationInfo.basic.title'))}</span></summary><div class="infoSubsectionBody"><div class="nationTitle"><b>${escapeHtml(activeNationName)}</b> <span class="status tierBadge">${escapeHtml(activeNationTierText)}</span> ${statusBadge(data.status)}</div><div class="nationSummary">${summaryHtml}</div><div class="kv">${kvRows}</div><div class="hint">${escapeHtml(t('nationInfo.hint'))}</div></div></details>`;
   nationInfo.innerHTML = `${basicInfo}<div class="claimSections">${renderClaimSection(t('claimSection.outgoing.title'), outgoingEntries, t('claimSection.outgoing.empty'), 'outgoing')}${renderClaimSection(t('claimSection.incoming.title'), incomingEntries, t('claimSection.incoming.empty'), 'incoming')}</div>`;
   bindNationInfoSectionToggles();
   nationInfo.querySelectorAll('.claimListItem').forEach(el => el.addEventListener('click', () => {

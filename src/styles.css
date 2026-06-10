@@ -110,20 +110,26 @@
   .infoSubsection > summary::before { content:'▸'; color:var(--muted); font-size:12px; }
   .infoSubsection[open] > summary::before { content:'▾'; }
   .infoSubsectionBody { margin-top:8px; }
-  .nationTitle { margin-bottom:2px; }
+  .nationTitle { display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin-bottom:6px; }
+  .nationTitle b { min-width:0; }
+  .nationTitle .status { margin-left:0; }
+  .status.tierBadge { border-color:rgba(145,183,255,.35); color:#dbeafe; background:rgba(145,183,255,.08); }
+  .nationSummary { display:flex; flex-direction:column; gap:2px; margin:2px 0 10px; }
+  .nationSummaryLine { line-height:1.35; }
   .claimList { display:flex; flex-direction:column; gap:7px; }
   .claimListGroup { display:flex; flex-direction:column; gap:5px; }
   .claimListGroup.active { border-radius:11px; background:rgba(145,183,255,.045); padding:3px; border:1px solid rgba(145,183,255,.18); }
   .claimListItem { width:100%; display:flex; flex-direction:column; gap:6px; align-items:stretch; text-align:left; padding:7px 9px; border-radius:9px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); color:var(--text); font:inherit; }
   .claimListItem:hover { background:rgba(255,255,255,.08); border-color:rgba(145,183,255,.28); }
   .claimListItem.active { background:rgba(145,183,255,.14); border-color:rgba(145,183,255,.42); }
-  .claimCardTitle { display:grid; grid-template-columns:minmax(0,1fr) max-content; gap:5px; width:100%; align-items:stretch; }
+  .claimCardTitle { display:grid; grid-template-columns:minmax(0,1fr) min-content; column-gap:4px; row-gap:5px; width:100%; align-items:stretch; }
   .claimCardTitleField { min-width:0; display:flex; flex-direction:column; gap:1px; padding:4px 6px; border-radius:7px; background:rgba(15,23,42,.32); border:1px solid rgba(255,255,255,.06); }
   .claimCardTitleField--nation { grid-column:1; grid-row:1; }
-  .claimCardTitleField--research { grid-column:2; grid-row:1; align-items:flex-end; text-align:right; min-width:4.8rem; }
+  .claimCardTitleField--research { grid-column:2; grid-row:1; align-items:flex-end; text-align:right; min-width:1.75rem; max-width:2.15rem; padding-left:4px; padding-right:4px; }
   .claimCardTitleField--project { grid-column:1 / -1; grid-row:2; }
-  .claimCardTitleLabel { color:var(--muted); font-size:10px; font-weight:700; line-height:1.1; letter-spacing:.02em; }
+  .claimCardTitleLabel { color:var(--muted); font-size:9.5px; font-weight:700; line-height:1.1; letter-spacing:.01em; }
   .claimCardTitleValue { min-width:0; color:var(--text); font-size:12.5px; line-height:1.28; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .claimCardTitleField--research .claimCardTitleValue { font-size:12px; line-height:1.15; }
   .claimCardTitleField--nation .claimCardTitleValue, .claimCardTitleField--project .claimCardTitleValue { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; white-space:normal; }
   .claimListMeta { color:var(--muted); font-size:12px; }
   .muted { color:var(--muted); }
