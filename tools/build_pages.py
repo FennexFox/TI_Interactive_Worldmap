@@ -32,6 +32,8 @@ def copy_js_modules(src_dir: Path, dest_dir: Path) -> None:
     if not src_dir.exists():
         return
     dest_dir.mkdir(parents=True, exist_ok=True)
+    for existing in dest_dir.glob("*.js"):
+        existing.unlink()
     for source in src_dir.glob("*.js"):
         shutil.copyfile(source, dest_dir / source.name)
 
