@@ -63,7 +63,7 @@
   svg.claims-active .region.selected { opacity:1; filter:saturate(.55) brightness(.78); }
   svg.claims-active .region:hover, svg.claims-active .region.hovered { filter:saturate(.6) brightness(.82); }
   .claim-overlay { pointer-events:none; stroke:rgba(255,255,255,.55); stroke-width:.012; vector-effect:non-scaling-stroke; mix-blend-mode:screen; }
-  svg.claims-active .claim-overlay { mix-blend-mode:normal; filter:saturate(1.45) brightness(1.35); }
+  svg.claims-active .claim-overlay { mix-blend-mode:normal; filter: none; opacity: 1;}
   .claim-overlay.peaceful { stroke:#9ee7ff; stroke-width:.015; }
   .claim-overlay.hostile { stroke:var(--hostile); stroke-width:.023; }
   .claim-overlay.capital { stroke-dasharray:.035 .018; stroke-width:.027; }
