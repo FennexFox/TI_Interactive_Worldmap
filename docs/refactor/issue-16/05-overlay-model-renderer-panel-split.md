@@ -106,21 +106,41 @@ Rollback should restore the previous `updateNationOverlay()` implementation for 
 
 ## Progress
 
-- [ ] Overlay data inventory completed
-- [ ] Model builder added
-- [ ] Map overlay renderer added
-- [ ] Panel renderer added
-- [ ] Panel event binding preserved
-- [ ] Claim pill and selected state preserved
-- [ ] Generated Pages assets rebuilt
-- [ ] Validation completed
-- [ ] Manual smoke completed
+- [x] Overlay data inventory completed
+- [x] Model builder added
+- [x] Map overlay renderer added
+- [x] Panel renderer added
+- [x] Panel event binding preserved
+- [x] Claim pill and selected state preserved
+- [x] Generated Pages assets rebuilt
+- [x] Validation completed
+- [x] Manual smoke completed
 
 ## Decision Log
 
 - The model builder may be mostly pure rather than fully pure if passing all localization and control state separately would make the phase too large.
 - `updateNationOverlay()` remains as the public orchestration function for this phase.
+- 2026-06-11: Added `buildNationOverlayModel(activeData, indices, nationId, options)` as the selected-nation overlay calculation boundary while leaving current claim semantics and global control reads intact.
+- 2026-06-11: Added `renderMapOverlay(model, renderContext)`, `renderClaimSummaryPill(model)`, `renderNationInfoPanel(panelRoot, model)`, and `bindNationOverlayPanelEvents(panelRoot, model)`.
+- 2026-06-11: Kept capital marker refresh inside `renderMapOverlay()` because the current marker state depends on active overlay and selected-region context.
+- 2026-06-11: Normalized the targeted-region count separator in the new panel renderer to ASCII ` - ` to avoid preserving mojibake from the previous inline block.
 
 ## Outcomes
 
-Not started.
+Completed.
+
+`updateNationOverlay()` now coordinates state reset, project options, overlay model creation, visible-region state, map rendering, claim pill rendering, panel rendering, panel event binding, filtering, and selected-region refresh. Overlay calculation, SVG overlay rendering, side-panel HTML, and panel interactions are now independently reviewable functions.
+
+Validation completed successfully:
+
+```powershell
+node --check src/app.js
+npm run build
+npm run verify
+npm run test:e2e
+rg "buildNationOverlayModel|renderMapOverlay|renderClaimSummaryPill|renderNationInfoPanel|bindNationOverlayPanelEvents|function updateNationOverlay|targetedRegions" src/app.js
+```
+
+Manual smoke completed successfully with an inline Playwright script against the generated `docs/` site. It covered Brazil selection, base/claim/project counts, capital panel details, claim display modes, peaceful/hostile/all claim kinds, outgoing claim-card narrowing, incoming claim-card nation switching, claim-card region row selection with nation preservation, and language switching after panel render.
+
+Residual risk: the model builder still reads some current global controls through existing helpers. That is intentional for this phase so behavior remains unchanged and the app stays working before Phase 6.

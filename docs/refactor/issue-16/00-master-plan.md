@@ -131,12 +131,12 @@ High-risk phases are expected to be:
 ## Progress
 
 - [x] Phase 1: Baseline Safety Net
-- [ ] Phase 2: Active Data And Derived Indices
-- [ ] Phase 3: Renderer Helpers And Layer Entrypoints
-- [ ] Phase 4: Hit Layer And Delegated Events
-- [ ] Phase 5: Overlay Model, Renderer, And Panel Split
-- [ ] Phase 6: Canonical Visual State
-- [ ] Phase 7: Map View And Follow-Up Contracts
+- [x] Phase 2: Active Data And Derived Indices
+- [x] Phase 3: Renderer Helpers And Layer Entrypoints
+- [x] Phase 4: Hit Layer And Delegated Events
+- [x] Phase 5: Overlay Model, Renderer, And Panel Split
+- [x] Phase 6: Canonical Visual State
+- [x] Phase 7: Map View And Follow-Up Contracts
 
 ## Decision Log
 
@@ -145,7 +145,27 @@ High-risk phases are expected to be:
 - 2026-06-11: Treat the existing `2026` data as the only active scenario during issue #16.
 - 2026-06-11: Use current region names as canonical browser region identity unless a later phase proves numeric IDs are safer.
 - 2026-06-11: Completed Phase 1 as a test-only safety-net phase; no application source or generated deploy output changed.
+- 2026-06-11: Completed Phase 2 with active data and derived-index wrappers while preserving existing compatibility aliases for current callers.
+- 2026-06-11: Completed Phase 3 by routing SVG creation through local renderer helpers while preserving current layer IDs and event ownership.
+- 2026-06-11: Completed Phase 4 by adding a transparent hit layer and moving region hover/click handling to delegated handlers.
+- 2026-06-11: Completed Phase 5 by splitting selected-nation overlay calculation, map overlay rendering, claim pill rendering, side-panel HTML, and panel event binding into separate functions.
+- 2026-06-11: Completed Phase 6 by centralizing region visual classes in `appState.mapVisualState` and replacing claim-overlay `svg:has(...)` inference with explicit `svg.claims-active` state.
+- 2026-06-11: Completed Phase 7 by initializing `appState.mapView` from the active viewBox and passing it through existing render contexts without changing SVG framing or adding panning.
 
 ## Outcomes
 
-Phase 1 is complete. The e2e safety net now covers claim display controls, project filtering, claim-kind filtering, outgoing and incoming claim-card synchronization, and empty-map clear behavior in addition to the existing language, search, hover, selection, and capital-marker coverage.
+Phase 1 and Phase 2 are complete. The e2e safety net now covers claim display controls, project filtering, claim-kind filtering, outgoing and incoming claim-card synchronization, and empty-map clear behavior in addition to the existing language, search, hover, selection, and capital-marker coverage.
+
+Phase 2 introduced active data ownership and a derived-index boundary without changing public data schemas or user-facing behavior.
+
+Phase 3 introduced renderer helpers and migrated base map, labels, claim overlays, hover/selection overlays, and capital markers to those helpers without changing visual behavior.
+
+Phase 4 separated visible region rendering from pointer hit testing. Region interactions now resolve canonical region identity from hit-path data attributes.
+
+Phase 5 turned `updateNationOverlay()` into a coordinator over a selected-nation overlay model. Claim overlays, side-panel HTML, claim-pill text, and panel interactions are now separate reviewable units while preserving current claim-card, filter, language, and selected-region behavior.
+
+Phase 6 introduced canonical map visual state sets for selected, owned, claim-target, hovered, dimmed, hidden, and claims-active state. Visible paths and hit paths now receive those classes through `applyMapVisualState()`, and generated styles no longer rely on `svg:has(#claimOverlays .claim-overlay)`.
+
+Phase 7 added the minimal `mapView` contract for future world-wrap and pan/zoom work. The current SVG `viewBox` remains unchanged, and render contexts can now carry `mapView` without changing interaction behavior.
+
+All seven phases are complete. The app remains a static Pages build with generated `docs/**` synchronized from `src/**`.

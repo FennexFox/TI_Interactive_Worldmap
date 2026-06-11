@@ -104,29 +104,48 @@ Rollback should remove the `mapView` state and render-context plumbing from this
 
 ## Progress
 
-- [ ] Map view object added
-- [ ] View initialized from active data
-- [ ] Render context plumbing added where useful
-- [ ] Current SVG framing preserved
-- [ ] Future TODO comments aligned
-- [ ] Generated Pages assets rebuilt
-- [ ] Validation completed
-- [ ] Manual smoke completed
-- [ ] Follow-up contracts recorded
+- [x] Map view object added
+- [x] View initialized from active data
+- [x] Render context plumbing added where useful
+- [x] Current SVG framing preserved
+- [x] Future TODO comments aligned
+- [x] Generated Pages assets rebuilt
+- [x] Validation completed
+- [x] Manual smoke completed
+- [x] Follow-up contracts recorded
 
 ## Decision Log
 
 - `mapView` is state only in issue #16.
 - Panning, repeated world rendering, and offset normalization belong to follow-up work.
 - The current SVG viewBox remains authoritative for rendering until a future issue changes it.
+- 2026-06-11: Added `createMapViewState()` and `initializeMapView(activeData, target)` and initialized `appState.mapView` from `activeData.regionMap.summary.viewBox`.
+- 2026-06-11: Kept the SVG `viewBox` and `preserveAspectRatio` attributes unchanged; Phase 7 only records state and passes it through existing render contexts.
+- 2026-06-11: Passed `mapView` through grid, region, hit-layer, label, and overlay render contexts where those entry points already exist.
+- 2026-06-11: Updated focus TODOs to name `mapView` as the future pan/zoom integration point without changing focus behavior.
 
 ## Outcomes
 
-Not started.
+Completed.
+
+`appState.mapView` now records the current map view as `{x, y, width, height, worldWidth}` initialized from the active data `summary.viewBox`. Existing render entry points can receive `{mapView}` context, while the generated SVG framing remains unchanged.
+
+Validation completed successfully:
+
+```powershell
+node --check src/app.js
+npm run build
+npm run verify
+npm run test:e2e
+rg "mapView|viewBox|worldWidth|pan|zoom" src/app.js docs/assets/app.js
+```
+
+Manual smoke completed successfully with an inline Playwright script against the generated `docs/` site. It confirmed the initial SVG `viewBox` and `preserveAspectRatio`, resize behavior, hover and click after resizing, Brazil overlays and capital marker alignment, labels, base color modes, claim display, only-claims filtering, and empty-map clear.
 
 Expected follow-up contracts after completion:
 
-- World-wrap work can attach panning state to `appState.mapView`.
+- World-wrap work can attach panning state to `appState.mapView` without changing current selected-nation, overlay, or hit-layer contracts.
 - Scenario switching work can build on `appData`, `getActiveData()`, and `buildDerivedIndices(activeData)`.
 - Secondary capital hover previews can consume overlay models instead of reading map DOM classes.
 - Overlay performance work can optimize renderer layers without changing panel rendering.
+- Canonical visual state work is complete enough for future render scheduling: path classes are applied through `applyMapVisualState()` from `appState.mapVisualState`.

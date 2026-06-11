@@ -119,23 +119,45 @@ Rollback should restore DOM class mutation behavior from the previous phase.
 
 ## Progress
 
-- [ ] Visual state object added
-- [ ] State update helpers added
-- [ ] Visual state apply helper added
-- [ ] Selected state migrated
-- [ ] Overlay owned/claim/dimmed state migrated
-- [ ] Hover/hidden state migrated
-- [ ] Explicit SVG classes added
-- [ ] `svg:has(...)` selectors replaced or documented
-- [ ] Generated Pages assets rebuilt
-- [ ] Validation completed
-- [ ] Manual smoke completed
+- [x] Visual state object added
+- [x] State update helpers added
+- [x] Visual state apply helper added
+- [x] Selected state migrated
+- [x] Overlay owned/claim/dimmed state migrated
+- [x] Hover/hidden state migrated
+- [x] Explicit SVG classes added
+- [x] `svg:has(...)` selectors replaced or documented
+- [x] Generated Pages assets rebuilt
+- [x] Validation completed
+- [x] Manual smoke completed
 
 ## Decision Log
 
 - DOM path collections may remain render caches, but canonical state must live in JS sets or objects.
 - Explicit `svg.claims-active` state is preferred over `svg:has(...)` inference.
+- 2026-06-11: Used current region names as the canonical region identity inside `mapVisualState` sets, matching the earlier cross-phase decision.
+- 2026-06-11: Kept `selectedRegionNames` and `hoverRegionName` as interaction state, but moved map path class application to `applyMapVisualState()`.
+- 2026-06-11: Added explicit `svg.claims-active` and `.region.hovered` classes so claim-active and hover visual styling no longer depend on `svg:has(...)`.
+- 2026-06-11: Left label visibility as a direct label render concern because labels are regenerated separately and are not region path state owners.
 
 ## Outcomes
 
-Not started.
+Completed.
+
+`appState.mapVisualState` now owns selected, owned, claim-target, hovered, dimmed, hidden, and claim-overlay-active state as canonical JS state. `applyMapVisualState()` is the single path that applies those state sets to visible region paths, transparent hit paths, and the SVG root `claims-active` class.
+
+Validation completed successfully:
+
+```powershell
+node --check src/app.js
+npm run build
+npm run verify
+npm run test:e2e
+rg ":has\(#claimOverlays|svg:has" src docs/assets
+```
+
+The targeted selector check returned no matches.
+
+Manual smoke completed successfully with an inline Playwright script against the generated `docs/` site. It covered Brazil selection, empty-map clear with no stale visual classes, hover transitions between Ontario and Amazonia, claim display off/all, only-claims hidden state for both visible and hit paths, base color modes, labels, language switching with state preservation, and final empty-map visual reset.
+
+Residual risk: Phase 6 intentionally centralizes class application without adding a dirty-layer scheduler. Some non-region UI state still refreshes through existing render functions, which is expected until a future rendering scheduler exists.

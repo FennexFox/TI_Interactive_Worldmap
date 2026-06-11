@@ -51,18 +51,19 @@
   svg { width:100%; height:100%; display:block; background: radial-gradient(circle at 50% 45%,#172033 0%,#0b1020 70%); }
   .graticule { stroke:rgba(255,255,255,.08); stroke-width:.006; fill:none; vector-effect:non-scaling-stroke; }
   .region { stroke:rgba(8,13,24,.82); stroke-width:.006; vector-effect:non-scaling-stroke; transition:filter .08s, opacity .08s, stroke-width .08s; cursor:pointer; }
-  .region:hover { filter:brightness(1.45); stroke:white; stroke-width:.012; }
+  .region:hover, .region.hovered { filter:brightness(1.45); stroke:white; stroke-width:.012; }
   .region.dimmed { opacity:.18; }
   .region.owned-highlight { stroke:white; stroke-width:.016; filter:brightness(1.55); opacity:1; }
   .region.selected { stroke:#fff; stroke-width:.02; filter:brightness(1.75); }
-  .region.hidden { display:none; }
-  svg:has(#claimOverlays .claim-overlay) .region { opacity:1; filter:saturate(.42) brightness(.62); }
-  svg:has(#claimOverlays .claim-overlay) .region.dimmed { opacity:1; filter:saturate(.18) brightness(.38); }
-  svg:has(#claimOverlays .claim-overlay) .region.owned-highlight { fill:transparent; opacity:.82; filter:none; }
-  svg:has(#claimOverlays .claim-overlay) .region.selected { opacity:1; filter:saturate(.55) brightness(.78); }
-  svg:has(#claimOverlays .claim-overlay) .region:hover { filter:saturate(.6) brightness(.82); }
+  .region.hidden, .region-hit.hidden { display:none; }
+  .region-hit { fill:transparent; stroke:transparent; pointer-events:all; cursor:pointer; }
+  svg.claims-active .region { opacity:1; filter:saturate(.42) brightness(.62); }
+  svg.claims-active .region.dimmed { opacity:1; filter:saturate(.18) brightness(.38); }
+  svg.claims-active .region.claim-target, svg.claims-active .region.owned-highlight { fill:transparent; opacity:.82; filter:none; }
+  svg.claims-active .region.selected { opacity:1; filter:saturate(.55) brightness(.78); }
+  svg.claims-active .region:hover, svg.claims-active .region.hovered { filter:saturate(.6) brightness(.82); }
   .claim-overlay { pointer-events:none; stroke:rgba(255,255,255,.55); stroke-width:.012; vector-effect:non-scaling-stroke; mix-blend-mode:screen; }
-  svg:has(#claimOverlays .claim-overlay) .claim-overlay { mix-blend-mode:normal; filter:saturate(1.45) brightness(1.35); }
+  svg.claims-active .claim-overlay { mix-blend-mode:normal; filter:saturate(1.45) brightness(1.35); }
   .claim-overlay.peaceful { stroke:#9ee7ff; stroke-width:.015; }
   .claim-overlay.hostile { stroke:var(--hostile); stroke-width:.023; }
   .claim-overlay.capital { stroke-dasharray:.035 .018; stroke-width:.027; }

@@ -8,6 +8,24 @@ async function chooseNation(page, query, tag) {
     .click();
 }
 
+function regionTarget(page, regionName) {
+  return page.locator(`#hitRegions .region-hit[data-region="${regionName}"]`);
+}
+
+async function hoverRegion(page, regionName) {
+  const target = regionTarget(page, regionName);
+  await target.dispatchEvent('pointerover', { bubbles: true, clientX: 120, clientY: 120, pointerType: 'mouse' });
+  await target.dispatchEvent('pointermove', { bubbles: true, clientX: 126, clientY: 126, pointerType: 'mouse' });
+}
+
+async function clickRegion(page, regionName) {
+  await regionTarget(page, regionName).dispatchEvent('click', { bubbles: true });
+}
+
+async function clearMap(page) {
+  await page.locator('#hitRegions').dispatchEvent('click', { bubbles: true });
+}
+
 test('language selector switches static and dynamic UI copy', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
@@ -126,7 +144,7 @@ test('selected nation marks its capital region with a fillable star', async ({ p
   await page.goto('/');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
-  await page.locator('#regions .region[data-region="Amazonia"]').hover();
+  await hoverRegion(page, 'Amazonia');
   await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
   await expect(page.locator('#hoverOutlines .selection-dot[data-region="Amazonia"]')).toHaveCount(0);
   await expect(page.locator('#hoverOutlines .selection-label[data-region="Amazonia"]')).toHaveCount(0);
@@ -142,17 +160,17 @@ test('selected nation marks its capital region with a fillable star', async ({ p
   await expect(page.locator('#capitalMarkers text')).toHaveCount(0);
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]')).not.toHaveClass(/is-selected/);
 
-  await page.locator('#regions .region[data-region="Amazonia"]').hover();
+  await hoverRegion(page, 'Amazonia');
   await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
   await expect(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="BRA"]')).toHaveCount(0);
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]')).toHaveCount(1);
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]')).not.toHaveClass(/is-selected/);
 
-  await page.locator('#regions .region[data-region="Amazonia"]').click();
+  await clickRegion(page, 'Amazonia');
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]')).toHaveCount(1);
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]')).not.toHaveClass(/is-selected/);
 
-  await page.locator('#regions .region[data-region="Ontario"]').hover();
+  await hoverRegion(page, 'Ontario');
   await expect(page.locator('#hoverOutlines .hover-fill[data-region="Ontario"]')).toHaveCount(0);
   await expect(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="CAN"][data-region="Ontario"]')).toHaveCount(1);
   await expect(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="CAN"]')).not.toHaveCount(0);
@@ -164,22 +182,22 @@ test('selected nation marks its capital region with a fillable star', async ({ p
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Ontario"]')).toHaveCount(1);
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Ontario"]')).toHaveClass(/is-selected/);
 
-  await page.locator('#regions .region[data-region="Bolivia"]').hover();
+  await hoverRegion(page, 'Bolivia');
   await expect(page.locator('#hoverOutlines .hover-fill[data-region="Bolivia"]')).toHaveCount(1);
   await expect(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="BOL"][data-region="Brasilia"]')).toHaveCount(0);
 
-  await page.locator('#regions .region[data-region="Brasilia"]').hover();
+  await hoverRegion(page, 'Brasilia');
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]')).toHaveClass(/is-selected/);
 
-  await page.locator('#regions .region[data-region="Brasilia"]').click();
+  await clickRegion(page, 'Brasilia');
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]')).toHaveClass(/is-selected/);
   await expect(page.locator('#selectionOutlines .selection-dot[data-region="Brasilia"]')).toHaveCount(0);
   await expect(page.locator('#selectionOutlines .selection-label[data-region="Brasilia"]')).toHaveText('Brasilia');
 
-  await page.locator('#regions .region[data-region="FrenchGuiana"]').hover();
+  await hoverRegion(page, 'FrenchGuiana');
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]')).toHaveClass(/is-selected/);
 
-  await page.locator('#regions .region[data-region="Ontario"]').hover();
+  await hoverRegion(page, 'Ontario');
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Ontario"]')).toHaveCount(1);
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Ontario"]')).toHaveClass(/is-selected/);
 });
@@ -220,7 +238,7 @@ test('claim cards synchronize map overlays, panel state, and empty map clear', a
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
   await chooseNation(page, 'Brazil', 'BRA');
-  await page.locator('#regions .region[data-region="Amazonia"]').click();
+  await clickRegion(page, 'Amazonia');
   await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveText('Manaus');
   await expect(page.locator('.claimListItem[data-claim-kind="incoming"]')).toHaveCount(4);
 
@@ -239,7 +257,7 @@ test('claim cards synchronize map overlays, panel state, and empty map clear', a
   await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
   await expect(page.locator('.claimListItem.active[data-claim-kind="outgoing"]')).toHaveCount(1);
 
-  await page.locator('#grid .graticule').first().click({ force: true });
+  await clearMap(page);
   await expect(page.locator('#search')).toHaveValue('');
   await expect(page.locator('#claimMode')).toHaveValue('all');
   await expect(page.locator('#claimPill')).toHaveText('Claims: -');

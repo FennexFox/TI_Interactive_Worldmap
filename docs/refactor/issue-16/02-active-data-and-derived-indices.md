@@ -112,20 +112,61 @@ Rollback should revert this phase only and keep the baseline tests from phase 1.
 
 ## Progress
 
-- [ ] Active data wrapper added
-- [ ] App state object added
-- [ ] Derived-index builder added
-- [ ] Existing callers migrated where safe
-- [ ] Generated Pages assets rebuilt
-- [ ] Validation completed
-- [ ] Manual smoke completed
+- [x] Active data wrapper added
+- [x] App state object added
+- [x] Derived-index builder added
+- [x] Existing callers migrated where safe
+- [x] Generated Pages assets rebuilt
+- [x] Validation completed
+- [x] Manual smoke completed
 
 ## Decision Log
 
 - The initial active scenario is the existing generated scenario year, expected to be `2026`.
 - This phase can keep compatibility aliases if removing every global would make the review too large.
 - Scenario switching remains explicitly out of scope.
+- 2026-06-11: Added `appData`, `appState`, `getActiveData()`, and `buildDerivedIndices(activeData)` in `src/app.js`.
+- 2026-06-11: Kept `REGIONS`, `SUMMARY`, `CLAIMS_BY_NATION`, `PROJECT_META`, `CLAIM_STATS`, `NATION_META`, `regionByName`, `nationRegions`, `nationChoices`, `regionChoices`, and `incomingClaimsByRegion` as compatibility aliases backed by derived indices.
+- 2026-06-11: Deferred migration of existing mutable UI variables into `appState` because doing so broadly belongs in later state/visual-state phases.
+- 2026-06-11: Rebuilt generated Pages assets with `npm run build`.
 
 ## Outcomes
 
-Not started.
+Completed on 2026-06-11.
+
+### Completed Phase Summary
+
+Phase 2 introduced explicit active data ownership around the current generated `2026` dataset and created a derived-index boundary for the runtime lookup structures. Current callers still use familiar local names, but those aliases now originate from `derivedIndices`.
+
+The implementation added:
+
+- `appData` with the current dataset wrapped under the generated scenario year.
+- `appState.activeScenario` and placeholder state fields for later phases.
+- `getActiveData()` for active scenario data lookup.
+- `buildDerivedIndices(activeData)` for regions, summary, nation/project/claim metadata, region lookup, nation-region lookup, incoming-claim index storage, and search choice storage.
+- derived-backed compatibility aliases to keep the patch reviewable and behavior-preserving.
+
+### Changed Files
+
+- `src/app.js`
+- `docs/assets/app.js`
+- `docs/refactor/issue-16/00-master-plan.md`
+- `docs/refactor/issue-16/02-active-data-and-derived-indices.md`
+
+`docs/assets/app.js` changed only because `npm run build` copies `src/app.js` into the generated Pages output.
+
+### Test Results
+
+- `npm run build`: passed.
+- `npm run verify`: passed.
+- `npm run test:e2e`: passed, 7 tests.
+- Manual smoke coverage was exercised through a browser smoke script against `docs/`; it passed map render, search for Canada/United States/China/Denver/Seoul/Greater India, Brazil overlays, Amazonia/Ontario hover, selected-nation language refresh, and empty-map clear.
+
+### Retrospective
+
+Keeping compatibility aliases made this phase small enough to review independently while still establishing the important boundary. Later phases can migrate individual callers from aliases to explicit context where it reduces coupling.
+
+### Remaining Risks
+
+- `appState` is introduced but not yet the single owner of all mutable UI state. That is intentional for this phase and will be addressed by later state and visual-state phases.
+- Derived indices are currently rebuilt only at startup because scenario switching is out of scope. Future scenario work must rebuild or replace `derivedIndices` when `appState.activeScenario` changes.

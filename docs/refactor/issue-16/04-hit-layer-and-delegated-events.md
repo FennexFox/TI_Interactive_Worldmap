@@ -114,23 +114,75 @@ Rollback should restore per-region listeners and remove the hit layer.
 
 ## Progress
 
-- [ ] Hit layer added to SVG
-- [ ] Hit path CSS added
-- [ ] Hit layer renderer added
-- [ ] Region resolver added
-- [ ] Delegated hover/move/leave behavior implemented
-- [ ] Delegated click behavior implemented
-- [ ] Empty-map clear verified
-- [ ] Generated Pages assets rebuilt
-- [ ] Validation completed
-- [ ] Manual smoke completed
+- [x] Hit layer added to SVG
+- [x] Hit path CSS added
+- [x] Hit layer renderer added
+- [x] Region resolver added
+- [x] Delegated hover/move/leave behavior implemented
+- [x] Delegated click behavior implemented
+- [x] Empty-map clear verified
+- [x] Generated Pages assets rebuilt
+- [x] Validation completed
+- [x] Manual smoke completed
 
 ## Decision Log
 
 - Use existing region names as canonical browser identity for this phase.
 - Keep visible `.region` paths available for rendering, styling, and compatibility.
 - Update tests to prefer user-visible behavior over exact interaction target when practical.
+- 2026-06-11: Added `#hitRegions` as the top SVG interaction layer and `.region-hit` as transparent pointer target paths.
+- 2026-06-11: Added `renderHitLayer()`, `resolveHitRegion()`, and delegated hit-layer pointer/click handlers in `src/app.js`.
+- 2026-06-11: Kept visible `.region` paths and `regionPathElements` for visual state, but removed per-region pointer/click listeners from visible paths.
+- 2026-06-11: Synchronized hidden state between visible paths and hit paths so search and only-claims filters do not leave hidden regions clickable.
+- 2026-06-11: Treated `#hitRegions` background clicks/moves as blank map interactions for clear/hover-clear behavior.
+- 2026-06-11: Updated Playwright region interactions to dispatch events through hit-path helpers. Direct SVG path actionability can choose a bounding-box point intercepted by overlapping paths, which is not a reliable way to target irregular SVG regions.
 
 ## Outcomes
 
-Not started.
+Completed on 2026-06-11.
+
+### Completed Phase Summary
+
+Phase 4 added a dedicated transparent hit layer and moved region interaction to delegated hit-layer handlers. Visible region paths now remain responsible for rendering and class state, while hit paths own pointer and click interaction.
+
+The implementation added:
+
+- `#hitRegions` to `src/index.html`.
+- `.region-hit` CSS and hidden-state parity with `.region.hidden`.
+- hit-path caches in `src/app.js`.
+- `renderHitLayer(parent, activeData, indices)`.
+- `resolveHitRegion()` and delegated pointerover, pointermove, pointerout, and click handlers.
+- blank-map handling for `#hitRegions` itself.
+- e2e helpers that target hit paths instead of visible region paths.
+
+### Changed Files
+
+- `src/index.html`
+- `src/styles.css`
+- `src/app.js`
+- `docs/index.html`
+- `docs/assets/styles.css`
+- `docs/assets/app.js`
+- `tests/language.spec.js`
+- `docs/refactor/issue-16/00-master-plan.md`
+- `docs/refactor/issue-16/04-hit-layer-and-delegated-events.md`
+
+Generated `docs/**` files changed because `npm run build` copied the source updates.
+
+### Test Results
+
+- `npm run build`: passed.
+- `npm run verify`: passed.
+- `npm run test:e2e`: passed, 7 tests.
+- Targeted check for hit-layer markers and delegated pointer handlers passed with `rg -n 'pointerover|pointermove|pointerout|data-region-id|region-hit|hitRegions' src\app.js src\index.html src\styles.css`.
+- Manual smoke coverage was exercised through a browser smoke script against `docs/`; it passed delegated hit-layer hover, move between regions without stale hover, overlay click-through, blank hover clear, and blank click clear.
+
+### Retrospective
+
+The main Phase 4 risk was not the delegation logic itself, but interaction test targeting. SVG path bounding boxes are not reliable click points for irregular regions when transparent hit paths overlap. Dispatching through hit-path helpers gives stable coverage of the delegated event path while the manual smoke script verifies the same user-facing outcomes.
+
+### Remaining Risks
+
+- Tests now use event dispatch helpers for region interactions. This is stable for verifying delegation behavior but is less close to physical pointer movement than direct Playwright hover/click.
+- The visible path DOM still carries visual state classes. That is intentional until Phase 6 introduces canonical visual state.
+- Hit path order mirrors region order. If future data introduces overlapping geometries that matter for real pointer targeting, a later issue may need explicit z-order policy.

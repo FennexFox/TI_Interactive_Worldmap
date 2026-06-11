@@ -89,20 +89,62 @@ Rollback should remove helper extraction but leave phase 1 and phase 2 intact.
 
 ## Progress
 
-- [ ] SVG helper functions added
-- [ ] Base map rendering migrated
-- [ ] Label rendering migrated
-- [ ] Overlay rendering migrated
-- [ ] Hover and selection rendering migrated
-- [ ] Generated Pages assets rebuilt
-- [ ] Validation completed
-- [ ] Manual smoke completed
+- [x] SVG helper functions added
+- [x] Base map rendering migrated
+- [x] Label rendering migrated
+- [x] Overlay rendering migrated
+- [x] Hover and selection rendering migrated
+- [x] Generated Pages assets rebuilt
+- [x] Validation completed
+- [x] Manual smoke completed
 
 ## Decision Log
 
 - Renderer helpers remain in `src/app.js` during issue #16 to avoid introducing build or module changes.
 - Layer IDs remain stable for CSS, tests, and manual debugging.
+- 2026-06-11: Added `SVG_NS`, `createSvgElement()`, `createRegionPath()`, `replaceLayerChildren()`, and `setLayerVisible()`.
+- 2026-06-11: Migrated base region paths, labels, claim overlays, claim labels, hover/selection overlays, foreign hover overlays, and capital markers to helper-based SVG creation.
+- 2026-06-11: Kept grid rendering as string-based markup because it is not a region/overlay layer and does not affect follow-up boundaries.
+- 2026-06-11: Kept per-region event listeners, `regionPathElements`, and DOM class mutation unchanged for later phases.
 
 ## Outcomes
 
-Not started.
+Completed on 2026-06-11.
+
+### Completed Phase Summary
+
+Phase 3 centralized SVG element creation and layer replacement while keeping the current DOM layer IDs, visual classes, and interaction ownership intact. The refactor creates renderer helper entry points that later phases can reuse for hit layers, overlay model rendering, and visual-state application.
+
+The implementation added or used:
+
+- `createSvgElement()` for generic SVG nodes and text content.
+- `createRegionPath()` for region-shaped paths.
+- `replaceLayerChildren()` for clearing and replacing SVG layer contents.
+- `setLayerVisible()` for label layer visibility.
+- helper-backed rendering for base regions, labels, claim overlays, claim labels, hover highlights, selection markers, foreign hover overlays, and capital markers.
+
+### Changed Files
+
+- `src/app.js`
+- `docs/assets/app.js`
+- `docs/refactor/issue-16/00-master-plan.md`
+- `docs/refactor/issue-16/03-renderer-helpers-and-layer-entrypoints.md`
+
+`docs/assets/app.js` changed only because `npm run build` copies `src/app.js` into the generated Pages output.
+
+### Test Results
+
+- `npm run build`: passed.
+- `npm run verify`: passed.
+- `npm run test:e2e`: passed, 7 tests.
+- Manual smoke coverage was exercised through a browser smoke script against `docs/`; it passed base map color modes, label toggling, Brazil owned/claim overlays, Amazonia/Ontario hover overlays, Brasilia selection, and capital marker top-layer order.
+
+### Retrospective
+
+This phase was safest when kept as an extraction of SVG creation only. Avoiding event delegation and canonical visual state changes kept it independently reviewable and gave Phase 4 and Phase 6 cleaner helper seams to build on.
+
+### Remaining Risks
+
+- The helpers are still local to `src/app.js`, so they reduce duplication but do not yet create module-level isolation.
+- Grid rendering still uses string markup. That is acceptable for Phase 3 because grid rendering is not part of the region/overlay boundaries targeted by issue #16.
+- Direct class mutation still exists and is intentionally deferred to Phase 6.
