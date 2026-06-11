@@ -51,6 +51,13 @@ export function setHoveredNation(state, nationId = '') {
   return state;
 }
 
+export function setLockedNation(state, nationId = '') {
+  const normalized = normalizeId(nationId);
+  state.lockedNationId = normalized;
+  if (normalized) state.selectedNationId = normalized;
+  return state;
+}
+
 export function setActiveIncomingClaim(state, claimKey = '') {
   state.activeIncomingClaimKey = normalizeId(claimKey);
   return state;

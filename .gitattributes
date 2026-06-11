@@ -1,5 +1,12 @@
 # Derived Terra Invicta data and GitHub Pages deployment artifacts.
 # Keep these paths out of GitHub language statistics and generated-file review.
+*.css text eol=lf
+*.html text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.py text eol=lf
+
 data/generated/** linguist-generated=true
 data/*.catalog.json linguist-generated=true
 docs/index.html linguist-generated=true

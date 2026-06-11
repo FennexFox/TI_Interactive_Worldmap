@@ -32,10 +32,25 @@ When one of these files appears relevant, prefer inspecting the generator, sourc
 Use these paths for ordinary implementation and review:
 
 - `src/**` for the browser app source copied into `docs/`
+- `src/state/**` for application and map visual state modules
+- `src/data/**` for active data access and derived index modules
+- `src/render/**` for SVG layer rendering helpers
 - `tools/**` for extraction, catalog builders, page generation, and verification
 - `tests/**` and `playwright.config.js` for test coverage
 - `data/manual/region_aliases.json` for hand-maintained normalization aliases
 - `README.md` and `.github/**` for project and workflow documentation
+
+## Browser App Module Boundaries
+
+The browser app uses native ES modules. Keep state, data, and rendering boundaries explicit:
+
+- `src/state/app-state.js` owns app-level interaction state and transition helpers.
+- `src/state/map-visual-state.js` owns visual state for currently applied map classes and visibility.
+- `src/data/active-data.js` resolves the active scenario data, even while the app still ships one scenario.
+- `src/data/derived-indices.js` builds data indices derived from the active data.
+- `src/render/map-layers.js` contains low-level SVG layer rendering helpers and should receive dependencies through arguments or render context.
+
+Do not make render modules import `appState` directly. Pass state-derived values explicitly from `src/app.js`.
 
 ## Change Rules
 
