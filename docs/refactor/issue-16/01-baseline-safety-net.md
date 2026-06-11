@@ -102,17 +102,60 @@ Primary risk is over-specifying DOM implementation details that later phases are
 
 ## Progress
 
-- [ ] Baseline validation recorded
-- [ ] Missing coverage identified
-- [ ] Playwright tests added or updated
-- [ ] Validation completed
-- [ ] Manual smoke completed
+- [x] Baseline validation recorded
+- [x] Missing coverage identified
+- [x] Playwright tests added or updated
+- [x] Validation completed
+- [x] Manual smoke completed
 
 ## Decision Log
 
 - Use Playwright against `docs/` because that is how the app is deployed and how existing e2e tests run.
 - Keep test additions focused on behavior preservation rather than internals.
+- 2026-06-11: Baseline `npm run verify` passed before test changes.
+- 2026-06-11: Baseline `npm run test:e2e` exposed stale expectations in the existing capital-marker test: foreign hover overlays now use `mix-blend-mode: normal`, and Brazil's visible claim result set treats Bolivia as an in-overlay region with normal hover fill.
+- 2026-06-11: Added a small `chooseNation()` Playwright helper for new tests only.
+- 2026-06-11: Added tests for claim display mode, project filtering, claim-kind filtering, outgoing claim-card activation, incoming claimant switch, and empty-map clear.
 
 ## Outcomes
 
-Not started.
+Completed on 2026-06-11.
+
+### Completed Phase Summary
+
+Phase 1 stayed within the planned test-only scope. It corrected stale assertions in the existing capital-marker e2e test and added behavior coverage for the interaction paths that later refactor phases are most likely to disturb.
+
+The new safety net verifies:
+
+- Brazil selection renders the expected claim pill and overlay count.
+- Project selection switches claim display to project mode and narrows overlays.
+- Hostile claim filtering updates overlays and panel state.
+- Claim display off removes claim overlays while preserving selected-nation panel state.
+- Outgoing claim-card clicks activate project mode without changing the selected nation.
+- Incoming claim-card clicks switch to the claimant and preserve the expected overlay context.
+- Empty-map clicks clear search, overlays, selected outlines, and reset claim mode.
+
+### Changed Files
+
+- `tests/language.spec.js`
+- `docs/refactor/issue-16/00-master-plan.md`
+- `docs/refactor/issue-16/01-baseline-safety-net.md`
+
+No application source files or generated deploy files were changed.
+
+### Test Results
+
+- Initial baseline `npm run verify`: passed.
+- Initial baseline `npm run test:e2e`: failed on stale current-behavior expectations in an existing test.
+- Final `npm run verify`: passed.
+- Final `npm run test:e2e`: passed, 7 tests.
+- Manual smoke coverage was exercised through a browser smoke script against `docs/`; it passed map render, language switching, search, Brazil overlays, hover/click regions, claim controls, and empty-map clear.
+
+### Retrospective
+
+The useful outcome from this phase is not only added coverage, but also correction of two assertions that no longer described current behavior. Leaving those stale expectations in place would have made later architecture phases look broken even when preserving the actual app.
+
+### Remaining Risks
+
+- The new tests intentionally assert current 2026 generated-data counts for Brazil and Bolivia. That is appropriate for issue #16 behavior preservation, but future data-regeneration work may need to update those counts.
+- Some tests still interact with visible `.region` paths. Phase 4 may need to retarget those interactions to the hit layer while preserving the same user-level behavior assertions.

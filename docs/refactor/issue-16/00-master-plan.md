@@ -130,7 +130,7 @@ High-risk phases are expected to be:
 
 ## Progress
 
-- [ ] Phase 1: Baseline Safety Net
+- [x] Phase 1: Baseline Safety Net
 - [ ] Phase 2: Active Data And Derived Indices
 - [ ] Phase 3: Renderer Helpers And Layer Entrypoints
 - [ ] Phase 4: Hit Layer And Delegated Events
@@ -144,7 +144,8 @@ High-risk phases are expected to be:
 - 2026-06-11: Keep implementation phases source-first and rebuild `docs/**` with `npm run build`.
 - 2026-06-11: Treat the existing `2026` data as the only active scenario during issue #16.
 - 2026-06-11: Use current region names as canonical browser region identity unless a later phase proves numeric IDs are safer.
+- 2026-06-11: Completed Phase 1 as a test-only safety-net phase; no application source or generated deploy output changed.
 
 ## Outcomes
 
-Not started. Fill this section as phases are completed.
+Phase 1 is complete. The e2e safety net now covers claim display controls, project filtering, claim-kind filtering, outgoing and incoming claim-card synchronization, and empty-map clear behavior in addition to the existing language, search, hover, selection, and capital-marker coverage.

@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test';
 
+async function chooseNation(page, query, tag) {
+  await page.locator('#search').fill(query);
+  await page.locator('#nationDropdown .searchOption')
+    .filter({ has: page.locator('.searchOptionTag', { hasText: tag }) })
+    .first()
+    .click();
+}
+
 test('language selector switches static and dynamic UI copy', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
@@ -149,7 +157,7 @@ test('selected nation marks its capital region with a fillable star', async ({ p
   await expect(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="CAN"][data-region="Ontario"]')).toHaveCount(1);
   await expect(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="CAN"]')).not.toHaveCount(0);
   const foreignHoverOverlay = page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="CAN"]').first();
-  await expect(foreignHoverOverlay).toHaveCSS('mix-blend-mode', 'screen');
+  await expect(foreignHoverOverlay).toHaveCSS('mix-blend-mode', 'normal');
   await expect(foreignHoverOverlay).toHaveAttribute('fill-opacity', /^(0\.|1)/);
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]')).toHaveCount(1);
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]')).not.toHaveClass(/is-selected/);
@@ -157,8 +165,8 @@ test('selected nation marks its capital region with a fillable star', async ({ p
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Ontario"]')).toHaveClass(/is-selected/);
 
   await page.locator('#regions .region[data-region="Bolivia"]').hover();
-  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Bolivia"]')).toHaveCount(0);
-  await expect(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="BOL"][data-region="Brasilia"]')).toHaveCount(1);
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Bolivia"]')).toHaveCount(1);
+  await expect(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="BOL"][data-region="Brasilia"]')).toHaveCount(0);
 
   await page.locator('#regions .region[data-region="Brasilia"]').hover();
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]')).toHaveClass(/is-selected/);
@@ -174,4 +182,67 @@ test('selected nation marks its capital region with a fillable star', async ({ p
   await page.locator('#regions .region[data-region="Ontario"]').hover();
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Ontario"]')).toHaveCount(1);
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Ontario"]')).toHaveClass(/is-selected/);
+});
+
+test('selected nation claim controls update overlays without losing state', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  await expect(page.locator('#projectSel option')).toHaveCount(3);
+
+  await page.selectOption('#projectSel', 'Project_GranColombia');
+  await expect(page.locator('#claimMode')).toHaveValue('project');
+  await expect(page.locator('#projectSel')).toHaveValue('Project_GranColombia');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 5, research tiers 1');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(14);
+  await expect(page.locator('.claimListItem.active[data-claim-kind="outgoing"]')).toHaveCount(1);
+
+  await page.selectOption('#claimMode', 'all');
+  await page.selectOption('#claimKind', 'hostile');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 11, research tiers 1');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(20);
+  await expect(page.locator('.claimListItem[data-claim-kind="outgoing"]')).toHaveCount(1);
+
+  await page.selectOption('#claimKind', 'all');
+  await page.selectOption('#claimMode', 'off');
+  await expect(page.locator('#claimMode')).toHaveValue('off');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 0, research tiers 0');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(0);
+  await expect(page.locator('#nationInfo')).toContainText('Display mode');
+  await expect(page.locator('#nationInfo')).toContainText('Off');
+});
+
+test('claim cards synchronize map overlays, panel state, and empty map clear', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await page.locator('#regions .region[data-region="Amazonia"]').click();
+  await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveText('Manaus');
+  await expect(page.locator('.claimListItem[data-claim-kind="incoming"]')).toHaveCount(4);
+
+  await page.locator('.claimListItem[data-claim-kind="outgoing"]').first().click();
+  await expect(page.locator('#claimMode')).toHaveValue('project');
+  await expect(page.locator('#projectSel')).toHaveValue('Project_GranColombia');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 5, research tiers 1');
+  await expect(page.locator('.claimListItem.active[data-claim-kind="outgoing"]')).toHaveCount(1);
+  await expect(page.locator('.legendRegionItem[data-region-name="FrenchGuiana"]').first()).toBeVisible();
+
+  await page.locator('.claimListItem[data-claim-kind="incoming"]').first().click();
+  await expect(page.locator('#search')).toHaveValue(/Bolivia/);
+  await expect(page.locator('#claimMode')).toHaveValue('project');
+  await expect(page.locator('#projectSel')).toHaveValue('');
+  await expect(page.locator('#claimPill')).toHaveText('Bolivia: territory 1, claims 25, research tiers 0');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  await expect(page.locator('.claimListItem.active[data-claim-kind="outgoing"]')).toHaveCount(1);
+
+  await page.locator('#grid .graticule').first().click({ force: true });
+  await expect(page.locator('#search')).toHaveValue('');
+  await expect(page.locator('#claimMode')).toHaveValue('all');
+  await expect(page.locator('#claimPill')).toHaveText('Claims: -');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(0);
+  await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
 });
