@@ -1653,7 +1653,7 @@ function renderHitLayer(parent, activeData, indices, renderContext = {}) {
     const hitPath = createRegionPath(region, {
       class: 'region-hit',
       fill: 'transparent',
-      stroke: 'transparent',
+      stroke: 'none',
     }, {regionId: region.regionName});
     hitPathByRegion.set(region.regionName, hitPath);
     hitPathElements.push(hitPath);
