@@ -84,6 +84,9 @@ The deploy helper only stages generated paths:
 - `docs/data/claim_map.generated.json`
 - `docs/assets/data.generated.js`
 - `docs/assets/app.js`
+- `docs/assets/state/*.js`
+- `docs/assets/data/*.js`
+- `docs/assets/render/*.js`
 - `docs/assets/styles.css`
 - `docs/index.html`
 

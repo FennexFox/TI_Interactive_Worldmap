@@ -28,6 +28,14 @@ def write_text(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def copy_js_modules(src_dir: Path, dest_dir: Path) -> None:
+    if not src_dir.exists():
+        return
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    for source in src_dir.glob("*.js"):
+        shutil.copyfile(source, dest_dir / source.name)
+
+
 def build_pages() -> None:
     docs = ROOT / "docs"
     (docs / "assets").mkdir(parents=True, exist_ok=True)
@@ -36,6 +44,9 @@ def build_pages() -> None:
     shutil.copyfile(ROOT / "src" / "index.html", docs / "index.html")
     shutil.copyfile(ROOT / "src" / "styles.css", docs / "assets" / "styles.css")
     shutil.copyfile(ROOT / "src" / "app.js", docs / "assets" / "app.js")
+    copy_js_modules(ROOT / "src" / "state", docs / "assets" / "state")
+    copy_js_modules(ROOT / "src" / "data", docs / "assets" / "data")
+    copy_js_modules(ROOT / "src" / "render", docs / "assets" / "render")
 
     region_map = load_json(ROOT / "data" / "generated" / "region_map.generated.json")
     claim_map = load_json(ROOT / "data" / "generated" / "claim_map.generated.json")
