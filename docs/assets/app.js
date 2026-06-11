@@ -1,26 +1,38 @@
+import {
+  clearSelectionState,
+  clearTransientClaimState as clearTransientClaimAppState,
+  createAppState,
+  setActiveIncomingClaim,
+  setActiveScenarioId,
+  setClaimFilters,
+  setHoveredNation,
+  setHoveredRegion,
+  setLockedNation,
+  setSelectedNation,
+  setSelectedRegions,
+} from './state/app-state.js';
+import {
+  applyMapVisualState as applyVisualState,
+  clearOverlayVisualState as clearOverlayState,
+  createMapVisualState,
+  setHiddenVisualState as setHiddenState,
+  setHoverVisualState as setHoverState,
+  setOverlayVisualState as setOverlayState,
+  syncSelectedVisualState as syncSelectedState,
+} from './state/map-visual-state.js';
+import {createAppData, getActiveData} from './data/active-data.js';
+import {buildDerivedIndices} from './data/derived-indices.js';
+import {
+  createRegionPath,
+  createSvgElement,
+  renderGrid as renderGridLayer,
+  renderLabels as renderLabelsLayer,
+  renderRegions as renderRegionLayers,
+  replaceLayerChildren,
+} from './render/map-layers.js';
+
 window.TI_DATA_PROMISE.then(({regionMap, claimMap, catalogs = {}}) => {
-const defaultScenario = String(regionMap?.summary?.scenarioYear || '2026');
-const appData = {
-  defaultScenario,
-  scenarios: {
-    [defaultScenario]: {
-      regionMap,
-      claimMap,
-      catalogs,
-    },
-  },
-};
-function createMapVisualState() {
-  return {
-    selectedRegionIds: new Set(),
-    ownedRegionIds: new Set(),
-    claimTargetRegionIds: new Set(),
-    hoverRegionIds: new Set(),
-    dimmedRegionIds: new Set(),
-    hiddenRegionIds: new Set(),
-    hasClaimOverlay: false,
-  };
-}
+const appData = createAppData({regionMap, claimMap, catalogs});
 function createMapViewState() {
   return {
     x: 0,
@@ -40,58 +52,11 @@ function initializeMapView(activeData, target = createMapViewState()) {
   target.worldWidth = width;
   return target;
 }
-const appState = {
-  activeScenario: appData.defaultScenario,
-  selectedNationId: '',
-  selectedRegionId: '',
-  hoveredRegionId: '',
-  activeIncomingClaimKey: '',
-  filters: {},
-  mapView: createMapViewState(),
-  mapVisualState: createMapVisualState(),
-};
-const mapVisualState = appState.mapVisualState;
-function getActiveData() {
-  return appData.scenarios[appState.activeScenario] || appData.scenarios[appData.defaultScenario];
-}
-function buildDerivedIndices(activeData) {
-  const activeRegionMap = activeData.regionMap || {regions: [], summary: {}};
-  const activeClaimMap = activeData.claimMap || {};
-  const activeCatalogs = activeData.catalogs || {};
-  const regions = activeRegionMap.regions || [];
-  const summary = activeRegionMap.summary || {};
-  const claimsByNation = activeClaimMap.claimsByNation || {};
-  const projectMeta = activeClaimMap.projects || {};
-  const claimStats = activeClaimMap.claimStats || {};
-  const nationCatalog = activeCatalogs.nations || {};
-  const nationMeta = {...(activeClaimMap.nationMeta || {}), ...((nationCatalog && nationCatalog.nations) || {})};
-  const nationRegions = new Map();
-  for (const region of regions) {
-    if (!nationRegions.has(region.nationTag)) nationRegions.set(region.nationTag, []);
-    nationRegions.get(region.nationTag).push(region.regionName);
-  }
-  return {
-    regionMap: activeRegionMap,
-    claimMap: activeClaimMap,
-    catalogs: activeCatalogs,
-    regions,
-    summary,
-    nationColorPalette: summary.nationColorPalette || [],
-    nationColorIndexes: summary.nationColorIndexes || {},
-    claimsByNation,
-    projectMeta,
-    claimStats,
-    nationCatalog,
-    nationMeta,
-    regionByName: Object.fromEntries(regions.map(region => [region.regionName, region])),
-    nationRegions,
-    incomingClaimsByRegion: new Map(),
-    nationChoices: [],
-    regionChoices: [],
-  };
-}
-const activeData = getActiveData();
-const mapView = initializeMapView(activeData, appState.mapView);
+const appState = createAppState({activeScenarioId: appData.defaultScenario});
+setActiveScenarioId(appState, appData.defaultScenario);
+const mapVisualState = createMapVisualState();
+const activeData = getActiveData(appData, appState.activeScenarioId);
+const mapView = initializeMapView(activeData);
 const derivedIndices = buildDerivedIndices(activeData);
 const REGIONS = derivedIndices.regions;
 const SUMMARY = derivedIndices.summary;
@@ -491,7 +456,7 @@ function setClaimsPillEmpty() {
 }
 function updateOnlyClaimsButtonLabel() {
   const el = document.getElementById('onlyClaimsBtn');
-  if (el) el.textContent = onlyClaims ? t('button.showAllMap') : t('button.onlyClaims');
+  if (el) el.textContent = getOnlyClaims() ? t('button.showAllMap') : t('button.onlyClaims');
 }
 function applyStaticTranslations() {
   document.documentElement.lang = currentLanguage;
@@ -510,22 +475,15 @@ const regionByName = derivedIndices.regionByName;
 const pathByRegion = new Map();
 const hitPathByRegion = new Map();
 const nationRegions = derivedIndices.nationRegions;
-let activeNation = '';
-let hoverNation = '';
-let lockedNation = '';
 let labelsVisible = false;
-let onlyClaims = false;
-let selectedRegionNames = new Set();
-let projectFilter = '';
+const selectedRegionIds = appState.selectedRegionIds;
 let nationChoices = derivedIndices.nationChoices;
 let nationDropdownOpen = false;
 let highlightedNationChoiceIndex = -1;
 let currentDropdownChoices = [];
 let regionChoices = derivedIndices.regionChoices;
-let activeIncomingClaimKey = '';
 let pendingHoverNation = '';
 let hoverPreviewFrame = 0;
-let hoverRegionName = '';
 let visibleNationRegionNames = new Set();
 let tooltipRegionId = null;
 let svgWrapRectCache = null;
@@ -537,102 +495,70 @@ let capitalMarkersKey = '';
 const nationChoiceByValue = new Map();
 const incomingClaimsByRegion = derivedIndices.incomingClaimsByRegion;
 const regionCenterCache = new Map();
-const SVG_NS = 'http://www.w3.org/2000/svg';
 
-function createSvgElement(tag, attrs = {}, dataset = {}) {
-  const element = document.createElementNS(SVG_NS, tag);
-  for (const [key, value] of Object.entries(attrs)) {
-    if (value == null) continue;
-    if (key === 'textContent') element.textContent = String(value);
-    else element.setAttribute(key, String(value));
-  }
-  for (const [key, value] of Object.entries(dataset)) {
-    if (value == null || value === '') continue;
-    element.dataset[key] = String(value);
-  }
-  return element;
+function setActiveNationState(nation = '') {
+  setSelectedNation(appState, nation);
 }
 
-function createRegionPath(region, attrs = {}, dataset = {}) {
-  return createSvgElement('path', {d: region.path, ...attrs}, {
-    id: region.id,
-    region: region.regionName,
-    nation: region.nationTag,
-    ...dataset,
-  });
+function setHoverNationState(nation = '') {
+  setHoveredNation(appState, nation);
 }
 
-function replaceLayerChildren(layer, children = []) {
-  if (!layer) return;
-  if (children instanceof DocumentFragment) {
-    layer.replaceChildren(children);
-    return;
-  }
-  const nextChildren = Array.isArray(children) ? children : [children];
-  layer.replaceChildren(...nextChildren.filter(Boolean));
+function setLockedNationState(nation = '') {
+  setLockedNation(appState, nation);
 }
 
-function setLayerVisible(layer, visible) {
-  if (layer) layer.style.display = visible ? '' : 'none';
+function setHoveredRegionState(regionName = '', nationId) {
+  setHoveredRegion(appState, regionName, nationId);
 }
 
-function replaceSetContents(targetSet, values = []) {
-  targetSet.clear();
-  for (const value of values) {
-    if (value) targetSet.add(value);
-  }
+function setSelectedRegionIds(regionIds = []) {
+  setSelectedRegions(appState, regionIds);
+  syncSelectedVisualState();
+}
+
+function setProjectFilterState(projectId = '') {
+  setClaimFilters(appState, {projectId});
+}
+
+function setOnlyClaimsState(value) {
+  setClaimFilters(appState, {onlyClaims: value});
+}
+
+function setActiveIncomingClaimKeyState(claimKey = '') {
+  setActiveIncomingClaim(appState, claimKey);
 }
 
 function syncSelectedVisualState() {
-  replaceSetContents(mapVisualState.selectedRegionIds, selectedRegionNames);
+  syncSelectedState(mapVisualState, selectedRegionIds);
 }
 
+function getActiveNation() { return appState.selectedNationId || ''; }
+function getHoverNation() { return appState.hoveredNationId || ''; }
+function getLockedNation() { return appState.lockedNationId || ''; }
+function getHoveredRegionName() { return appState.hoveredRegionId || ''; }
+function getProjectFilter() { return appState.filters.projectId || ''; }
+function getOnlyClaims() { return !!appState.filters.onlyClaims; }
+function getActiveIncomingClaimKey() { return appState.activeIncomingClaimKey || ''; }
+
 function setHoverVisualState(regionName = '') {
-  replaceSetContents(mapVisualState.hoverRegionIds, regionName ? [regionName] : []);
+  setHoverState(mapVisualState, regionName);
 }
 
 function clearOverlayVisualState() {
-  replaceSetContents(mapVisualState.ownedRegionIds);
-  replaceSetContents(mapVisualState.claimTargetRegionIds);
-  replaceSetContents(mapVisualState.dimmedRegionIds);
-  mapVisualState.hasClaimOverlay = false;
+  clearOverlayState(mapVisualState);
 }
 
 function setOverlayVisualState(model) {
-  if (!model) {
-    clearOverlayVisualState();
-    return;
-  }
-  replaceSetContents(mapVisualState.ownedRegionIds, model.displayBaseSet);
-  replaceSetContents(mapVisualState.claimTargetRegionIds, model.claimSet);
-  const regions = model.indices?.regions || REGIONS;
-  const dimmedRegionIds = model.nation
-    ? regions.map(region => region.regionName).filter(regionName => !model.resultSet.has(regionName))
-    : [];
-  replaceSetContents(mapVisualState.dimmedRegionIds, dimmedRegionIds);
-  mapVisualState.hasClaimOverlay = !!model.hasClaimOverlay;
+  setOverlayState(mapVisualState, model, REGIONS);
 }
 
 function setHiddenVisualState(hiddenRegionIds) {
-  replaceSetContents(mapVisualState.hiddenRegionIds, hiddenRegionIds);
+  setHiddenState(mapVisualState, hiddenRegionIds);
 }
 
 function applyMapVisualState(renderContext = {}, state = mapVisualState) {
-  const regionPaths = renderContext.regionPathElements || regionPathElements;
-  for (const path of regionPaths) {
-    const regionId = path.dataset.region;
-    path.classList.toggle('selected', state.selectedRegionIds.has(regionId));
-    path.classList.toggle('owned-highlight', state.ownedRegionIds.has(regionId));
-    path.classList.toggle('claim-target', state.claimTargetRegionIds.has(regionId));
-    path.classList.toggle('hovered', state.hoverRegionIds.has(regionId));
-    path.classList.toggle('dimmed', state.dimmedRegionIds.has(regionId));
-    path.classList.toggle('hidden', state.hiddenRegionIds.has(regionId));
-  }
-  const hitPaths = renderContext.hitPathByRegion || hitPathByRegion;
-  for (const [regionId, hitPath] of hitPaths) {
-    hitPath.classList.toggle('hidden', state.hiddenRegionIds.has(regionId));
-  }
-  svg?.classList.toggle('claims-active', !!state.hasClaimOverlay);
+  applyVisualState({svg, regionPathElements, hitPathByRegion, ...renderContext}, state);
 }
 
 const CLAIM_GRADIENT_START_HUE = 155;
@@ -905,7 +831,7 @@ function isCapitalRegionForNation(nation, regionName) {
   return !!nation && !!regionName && capitalRegionNamesForNation(nation).includes(regionName);
 }
 function selectedRegionIsCapital(regionName) {
-  if (isCapitalRegionForNation(activeNation, regionName)) return true;
+  if (isCapitalRegionForNation(getActiveNation(), regionName)) return true;
   const owner = regionByName[regionName]?.nationTag || '';
   return isCapitalRegionForNation(owner, regionName);
 }
@@ -922,27 +848,27 @@ function addCapitalMarkerNation(markers, nation, {selected=false} = {}) {
 }
 function collectCapitalMarkers() {
   const markers = new Map();
-  const pinnedNation = lockedNation || activeNation;
+  const pinnedNation = getLockedNation() || getActiveNation();
   if (pinnedNation) {
-    const selected = [...selectedRegionNames].some(rn => isCapitalRegionForNation(pinnedNation, rn))
-      || isCapitalRegionForNation(pinnedNation, hoverRegionName);
+    const selected = [...selectedRegionIds].some(rn => isCapitalRegionForNation(pinnedNation, rn))
+      || isCapitalRegionForNation(pinnedNation, getHoveredRegionName());
     addCapitalMarkerNation(markers, pinnedNation, {selected});
   }
 
-  for (const rn of selectedRegionNames) {
+  for (const rn of selectedRegionIds) {
     const owner = regionByName[rn]?.nationTag || '';
     if (isCapitalRegionForNation(owner, rn)) addCapitalMarkerNation(markers, owner, {selected:true});
   }
 
-  const hovered = hoverRegionName ? regionByName[hoverRegionName] : null;
+  const hovered = getHoveredRegionName() ? regionByName[getHoveredRegionName()] : null;
   if (hovered) {
-    if (activeNation && visibleNationRegionNames.has(hovered.regionName)) {
-      addCapitalMarkerNation(markers, activeNation, {selected:isCapitalRegionForNation(activeNation, hovered.regionName)});
+    if (getActiveNation() && visibleNationRegionNames.has(hovered.regionName)) {
+      addCapitalMarkerNation(markers, getActiveNation(), {selected:isCapitalRegionForNation(getActiveNation(), hovered.regionName)});
     }
     addCapitalMarkerNation(markers, hovered.nationTag, {selected:isCapitalRegionForNation(hovered.nationTag, hovered.regionName)});
   }
 
-  if (!markers.size) addCapitalMarkerNation(markers, hoverNation);
+  if (!markers.size) addCapitalMarkerNation(markers, getHoverNation());
   return [...markers.values()];
 }
 function renderCapitalMarkers({force=false} = {}) {
@@ -1056,7 +982,7 @@ function claimCardResearchLabel(entry, nation, {compact=false} = {}) {
   return t(compact ? 'claimCard.researchTierValue' : 'claimCard.researchTier', {tier});
 }
 function claimCardTitleParts(entry, kind) {
-  const nation = kind === 'incoming' ? (entry.claimant || '') : activeNation;
+  const nation = kind === 'incoming' ? (entry.claimant || '') : getActiveNation();
   const nationName = nationDisplayName(nation);
   return {
     tag: nation || '-',
@@ -1172,7 +1098,7 @@ function renderNationDropdown() {
   if (highlightedNationChoiceIndex >= currentDropdownChoices.length) highlightedNationChoiceIndex = currentDropdownChoices.length - 1;
   if (highlightedNationChoiceIndex < -1) highlightedNationChoiceIndex = -1;
   nationDropdown.innerHTML = currentDropdownChoices.map((c, i) => {
-    const selected = c.type === 'nation' ? search.dataset.selectedNation === c.tag : selectedRegionNames.has(c.regionName);
+    const selected = c.type === 'nation' ? search.dataset.selectedNation === c.tag : selectedRegionIds.has(c.regionName);
     const active = i === highlightedNationChoiceIndex;
     const tagText = c.type === 'region' ? t('search.regionTag') : c.tag;
     const labelText = c.type === 'region' ? c.label : c.label.replace(c.tag + ' · ', '');
@@ -1202,8 +1128,9 @@ function chooseNationFromDropdown(index=highlightedNationChoiceIndex) {
   return true;
 }
 function resetTransientClaimState() {
-  projectFilter = '';
-  activeIncomingClaimKey = '';
+  clearTransientClaimAppState(appState);
+  setProjectFilterState('');
+  setActiveIncomingClaimKeyState('');
   projectSel.value = '';
   if (claimModeSel.value === 'project') claimModeSel.value = 'all';
 }
@@ -1215,44 +1142,43 @@ function cancelPendingHoverPreview() {
   pendingHoverNation = '';
 }
 function setHoverPreviewNation(nation) {
-  if (lockedNation) return;
-  if (hoverNation === nation && activeNation === nation) return;
-  hoverNation = nation || '';
+  if (getLockedNation()) return;
+  if (getHoverNation() === nation && getActiveNation() === nation) return;
+  setHoverNationState(nation);
   resetTransientClaimState();
-  selectedRegionNames = new Set();
-  syncSelectedVisualState();
-  updateNationOverlay(hoverNation);
+  setSelectedRegionIds();
+  updateNationOverlay(getHoverNation());
 }
 function scheduleHoverPreviewNation(nation) {
-  if (lockedNation) return;
+  if (getLockedNation()) return;
   const nextNation = nation || '';
-  if (hoverNation === nextNation && activeNation === nextNation) return;
+  if (getHoverNation() === nextNation && getActiveNation() === nextNation) return;
   pendingHoverNation = nextNation;
   if (hoverPreviewFrame) return;
   hoverPreviewFrame = window.requestAnimationFrame(() => {
     hoverPreviewFrame = 0;
     const next = pendingHoverNation;
     pendingHoverNation = '';
-    if (!lockedNation && next) setHoverPreviewNation(next);
+    if (!getLockedNation() && next) setHoverPreviewNation(next);
   });
 }
 function clearHoverPreview() {
   cancelPendingHoverPreview();
   hideRegionTooltip();
   setHoverPill();
-  hoverRegionName = '';
+  setHoveredRegionState();
   setHoverVisualState();
   applyMapVisualState();
   renderHoverOutlines();
-  if (lockedNation) {
-    hoverNation = '';
+  if (getLockedNation()) {
+    setHoverNationState();
     renderCapitalMarkers();
     return;
   }
-  if (!hoverNation && !activeNation) return;
-  hoverNation = '';
+  if (!getHoverNation() && !getActiveNation()) return;
+  setHoverNationState();
   resetTransientClaimState();
-  selectedRegionNames = new Set();
+  setSelectedRegionIds();
   updateNationOverlay('');
   updateSelectedRegions();
 }
@@ -1294,7 +1220,7 @@ function buildIncomingClaimIndex() {
   }
 }
 function incomingTargetRegions(data, baseSet) {
-  const selected = [...selectedRegionNames].filter(Boolean);
+  const selected = [...selectedRegionIds].filter(Boolean);
   if (selected.length) return new Set(selected);
   const targetRegions = new Set(baseSet);
   if (!targetRegions.size) {
@@ -1310,15 +1236,16 @@ function incomingClaimKey(item) {
   return `${item?.claimant || ''}|${item?.project || '__base__'}`;
 }
 function selectedIncomingEntry(entries) {
+  const activeIncomingClaimKey = getActiveIncomingClaimKey();
   if (!activeIncomingClaimKey) return null;
   return entries.find(e => incomingClaimKey(e) === activeIncomingClaimKey) || null;
 }
-function incomingClaimsForTarget(activeNation, data, baseSet) {
+function incomingClaimsForTarget(targetNation, data, baseSet) {
   const targetRegions = incomingTargetRegions(data, baseSet);
   const grouped = new Map();
   for (const rn of targetRegions) {
     for (const item of incomingClaimsByRegion.get(rn) || []) {
-      if (item.claimant === activeNation) continue;
+      if (item.claimant === targetNation) continue;
       const key = incomingClaimKey(item);
       if (!grouped.has(key)) {
         grouped.set(key, {
@@ -1349,7 +1276,7 @@ function incomingClaimsForTarget(activeNation, data, baseSet) {
   return [...grouped.values()].sort((a,b) => a.claimant.localeCompare(b.claimant) || projectSortLabel(a.project).localeCompare(projectSortLabel(b.project)));
 }
 function selectedRegionSummary() {
-  const names = [...selectedRegionNames].filter(Boolean);
+  const names = [...selectedRegionIds].filter(Boolean);
   if (!names.length) return '';
   if (names.length === 1) {
     const rn = names[0];
@@ -1386,7 +1313,7 @@ function appendSelectedRegionMarker(frag, r, {showDot=true} = {}) {
 }
 function shouldShowForeignHoverNationOverlay(region) {
   if (!region?.nationTag) return false;
-  const pinnedNation = lockedNation || activeNation;
+  const pinnedNation = getLockedNation() || getActiveNation();
   if (!pinnedNation) return false;
   if (visibleNationRegionNames.has(region.regionName)) return false;
   return region.nationTag !== pinnedNation;
@@ -1446,15 +1373,15 @@ function clearHoverVisualLayers() {
   replaceLayerChildren(gHoverOutlines);
 }
 function renderHoverOutlines({force=false} = {}) {
-  const rn = hoverRegionName;
+  const rn = getHoveredRegionName();
   const r = rn ? regionByName[rn] : null;
-  const hidden = !rn || selectedRegionNames.has(rn) || !r;
+  const hidden = !rn || selectedRegionIds.has(rn) || !r;
   const foreign = !hidden && shouldShowForeignHoverNationOverlay(r);
   const key = hidden
     ? 'empty'
     : foreign
-      ? `foreign|${r.nationTag}|${claimModeSel.value}|${claimKindSel.value}|${lockedNation || activeNation}|${visibleNationRegionNames.has(rn) ? 1 : 0}`
-      : `region|${rn}|${lockedNation || activeNation}|${selectedRegionNames.has(rn) ? 1 : 0}`;
+      ? `foreign|${r.nationTag}|${claimModeSel.value}|${claimKindSel.value}|${getLockedNation() || getActiveNation()}|${visibleNationRegionNames.has(rn) ? 1 : 0}`
+      : `region|${rn}|${getLockedNation() || getActiveNation()}|${selectedRegionIds.has(rn) ? 1 : 0}`;
   if (!force && key === hoverVisualKey) return;
   hoverVisualKey = key;
   clearHoverVisualLayers();
@@ -1473,7 +1400,7 @@ function renderSelectionOutlines() {
   if (!gSelectionOutlines) return;
   replaceLayerChildren(gSelectionOutlines);
   const frag = document.createDocumentFragment();
-  for (const rn of selectedRegionNames) {
+  for (const rn of selectedRegionIds) {
     const r = regionByName[rn];
     if (!r) continue;
     appendRegionHighlight(frag, r, 'selection');
@@ -1508,7 +1435,7 @@ function renderRegionList(regionNames, claims={}, prefix='targets', regionSource
     const source = regionSourceLabels?.[rn] ? regionSourceLabels[rn] : '';
     const region = regionByName[rn];
     const owner = region?.nationTag ? ` · ${region.nationTag}` : '';
-    const active = selectedRegionNames.has(rn);
+    const active = selectedRegionIds.has(rn);
     const detail = t('regionList.detail', {
       prefix: t(`regionPrefix.${prefix}`) || prefix,
       owner,
@@ -1524,32 +1451,32 @@ function focusRegions(regionNames, {selectSingle=false, preserveNation=false, re
   if (selectSingle && names.length === 1) {
     const region = regionByName[names[0]];
     if (region) {
-      if (preserveNation && activeNation) {
-        selectedRegionNames = new Set([region.regionName]);
+      if (preserveNation && getActiveNation()) {
+        setSelectedRegionIds([region.regionName]);
         updateSelectedRegions();
         // TODO: Future mapView pan/zoom support should keep this focused region visible.
-        if (refreshOverlay) updateNationOverlay(activeNation);
+        if (refreshOverlay) updateNationOverlay(getActiveNation());
         return;
       }
       selectRegion(region);
       return;
     }
   }
-  selectedRegionNames = new Set(names);
+  setSelectedRegionIds(names);
   // TODO: Future mapView pan/zoom support should keep these focused regions visible.
   updateSelectedRegions();
-  if (refreshOverlay && activeNation) updateNationOverlay(activeNation);
+  if (refreshOverlay && getActiveNation()) updateNationOverlay(getActiveNation());
 }
 function clearSelection({clearSearch=true} = {}) {
-  activeNation = '';
-  hoverNation = '';
-  hoverRegionName = '';
+  clearSelectionState(appState);
+  setActiveNationState();
+  setHoverNationState();
+  setHoveredRegionState();
   setHoverVisualState();
-  lockedNation = '';
-  selectedRegionNames = new Set();
-  syncSelectedVisualState();
-  projectFilter = '';
-  activeIncomingClaimKey = '';
+  setLockedNationState();
+  setSelectedRegionIds();
+  setProjectFilterState('');
+  setActiveIncomingClaimKeyState('');
   projectSel.value = '';
   claimModeSel.value = 'all';
   cancelPendingHoverPreview();
@@ -1558,7 +1485,7 @@ function clearSelection({clearSearch=true} = {}) {
     search.value = '';
     search.dataset.selectedNation = '';
   }
-  onlyClaims = false;
+  setOnlyClaimsState(false);
   updateOnlyClaimsButtonLabel();
   setHoverPill();
   updateNationOverlay('');
@@ -1568,10 +1495,10 @@ function clearSelection({clearSearch=true} = {}) {
 function focusNation(nation, {fillSearch=true} = {}) {
   if (!nation) { clearSelection({clearSearch:fillSearch}); return; }
   cancelPendingHoverPreview();
-  lockedNation = nation;
-  hoverNation = '';
-  projectFilter = '';
-  activeIncomingClaimKey = '';
+  setLockedNationState(nation);
+  setHoverNationState();
+  setProjectFilterState('');
+  setActiveIncomingClaimKeyState('');
   if (fillSearch) {
     search.value = humanizeNationLabel(nation);
     search.dataset.selectedNation = nation;
@@ -1586,7 +1513,7 @@ function focusNation(nation, {fillSearch=true} = {}) {
 function renderClaimSection(title, items, emptyText, kind) {
   const sectionKey = kind === 'incoming' ? 'incoming' : 'outgoing';
   if (!items.length) return `<details class="infoSubsection claimSection" data-info-section="${sectionKey}"${infoSectionOpenAttribute(sectionKey)}><summary><span>${escapeHtml(title)}</span></summary><div class="infoSubsectionBody small">${escapeHtml(emptyText)}</div></details>`;
-  const activeOutgoing = claimModeSel.value === 'project' ? projectFilter : '';
+  const activeOutgoing = claimModeSel.value === 'project' ? getProjectFilter() : '';
   const rows = items.map((item, i) => {
     const project = item.project || '';
     const regions = item.regions || [];
@@ -1599,7 +1526,7 @@ function renderClaimSection(title, items, emptyText, kind) {
     const claimTitle = claimCardTitle(item, kind);
     const claimTitleHtml = renderClaimCardTitle(item, kind);
     const key = kind === 'incoming' ? incomingClaimKey(item) : outgoingClaimKey(item);
-    const active = kind === 'incoming' ? activeIncomingClaimKey === key : activeOutgoing === key;
+    const active = kind === 'incoming' ? getActiveIncomingClaimKey() === key : activeOutgoing === key;
     const targetNames = targetRegions.map(prettyRegion);
     const targetPreview = targetNames.slice(0, 4).join(', ') + (targetNames.length > 4 ? `, +${targetNames.length - 4}` : '');
     const direction = kind === 'incoming'
@@ -1618,72 +1545,38 @@ function renderClaimSection(title, items, emptyText, kind) {
 
 
 function renderGrid(renderContext = {}) {
-  const view = renderContext.mapView || mapView;
-  const {x, y, width: w, height: h} = view;
-  let out='';
-  for (let lon=-3; lon<=3.01; lon+=0.5) out += `<path class="graticule" d="M ${lon} ${y} L ${lon} ${y+h}"/>`;
-  for (let lat=-1.25; lat<=1.01; lat+=0.25) out += `<path class="graticule" d="M ${x} ${lat} L ${x+w} ${lat}"/>`;
-  gGrid.innerHTML = out;
+  renderGridLayer({layer: gGrid, mapView: renderContext.mapView || mapView});
 }
 function renderRegions(renderContext = {}) {
-  const context = {mapView, ...renderContext};
-  pathByRegion.clear();
-  regionPathElements.length = 0;
-  const frag = document.createDocumentFragment();
-  for (const r of REGIONS) {
-    const p = createRegionPath(r, {
-      class: 'region',
-      fill: colorFor(r),
-    });
-    pathByRegion.set(r.regionName, p);
-    regionPathElements.push(p);
-    frag.appendChild(p);
-  }
-  replaceLayerChildren(gRegions, frag);
-  renderHitLayer(gHitRegions, activeData, derivedIndices, context);
-  renderLabels(context);
+  renderRegionLayers({
+    layer: gRegions,
+    hitLayer: gHitRegions,
+    labelLayer: gLabels,
+    indices: derivedIndices,
+    pathByRegion,
+    regionPathElements,
+    hitPathByRegion,
+    hitPathElements,
+    labelTextElements,
+    labelsVisible,
+    colorFor,
+    labelPosition,
+    localizedRegionName,
+    ...renderContext,
+  });
   applyFilters();
   updateNationOverlay(getCurrentNation());
 }
-function renderHitLayer(parent, activeData, indices, renderContext = {}) {
-  hitPathByRegion.clear();
-  hitPathElements.length = 0;
-  const frag = document.createDocumentFragment();
-  for (const region of indices.regions) {
-    const hitPath = createRegionPath(region, {
-      class: 'region-hit',
-      fill: 'transparent',
-      stroke: 'none',
-    }, {regionId: region.regionName});
-    hitPathByRegion.set(region.regionName, hitPath);
-    hitPathElements.push(hitPath);
-    frag.appendChild(hitPath);
-  }
-  replaceLayerChildren(parent, frag);
-}
 function renderLabels(renderContext = {}) {
-  labelTextElements.length = 0;
-  replaceLayerChildren(gLabels);
-  setLayerVisible(gLabels, labelsVisible);
-  if (!labelsVisible) return;
-  const frag = document.createDocumentFragment();
-  for (const r of REGIONS) {
-    const lab = labelPosition(r);
-    if (!lab) continue;
-    const t = createSvgElement('text', {
-      class: 'label',
-      x: lab.x,
-      y: lab.y,
-      textContent: localizedRegionName(r),
-    }, {
-      id: r.id,
-      region: r.regionName,
-      nation: r.nationTag,
-    });
-    labelTextElements.push(t);
-    frag.appendChild(t);
-  }
-  replaceLayerChildren(gLabels, frag);
+  renderLabelsLayer({
+    layer: gLabels,
+    labelTextElements,
+    labelsVisible,
+    regions: REGIONS,
+    labelPosition,
+    localizedRegionName,
+    ...renderContext,
+  });
 }
 function invalidateTooltipLayout() {
   svgWrapRectCache = null;
@@ -1750,14 +1643,14 @@ function resolveRelatedHitRegion(event, indices = derivedIndices) {
   return indices.regionByName[regionName] || null;
 }
 function updateHoveredRegion(r, {force=false} = {}) {
-  const regionChanged = hoverRegionName !== r.regionName;
-  const nationChanged = hoverNation !== r.nationTag;
-  if (!force && !regionChanged && (!lockedNation || !nationChanged)) return;
-  hoverRegionName = r.regionName;
+  const regionChanged = getHoveredRegionName() !== r.regionName;
+  const nationChanged = getHoverNation() !== r.nationTag;
+  if (!force && !regionChanged && (!getLockedNation() || !nationChanged)) return;
+  setHoveredRegionState(r.regionName, r.nationTag);
   setHoverVisualState(r.regionName);
   applyMapVisualState();
-  if (!lockedNation) scheduleHoverPreviewNation(r.nationTag);
-  else hoverNation = r.nationTag;
+  if (!getLockedNation()) scheduleHoverPreviewNation(r.nationTag);
+  else setHoverNationState(r.nationTag);
   renderHoverOutlines();
   renderCapitalMarkers();
   setHoverPill(r);
@@ -1804,12 +1697,12 @@ function onMapMove(e) {
   if (target?.classList?.contains('region') || target?.classList?.contains('region-hit')) return;
   const isBlankMap = target === svg || target === gGrid || target === gHitRegions || target?.classList?.contains('graticule');
   if (!isBlankMap) return;
-  if (hoverRegionName || hoverNation || tooltipRegionId != null || pendingTooltipPoint) clearHoverPreview();
+  if (getHoveredRegionName() || getHoverNation() || tooltipRegionId != null || pendingTooltipPoint) clearHoverPreview();
 }
 function onMapLeave() {
   clearHoverPreview();
 }
-function getCurrentNation() { return lockedNation || hoverNation || ''; }
+function getCurrentNation() { return getLockedNation() || getHoverNation() || ''; }
 function claimKindPass(claim) {
   const k = claimKindSel.value;
   if (k === 'all') return true;
@@ -1880,8 +1773,8 @@ function cumulativeClaimEntries(entries) {
 function getVisibleProjectEntries(nation) {
   if (claimModeSel.value === 'off') return [];
   const directEntries = getClaimKindFilteredProjectEntries(nation);
-  if (claimModeSel.value === 'project' && projectFilter) {
-    return cumulativeClaimEntries(directEntries).filter(e => entryFilterValue(e) === projectFilter);
+  if (claimModeSel.value === 'project' && getProjectFilter()) {
+    return cumulativeClaimEntries(directEntries).filter(e => entryFilterValue(e) === getProjectFilter());
   }
   return directEntries;
 }
@@ -1896,6 +1789,7 @@ function buildNationOverlayModel(activeData, indices, nationId, options = {}) {
   const outgoingEntries = cumulativeEntries.map(e => ({...e, regions:(e.regions || []).filter(rn => !baseSet.has(rn))})).filter(e => e.regions.length);
   const incomingEntries = incomingClaimsForTarget(nation, data, baseSet);
   let activeIncoming = selectedIncomingEntry(incomingEntries);
+  const activeIncomingClaimKey = getActiveIncomingClaimKey();
   const nextActiveIncomingClaimKey = activeIncomingClaimKey && !activeIncoming ? '' : activeIncomingClaimKey;
   if (!nextActiveIncomingClaimKey) activeIncoming = null;
   const displayBaseSet = activeIncoming ? new Set(activeIncoming.claimantBaseRegions || []) : baseSet;
@@ -2027,10 +1921,10 @@ function bindNationOverlayPanelEvents(panelRoot, model) {
       // corresponding outgoing claim there; keep the current target region focused.
       const claimant = source.claimant || '';
       if (!claimant) return;
-      activeIncomingClaimKey = '';
-      lockedNation = claimant;
-      hoverNation = '';
-      projectFilter = outgoingClaimKey(source);
+      setActiveIncomingClaimKeyState('');
+      setLockedNationState(claimant);
+      setHoverNationState();
+      setProjectFilterState(outgoingClaimKey(source));
       claimModeSel.value = 'project';
       if (source.project) projectSel.value = source.project;
       else projectSel.value = '';
@@ -2041,10 +1935,10 @@ function bindNationOverlayPanelEvents(panelRoot, model) {
       return;
     }
     const key = outgoingClaimKey(source);
-    activeIncomingClaimKey = '';
-    projectFilter = claimModeSel.value === 'project' && projectFilter === key ? '' : key;
-    claimModeSel.value = projectFilter ? 'project' : 'all';
-    if (projectFilter && projectFilter !== '__base__') projectSel.value = projectFilter;
+    setActiveIncomingClaimKeyState('');
+    setProjectFilterState(claimModeSel.value === 'project' && getProjectFilter() === key ? '' : key);
+    claimModeSel.value = getProjectFilter() ? 'project' : 'all';
+    if (getProjectFilter() && getProjectFilter() !== '__base__') projectSel.value = getProjectFilter();
     else projectSel.value = '';
     // Switching claim cards should change the active claim overlay, not the
     // currently focused region. Region rows inside a claim card call
@@ -2060,13 +1954,13 @@ function bindNationOverlayPanelEvents(panelRoot, model) {
   }));
 }
 function updateNationOverlay(nation) {
-  activeNation = nation || '';
+  setActiveNationState(nation);
   clearOverlayVisualState();
   applyMapVisualState();
   replaceLayerChildren(gClaimOverlays);
   replaceLayerChildren(gClaimLabels);
-  updateProjectOptions(activeNation);
-  if (!activeNation) {
+  updateProjectOptions(getActiveNation());
+  if (!getActiveNation()) {
     visibleNationRegionNames = new Set();
     nationInfo.textContent = t('nationInfo.empty');
     setClaimsPillEmpty();
@@ -2074,8 +1968,8 @@ function updateNationOverlay(nation) {
     updateSelectedRegions();
     return;
   }
-  const overlayModel = buildNationOverlayModel(activeData, derivedIndices, activeNation);
-  activeIncomingClaimKey = overlayModel.activeIncomingClaimKey;
+  const overlayModel = buildNationOverlayModel(activeData, derivedIndices, getActiveNation());
+  setActiveIncomingClaimKeyState(overlayModel.activeIncomingClaimKey);
   visibleNationRegionNames = new Set(overlayModel.resultSet);
   renderMapOverlay(overlayModel, {claimOverlayLayer: gClaimOverlays, claimLabelLayer: gClaimLabels, mapView});
   renderClaimSummaryPill(overlayModel);
@@ -2085,7 +1979,7 @@ function updateNationOverlay(nation) {
   updateSelectedRegions();
 }
 function updateProjectOptions(nation) {
-  const current = projectFilter && projectFilter !== '__base__' ? projectFilter : '';
+  const current = getProjectFilter() && getProjectFilter() !== '__base__' ? getProjectFilter() : '';
   const d = CLAIMS_BY_NATION[nation];
   const directEntries = d ? sortedProjectEntries((d.projects || []).filter(e => e.project)) : [];
   const entries = cumulativeClaimEntries(directEntries);
@@ -2095,8 +1989,8 @@ function updateProjectOptions(nation) {
   else projectSel.value = '';
 }
 function selectRegion(r) {
-  hoverRegionName = r.regionName;
-  selectedRegionNames = new Set([r.regionName]);
+  setHoveredRegionState(r.regionName, r.nationTag);
+  setSelectedRegionIds([r.regionName]);
   focusNation(r.nationTag);
 }
 function applyFilters(rerenderResults=true) {
@@ -2111,7 +2005,7 @@ function applyFilters(rerenderResults=true) {
     const r = REGIONS[Number(p.dataset.id)];
       const text = (r.name+' '+r.regionName+' '+localizedRegionName(r)+' '+(r.primaryCity || '')+' '+Object.values(r.displayName || {}).join(' ')+' '+r.nationTag).toLowerCase();
     const okQ = !q || text.includes(q);
-    const okClaims = !onlyClaims || !currentNation || claimSet.has(r.regionName) || baseSet.has(r.regionName);
+    const okClaims = !getOnlyClaims() || !currentNation || claimSet.has(r.regionName) || baseSet.has(r.regionName);
     const ok = okQ && okClaims;
     if (!ok) hiddenRegionIds.add(r.regionName);
     if (ok) { visible++; if (matches.length<90) matches.push(r); }
@@ -2121,7 +2015,7 @@ function applyFilters(rerenderResults=true) {
   labelTextElements.forEach(t => {
     const r = REGIONS[Number(t.dataset.id)];
     const okQ = !q || (r.name+' '+r.regionName+' '+localizedRegionName(r)+' '+(r.primaryCity || '')+' '+Object.values(r.displayName || {}).join(' ')+' '+r.nationTag).toLowerCase().includes(q);
-    const okClaims = !onlyClaims || !currentNation || claimSet.has(r.regionName) || baseSet.has(r.regionName);
+    const okClaims = !getOnlyClaims() || !currentNation || claimSet.has(r.regionName) || baseSet.has(r.regionName);
     t.style.display = okQ && okClaims ? '' : 'none';
   });
   if (rerenderResults && results) {
@@ -2162,11 +2056,10 @@ search.addEventListener('click', () => openNationDropdown());
 search.addEventListener('input', () => {
   if (search.dataset.selectedNation && parseNationSearchValue(search.value) !== search.dataset.selectedNation) {
     search.dataset.selectedNation = '';
-    lockedNation = '';
-    selectedRegionNames = new Set();
-    syncSelectedVisualState();
+    setLockedNationState();
+    setSelectedRegionIds();
     resetTransientClaimState();
-    updateNationOverlay(hoverNation || '');
+    updateNationOverlay(getHoverNation() || '');
   }
   openNationDropdown();
   highlightedNationChoiceIndex = currentDropdownChoices.length ? 0 : -1;
@@ -2219,20 +2112,20 @@ document.addEventListener('click', e => {
 });
 baseModeSel.addEventListener('change', renderRegions);
 claimModeSel.addEventListener('change', () => {
-  activeIncomingClaimKey = '';
-  if (claimModeSel.value !== 'project') projectFilter = '';
-  else if (!projectFilter) projectFilter = projectSel.value || '';
+  setActiveIncomingClaimKeyState('');
+  if (claimModeSel.value !== 'project') setProjectFilterState('');
+  else if (!getProjectFilter()) setProjectFilterState(projectSel.value || '');
   updateNationOverlay(getCurrentNation());
 });
 claimKindSel.addEventListener('change', () => updateNationOverlay(getCurrentNation()));
 projectSel.addEventListener('change', () => {
-  activeIncomingClaimKey = '';
-  projectFilter = projectSel.value || '';
-  claimModeSel.value = projectFilter ? 'project' : 'all';
+  setActiveIncomingClaimKeyState('');
+  setProjectFilterState(projectSel.value || '');
+  claimModeSel.value = getProjectFilter() ? 'project' : 'all';
   updateNationOverlay(getCurrentNation());
 });
 document.getElementById('showLabels').addEventListener('click', () => { labelsVisible=!labelsVisible; renderLabels(); applyFilters(); });
-document.getElementById('onlyClaimsBtn').addEventListener('click', () => { onlyClaims=!onlyClaims; updateOnlyClaimsButtonLabel(); applyFilters(); });
+document.getElementById('onlyClaimsBtn').addEventListener('click', () => { setOnlyClaimsState(!getOnlyClaims()); updateOnlyClaimsButtonLabel(); applyFilters(); });
 if (gHitRegions) {
   gHitRegions.addEventListener('pointerover', onHitLayerPointerOver);
   gHitRegions.addEventListener('pointermove', onHitLayerPointerMove);
