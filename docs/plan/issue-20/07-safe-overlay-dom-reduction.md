@@ -75,19 +75,57 @@ npm run test:e2e
 
 ## Progress
 
-- [ ] Overlay grouping inventory completed.
-- [ ] Post-Phase-06 profile reviewed.
-- [ ] Safe group selected and documented, or deferral documented.
-- [ ] DOM-reduction strategy implemented if justified.
-- [ ] Semantic tests updated.
-- [ ] Validation commands run.
+- [x] Overlay grouping inventory completed.
+- [x] Post-Phase-06 profile reviewed.
+- [x] Safe group selected and documented, or deferral documented.
+- [x] DOM-reduction strategy deferred because profiling did not justify it.
+- [x] Semantic tests reviewed; no test changes required.
+- [x] Validation commands run.
 
 ## Decision Log
 
 - Compound paths are optional in issue #20; a different documented DOM-reduction strategy is acceptable if it is safer.
 - This phase is profiling-gated. Skipping it is acceptable if earlier phases remove the meaningful DOM replacement bottleneck.
 - Hit testing remains canonical-region based regardless of visible overlay strategy.
+- Post-Phase-06 profiling showed selected Brazil renders 26 overlay paths and 2 labels, and repeated same-key Brazil selection reuses the cached model with `claimOverlayDomReplacements=0`, `claimLabelDomReplacements=0`, and `capitalMarkerRebuilds=0`.
+- Claim-hover movement inside Brazil's visible claim range touched only two visible/hit paths and did not rebuild claim overlay or label DOM.
+- Moving between Canadian foreign-hover regions under selected Brazil kept `foreignHoverOverlayReplacements=0`; remaining work in that path is visual-state/capital-marker work rather than selected-claim overlay DOM churn.
+- Compounding owned territory would reduce only 9 Brazil nodes in the profiled case while removing useful per-region overlay path granularity; the complexity is not justified for issue #20.
 
 ## Outcomes
 
-Pending implementation.
+Implemented Phase 07 as a documented deferral on 2026-06-13.
+
+Post-Phase-06 profile:
+
+- Initial Brazil selection: 26 claim overlay paths, 2 claim labels, 1 overlay DOM replacement, 1 label DOM replacement, 1 overlay model build.
+- Brazil overlay grouping inventory: 9 owned-territory paths, 6 peaceful research-claim paths, and 11 hostile research-claim paths.
+- Repeating the same Brazil selection: 26 paths, 2 labels, `overlayModelCacheHits=1`, `overlayModelBuilds=0`, `claimOverlayDomReplacements=0`, `claimLabelDomReplacements=0`, and `capitalMarkerRebuilds=0`.
+- Moving from Amazonia to French Guiana while Brazil is selected: `boundedVisualStateApplications=1`, `visiblePathsTouched=2`, `hitPathsTouched=2`, `claimOverlayDomReplacements=0`, and `claimLabelDomReplacements=0`.
+- Moving from Ontario to another Canadian region while Brazil is selected: Canadian foreign hover overlay stayed at 10 paths with `foreignHoverOverlayReplacements=0`; selected Brazil overlay DOM stayed unchanged.
+- Project, hostile, and off filter changes each replaced overlay DOM exactly once because the visible overlay semantics changed.
+
+Decision:
+
+- No compound-path or alternate visible overlay DOM-reduction strategy was implemented in Phase 07.
+- The measurable selected-overlay DOM replacement bottleneck from the baseline has been removed by Phases 04-06 for unchanged interactions.
+- Remaining selected overlay node counts are small in the profiled Brazil case, and replacements now correspond to real semantic changes.
+- Keeping per-region overlay paths preserves diagnostics and avoids changing tests or future features that may inspect individual overlay nodes.
+
+Validation:
+
+- `npm run build` passed.
+- `npm run verify` passed: generated outputs verified, 5 Python unit tests passed.
+- `npm run test:e2e` passed: 13 Playwright tests passed.
+
+Manual smoke notes:
+
+- Re-profiled selected Brazil, repeated Brazil selection, Brazil claim-hover movement, Canadian foreign-hover movement, project filter, hostile filter, and claim mode off.
+- Toggle all/project/off and hostile filtering still updated overlay counts intentionally.
+- No compound or reduced overlay group was introduced, so canonical hit target resolution remains unchanged through `#hitRegions .region-hit`.
+- Existing semantic e2e coverage continues to assert hover, click, selection, overlay counts, panel state, language changes, and clear-map behavior.
+
+Retrospective:
+
+- Deferring compound paths keeps issue #20 focused on proven wins and avoids adding a second representation of region geometry.
+- A future DOM-reduction task should start from a profile showing real replacement or node-count cost after the current cache and render-key work, not from the old baseline.

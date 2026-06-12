@@ -118,7 +118,7 @@ These are deliberately out of scope for the issue #20 implementation, but should
 - [x] Phase 04 implemented.
 - [x] Phase 05 implemented.
 - [x] Phase 06 implemented.
-- [ ] Phase 07 implemented.
+- [x] Phase 07 implemented.
 - [ ] Phase 08 implemented.
 
 ## Decision Log
