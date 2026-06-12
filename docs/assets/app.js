@@ -39,11 +39,31 @@ import {
 
 window.TI_DATA_PROMISE.then(({regionMap, claimMap, catalogs = {}}) => {
 const appData = createAppData({regionMap, claimMap, catalogs});
+function shouldEnableWorldWrapReview() {
+  try {
+    const value = new URLSearchParams(window.location.search).get('worldWrap');
+    return value !== null && value !== '0' && value.toLowerCase() !== 'false';
+  } catch {
+    return false;
+  }
+}
+function createWorldCopyContexts(mapView, {enabled = false} = {}) {
+  const canonical = defaultWorldCopyContext();
+  const worldWidth = Number(mapView?.worldWidth) || 0;
+  if (!enabled || !worldWidth) return [canonical];
+  return [
+    {copyIndex: -1, xOffset: -worldWidth, isCanonical: false},
+    canonical,
+    {copyIndex: 1, xOffset: worldWidth, isCanonical: false},
+  ];
+}
 const appState = createAppState({activeScenarioId: appData.defaultScenario});
 setActiveScenarioId(appState, appData.defaultScenario);
 const mapVisualState = createMapVisualState();
 const activeData = getActiveData(appData, appState.activeScenarioId);
 const mapView = initializeMapView(activeData);
+const worldWrapReviewEnabled = shouldEnableWorldWrapReview();
+const worldCopyContexts = createWorldCopyContexts(mapView, {enabled: worldWrapReviewEnabled});
 const derivedIndices = buildDerivedIndices(activeData);
 const REGIONS = derivedIndices.regions;
 const SUMMARY = derivedIndices.summary;
@@ -57,6 +77,7 @@ const NATION_META = derivedIndices.nationMeta;
 
 const svg = document.getElementById('map');
 if (svg) svg.setAttribute('viewBox', formatViewBoxForMapView(mapView));
+svg?.classList.toggle('world-wrap-review', worldWrapReviewEnabled);
 const gRegions = document.getElementById('regions');
 const gHitRegions = document.getElementById('hitRegions');
 const gLabels = document.getElementById('labels');
@@ -83,7 +104,6 @@ const svgWrap = document.querySelector('.svgwrap');
 const regionPathElements = [];
 const hitPathElements = [];
 const labelTextElements = [];
-const worldCopyContexts = [defaultWorldCopyContext()];
 
 const DEBUG_RENDER_STATS_QUERY = 'debugRenderStats';
 function shouldEnableDebugRenderStats() {
@@ -1632,7 +1652,11 @@ function renderClaimSection(title, items, emptyText, kind) {
 
 
 function renderGrid(renderContext = {}) {
-  renderGridLayer({layer: gGrid, mapView: renderContext.mapView || mapView});
+  renderGridLayer({
+    layer: gGrid,
+    mapView: renderContext.mapView || mapView,
+    copyContexts: renderContext.copyContexts || worldCopyContexts,
+  });
 }
 function renderRegions(renderContext = {}) {
   renderRegionLayers({

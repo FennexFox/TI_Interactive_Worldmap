@@ -81,18 +81,28 @@ npx playwright test tests/map-wrap.spec.js
 
 ## Progress
 
-- [ ] Review flag added.
-- [ ] Copy contexts computed from `worldWidth`.
-- [ ] Base map copies rendered behind flag.
-- [ ] Hit layer copies rendered behind flag.
-- [ ] Canonical hit resolution tested.
+- [x] Review flag added.
+- [x] Copy contexts computed from `worldWidth`.
+- [x] Base map copies rendered behind flag.
+- [x] Hit layer copies rendered behind flag.
+- [x] Canonical hit resolution tested.
 
 ## Decision Log
 
 - Decision: Keep this phase behind a flag because overlays and pan gestures are not complete yet.
 - Decision: Use SVG group transforms for copies so panning can shift the viewBox without rewriting path data.
+- Decision: Use `?worldWrap=1` as the review-only flag; `?worldWrap=0` and the unflagged route keep the canonical single-copy app path.
+- Decision: Render copy groups at `-worldWidth`, `0`, and `+worldWidth` only for base regions, grid, labels, and hit paths in this phase.
+- Decision: Leave hover, selection, capital, and claim overlay projection for later phases; copied hit paths can still resolve canonical state and update the existing canonical overlay layers.
 
 ## Outcomes
 
-Pending implementation.
-
+- Added a world-wrap review flag helper in `src/app.js`.
+- Computed copy contexts from `mapView.worldWidth` and passed them through grid, region, hit-layer, and label rendering.
+- Updated `src/render/map-layers.js` so grid rendering uses the same translated copy-group infrastructure as visible and hit paths.
+- Added `tests/map-wrap.spec.js` coverage for flagged copy groups, copied hit-path hover/click canonical resolution, and filtering across all copies.
+- Rebuilt generated static assets under `docs/assets/**`.
+- Focused validation passed: `npx playwright test tests/map-wrap.spec.js`.
+- Full validation passed: `npm run build`, `npm run verify`, and `npm run test:e2e` with 22 active tests and 3 skipped future issue #2 markers.
+- Manual smoke checklist passed against the static `docs/` site: `/?worldWrap=1` copy groups, copied hit hover/click, and unflagged `/` single-copy behavior.
+- Retrospective: copied hit paths can now drive canonical hover and selection, but visual hover/selection/claim overlays still render only in the canonical coordinate space until the later overlay projection phase.

@@ -92,12 +92,29 @@ export function setLayerVisible(layer, visible) {
   if (layer) layer.style.display = visible ? '' : 'none';
 }
 
-export function renderGrid({layer, mapView}) {
+export function renderGrid({layer, mapView, copyContexts}) {
+  const contexts = normalizeWorldCopyContexts(copyContexts);
   const {x, y, width: w, height: h} = mapView;
-  let out = '';
-  for (let lon = -3; lon <= 3.01; lon += 0.5) out += `<path class="graticule" d="M ${lon} ${y} L ${lon} ${y + h}"/>`;
-  for (let lat = -1.25; lat <= 1.01; lat += 0.25) out += `<path class="graticule" d="M ${x} ${lat} L ${x + w} ${lat}"/>`;
-  if (layer) layer.innerHTML = out;
+  const frag = document.createDocumentFragment();
+  for (const copyContext of contexts) {
+    appendCopyFragment(frag, copyContext, contexts.length, 'grid-copy', () => {
+      const copyFrag = document.createDocumentFragment();
+      for (let lon = -3; lon <= 3.01; lon += 0.5) {
+        copyFrag.appendChild(createSvgElement('path', {
+          class: 'graticule',
+          d: `M ${lon} ${y} L ${lon} ${y + h}`,
+        }, copyDataset(copyContext)));
+      }
+      for (let lat = -1.25; lat <= 1.01; lat += 0.25) {
+        copyFrag.appendChild(createSvgElement('path', {
+          class: 'graticule',
+          d: `M ${x} ${lat} L ${x + w} ${lat}`,
+        }, copyDataset(copyContext)));
+      }
+      return copyFrag;
+    });
+  }
+  replaceLayerChildren(layer, frag);
 }
 
 export function renderHitLayer({
