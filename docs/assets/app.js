@@ -96,6 +96,46 @@ const regionPathElements = [];
 const hitPathElements = [];
 const labelTextElements = [];
 
+const DEBUG_RENDER_STATS_QUERY = 'debugRenderStats';
+function shouldEnableDebugRenderStats() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return params.has(DEBUG_RENDER_STATS_QUERY) || window.localStorage?.getItem('ti-debug-render-stats') === '1';
+  } catch {
+    return false;
+  }
+}
+
+function createDebugRenderStats() {
+  const keys = [
+    'fullVisualStateApplications',
+    'boundedVisualStateApplications',
+    'visiblePathsTouched',
+    'hitPathsTouched',
+    'overlayModelBuilds',
+    'overlayModelCacheHits',
+    'claimOverlayDomReplacements',
+    'claimLabelDomReplacements',
+    'hoverOutlineReplacements',
+    'foreignHoverOverlayReplacements',
+    'capitalMarkerRebuilds',
+  ];
+  const stats = {};
+  for (const key of keys) stats[key] = 0;
+  stats.reset = () => {
+    for (const key of keys) stats[key] = 0;
+  };
+  return stats;
+}
+
+const debugRenderStats = shouldEnableDebugRenderStats() ? createDebugRenderStats() : null;
+if (debugRenderStats) window.__TI_DEBUG_RENDER_STATS__ = debugRenderStats;
+
+function recordRenderStat(key, amount = 1) {
+  if (!debugRenderStats) return;
+  debugRenderStats[key] = (debugRenderStats[key] || 0) + amount;
+}
+
 const LANGUAGE_STORAGE_KEY = 'ti-map-language';
 const ASIDE_CARD_ORDER_STORAGE_KEY = 'ti-map-aside-card-order';
 const ASIDE_CARD_COLLAPSE_STORAGE_KEY = 'ti-map-aside-card-collapsed';
@@ -558,7 +598,11 @@ function setHiddenVisualState(hiddenRegionIds) {
 }
 
 function applyMapVisualState(renderContext = {}, state = mapVisualState) {
-  applyVisualState({svg, regionPathElements, hitPathByRegion, ...renderContext}, state);
+  const context = {svg, regionPathElements, hitPathByRegion, ...renderContext};
+  recordRenderStat('fullVisualStateApplications');
+  recordRenderStat('visiblePathsTouched', (context.regionPathElements || []).length);
+  recordRenderStat('hitPathsTouched', (context.hitPathByRegion || new Map()).size);
+  applyVisualState(context, state);
 }
 
 const CLAIM_GRADIENT_START_HUE = 155;
@@ -878,6 +922,7 @@ function renderCapitalMarkers({force=false} = {}) {
   const key = `${currentLanguage}|${markers.map(m => `${m.regionName}:${m.nation}:${m.selected ? 1 : 0}`).join('|')}`;
   if (!force && key === capitalMarkersKey) return;
   capitalMarkersKey = key;
+  recordRenderStat('capitalMarkerRebuilds');
   replaceLayerChildren(gCapitalMarkers);
   if (!markers.length) return;
   const frag = document.createDocumentFragment();
@@ -1369,6 +1414,8 @@ function appendForeignHoverNationOverlay(frag, nation) {
   }
 }
 function clearHoverVisualLayers() {
+  recordRenderStat('foreignHoverOverlayReplacements');
+  recordRenderStat('hoverOutlineReplacements');
   replaceLayerChildren(gForeignHoverOverlays);
   replaceLayerChildren(gHoverOutlines);
 }
@@ -1779,6 +1826,7 @@ function getVisibleProjectEntries(nation) {
   return directEntries;
 }
 function buildNationOverlayModel(activeData, indices, nationId, options = {}) {
+  recordRenderStat('overlayModelBuilds');
   const nation = nationId || '';
   const data = CLAIMS_BY_NATION[nation] || {nation, baseRegions:nationRegions.get(nation)||[], projects:[], totalClaimRegions:0, projectCount:0};
   const baseSet = new Set(data.baseRegions || nationRegions.get(nation) || []);
@@ -1873,7 +1921,9 @@ function renderMapOverlay(model, renderContext = {}) {
       labFrag.appendChild(t);
     }
   });
+  recordRenderStat('claimOverlayDomReplacements');
   replaceLayerChildren(renderContext.claimOverlayLayer || gClaimOverlays, frag);
+  recordRenderStat('claimLabelDomReplacements');
   replaceLayerChildren(renderContext.claimLabelLayer || gClaimLabels, labFrag);
   renderCapitalMarkers();
 }
@@ -1957,7 +2007,9 @@ function updateNationOverlay(nation) {
   setActiveNationState(nation);
   clearOverlayVisualState();
   applyMapVisualState();
+  recordRenderStat('claimOverlayDomReplacements');
   replaceLayerChildren(gClaimOverlays);
+  recordRenderStat('claimLabelDomReplacements');
   replaceLayerChildren(gClaimLabels);
   updateProjectOptions(getActiveNation());
   if (!getActiveNation()) {

@@ -97,18 +97,60 @@ npm run test:e2e -- --trace on
 
 ## Progress
 
-- [ ] Baseline commands run.
-- [ ] Manual smoke notes captured.
-- [ ] Trace or measurement note captured.
-- [ ] Regression coverage decision made.
-- [ ] Phase outcomes recorded.
+- [x] Baseline commands run.
+- [x] Manual smoke notes captured.
+- [x] Trace or measurement note captured.
+- [x] Regression coverage decision made.
+- [x] Phase outcomes recorded.
 
 ## Decision Log
 
 - Start with measurement because issue #20 requires documenting the current regression before optimization.
 - Keep any counters disabled by default to avoid changing runtime cost during normal use.
 - Prefer counters that can support later regression checks, but avoid turning performance measurements into brittle exact-count tests.
+- Added `window.__TI_DEBUG_RENDER_STATS__` only when `?debugRenderStats=1` is present or `localStorage["ti-debug-render-stats"]` is set to `1`.
+- Kept existing dispatch-based hover helpers for broad regression coverage, and added one real-pointer Playwright regression for the debug baseline path.
+- Used a sampled in-fill pointer helper for manual dense-Europe smoke notes because simple bounding-box centers are brittle for tiny or irregular SVG regions.
 
 ## Outcomes
 
-Pending implementation.
+Implemented Phase 01 on 2026-06-12.
+
+Source changes:
+
+- Added disabled-by-default render counters in `src/app.js`.
+- Added a Playwright regression, `debug render stats capture real pointer hover baseline`, in `tests/language.spec.js`.
+- Rebuilt generated Pages app output with `npm run build`.
+
+Baseline validation before code changes:
+
+- `npm run build` passed.
+- `npm run verify` passed: generated outputs verified, 5 Python unit tests passed.
+- `npm run test:e2e` passed: 7 Playwright tests passed.
+
+Final validation after code changes:
+
+- `npm run build` passed.
+- `npm run verify` passed: generated outputs verified, 5 Python unit tests passed.
+- `npm run test:e2e` passed: 8 Playwright tests passed.
+- Focused `npm run test:e2e -- --grep "debug render stats"` passed.
+
+Baseline measurement snapshot:
+
+- Scenario: fresh Playwright browser context, `?debugRenderStats=1`, select Brazil, hover Amazonia, hover Ontario.
+- User-visible state: hover pill ended on `Hover: CAN - Toronto-Ottawa`; claim pill remained `Brazil: territory 9, claims 17, research tiers 2`; Canadian foreign hover overlay count was 10; selected Brazil claim overlay count was 26.
+- Counters: `fullVisualStateApplications=9`, `boundedVisualStateApplications=0`, `visiblePathsTouched=3267`, `hitPathsTouched=3267`, `overlayModelBuilds=1`, `overlayModelCacheHits=0`, `claimOverlayDomReplacements=2`, `claimLabelDomReplacements=2`, `hoverOutlineReplacements=2`, `foreignHoverOverlayReplacements=2`, `capitalMarkerRebuilds=2`.
+
+Manual smoke notes:
+
+- Dense Europe hover path resolved with sampled real pointer coordinates for Austria, Czechia, Germany, Poland, Belgium, and Netherlands. Hover pills and hover outline regions followed the target regions.
+- South America hover path resolved Amazonia, Bolivia, and French Guiana. Hover pill and claim pill updated to the resolved nation/region.
+- Selecting Brazil and hovering Bolivia/Ontario preserved Brazil selected overlay state; Ontario produced a Canadian foreign hover overlay.
+- Project filter, claim kind, and claim-target-only toggles updated overlay counts and hidden/visible state without breaking hover feedback.
+- Empty-map click cleared claim overlays, foreign hover overlays, hover pill, selection outlines, and claim pill.
+
+Retrospective:
+
+- The baseline confirms the issue #20 hotspot: normal hover/selection smoke currently performs full visual-state walks and touches every visible and hit path; bounded updates are not used yet.
+- The debug counter hook is intentionally small and inert by default, but now gives later phases a stable way to compare full visual-state applications, DOM replacements, and eventual cache hits.
+- Real pointer movement is reliable when Playwright can find a valid in-fill point. SVG path bounding-box centers remain too brittle for dense tiny regions, so later tests should prefer sampled hit points or carefully chosen large regions.

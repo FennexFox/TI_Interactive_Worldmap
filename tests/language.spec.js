@@ -18,6 +18,10 @@ async function hoverRegion(page, regionName) {
   await target.dispatchEvent('pointermove', { bubbles: true, clientX: 126, clientY: 126, pointerType: 'mouse' });
 }
 
+async function hoverRegionWithMouse(page, regionName) {
+  await regionTarget(page, regionName).hover();
+}
+
 async function clickRegion(page, regionName) {
   await regionTarget(page, regionName).dispatchEvent('click', { bubbles: true });
 }
@@ -139,6 +143,39 @@ test('nation search matches claim project names to claimant nations', async ({ p
   await expect(nationOption('TUR').first()).toBeVisible();
 });
 
+
+test('debug render stats capture real pointer hover baseline', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+  await expect.poll(() => page.evaluate(() => Boolean(window.__TI_DEBUG_RENDER_STATS__))).toBe(false);
+
+  await page.goto('/?debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+  await expect.poll(() => page.evaluate(() => Boolean(window.__TI_DEBUG_RENDER_STATS__))).toBe(true);
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#claimPill')).toContainText('Brazil');
+
+  await hoverRegionWithMouse(page, 'Amazonia');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
+
+  await hoverRegionWithMouse(page, 'Ontario');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Ontario"]')).toHaveCount(0);
+  await expect(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="CAN"]')).not.toHaveCount(0);
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.fullVisualStateApplications).toBeGreaterThan(0);
+  expect(stats.boundedVisualStateApplications).toBe(0);
+  expect(stats.visiblePathsTouched).toBeGreaterThan(0);
+  expect(stats.hitPathsTouched).toBeGreaterThan(0);
+  expect(stats.overlayModelBuilds).toBeGreaterThan(0);
+  expect(stats.claimOverlayDomReplacements).toBeGreaterThan(0);
+  expect(stats.claimLabelDomReplacements).toBeGreaterThan(0);
+  expect(stats.hoverOutlineReplacements).toBeGreaterThan(0);
+  expect(stats.foreignHoverOverlayReplacements).toBeGreaterThan(0);
+  expect(stats.capitalMarkerRebuilds).toBeGreaterThan(0);
+});
 
 test('selected nation marks its capital region with a fillable star', async ({ page }) => {
   await page.goto('/');
