@@ -538,6 +538,10 @@ const incomingClaimsByRegion = derivedIndices.incomingClaimsByRegion;
 const regionCenterCache = new Map();
 const OVERLAY_MODEL_CACHE_LIMIT = 256;
 const overlayModelCache = new Map();
+const CLAIM_OVERLAY_EMPTY_RENDER_KEY = 'claim-overlay-paths:empty';
+const CLAIM_LABEL_EMPTY_RENDER_KEY = 'claim-labels:empty';
+const claimOverlayLayerRenderKeys = new WeakMap();
+const claimLabelLayerRenderKeys = new WeakMap();
 
 function setActiveNationState(nation = '') {
   setSelectedNation(appState, nation);
@@ -1928,6 +1932,17 @@ function getNationOverlayModel(activeData, indices, nationId, options = {}) {
   pruneOverlayModelCache();
   return model;
 }
+function overlayModelRenderDataKey(model) {
+  return {
+    scenario: appState.activeScenarioId || appData.defaultScenario || '',
+    data: overlayModelDataVersionKey(model?.activeData, model?.indices),
+    nation: model?.nation || '',
+    claimMode: claimModeSel.value || '',
+    claimKind: claimKindSel.value || '',
+    project: getProjectFilter(),
+    activeIncomingClaim: model?.activeIncomingClaimKey || '',
+  };
+}
 function buildNationOverlayModel(activeData, indices, nationId, options = {}) {
   recordRenderStat('overlayModelBuilds');
   const nation = nationId || '';
@@ -1978,56 +1993,144 @@ function buildNationOverlayModel(activeData, indices, nationId, options = {}) {
     gatedCount: (data.gatedRegions || []).length,
   };
 }
-function renderMapOverlay(model, renderContext = {}) {
-  setOverlayVisualState(model);
-  applyMapVisualState(renderContext);
-  const frag = document.createDocumentFragment();
-  const labFrag = document.createDocumentFragment();
+function visibleClaimRegionsForEntry(entry, model) {
+  return (entry.regions || []).filter(rn => !model.displayBaseSet.has(rn));
+}
+function claimOverlayPathDescriptors(model) {
+  if (!model) return [];
+  const descriptors = [];
   if (claimModeSel.value !== 'off') {
     for (const rn of model.displayBaseSet) {
-      const r = regionByName[rn];
-      if (!r) continue;
-      const p = createSvgElement('path', {
-        d: r.path,
-        class: 'claim-overlay owned-territory',
+      if (!regionByName[rn]) continue;
+      descriptors.push({
+        region: rn,
+        className: 'claim-overlay owned-territory',
         fill: BASE_TERRITORY_COLOR,
-      }, {project: 'initial-territory'});
-      frag.appendChild(p);
+        project: 'initial-territory',
+      });
     }
   }
-  model.entries.forEach((entry, i) => {
-    const visibleClaimRegions = (entry.regions || []).filter(rn => !model.displayBaseSet.has(rn));
+  model.entries.forEach(entry => {
+    const visibleClaimRegions = visibleClaimRegionsForEntry(entry, model);
     if (!visibleClaimRegions.length) return;
     const tier = countryProjectTier(entry, model.tierByProject);
     const color = projectColor(entry.project, tier);
     for (const rn of visibleClaimRegions) {
-      const r = regionByName[rn];
-      if (!r) continue;
+      if (!regionByName[rn]) continue;
       const claim = entry.claims?.[rn] || {};
-      const p = createSvgElement('path', {
-        d: r.path,
-        class: 'claim-overlay ' + (entry.project ? 'research-claim ' : 'basic-claim ') + (claim.hostileClaim ? 'hostile' : 'peaceful') + (claim.capitalClaim ? ' capital' : '') + (claim.gatedClaim ? ' gated' : ''),
+      descriptors.push({
+        region: rn,
+        className: 'claim-overlay ' + (entry.project ? 'research-claim ' : 'basic-claim ') + (claim.hostileClaim ? 'hostile' : 'peaceful') + (claim.capitalClaim ? ' capital' : '') + (claim.gatedClaim ? ' gated' : ''),
         fill: color,
-      }, {project: entry.project || 'base'});
-      frag.appendChild(p);
-    }
-    // label first few projects near their first non-owned claim region, enough for a wireframe.
-    const labelRegion = visibleClaimRegions.map(rn => regionByName[rn]).find(Boolean);
-    const lab = labelRegion && labelPosition(labelRegion);
-    if (lab && i < 10) {
-      const t = createSvgElement('text', {
-        class: 'claim-label',
-        x: lab.x,
-        y: lab.y,
-        textContent: projectDisplay(entry.project).slice(0, 18),
+        project: entry.project || 'base',
       });
-      labFrag.appendChild(t);
     }
   });
-  recordRenderStat('claimOverlayDomReplacements');
-  replaceLayerChildren(renderContext.claimOverlayLayer || gClaimOverlays, frag);
-  recordRenderStat('claimLabelDomReplacements');
-  replaceLayerChildren(renderContext.claimLabelLayer || gClaimLabels, labFrag);
+  return descriptors;
+}
+function claimLabelDescriptors(model) {
+  if (!model) return [];
+  const descriptors = [];
+  model.entries.forEach((entry, i) => {
+    const visibleClaimRegions = visibleClaimRegionsForEntry(entry, model);
+    if (!visibleClaimRegions.length || i >= 10) return;
+    const labelRegion = visibleClaimRegions.map(rn => regionByName[rn]).find(Boolean);
+    const lab = labelRegion && labelPosition(labelRegion);
+    if (!lab) return;
+    descriptors.push({
+      region: labelRegion.regionName,
+      x: lab.x,
+      y: lab.y,
+      text: projectDisplay(entry.project).slice(0, 18),
+    });
+  });
+  return descriptors;
+}
+function claimOverlayPathRenderKey(model, descriptors) {
+  if (!model) return CLAIM_OVERLAY_EMPTY_RENDER_KEY;
+  return JSON.stringify({
+    kind: 'claim-overlay-paths',
+    ...overlayModelRenderDataKey(model),
+    descriptors,
+  });
+}
+function claimLabelRenderKey(model, descriptors) {
+  if (!model) return CLAIM_LABEL_EMPTY_RENDER_KEY;
+  return JSON.stringify({
+    kind: 'claim-labels',
+    ...overlayModelRenderDataKey(model),
+    language: currentLanguage,
+    descriptors,
+  });
+}
+function createClaimOverlayPathFragment(descriptors) {
+  const frag = document.createDocumentFragment();
+  for (const descriptor of descriptors) {
+    const r = regionByName[descriptor.region];
+    if (!r) continue;
+    frag.appendChild(createSvgElement('path', {
+      d: r.path,
+      class: descriptor.className,
+      fill: descriptor.fill,
+    }, {project: descriptor.project}));
+  }
+  return frag;
+}
+function createClaimLabelFragment(descriptors) {
+  const frag = document.createDocumentFragment();
+  for (const descriptor of descriptors) {
+    frag.appendChild(createSvgElement('text', {
+      class: 'claim-label',
+      x: descriptor.x,
+      y: descriptor.y,
+      textContent: descriptor.text,
+    }));
+  }
+  return frag;
+}
+function replaceLayerChildrenForRenderKey(layer, keyStore, nextKey, buildChildren, statKey) {
+  if (!layer) return false;
+  if (keyStore.get(layer) === nextKey) return false;
+  recordRenderStat(statKey);
+  replaceLayerChildren(layer, buildChildren());
+  keyStore.set(layer, nextKey);
+  return true;
+}
+function clearClaimOverlayDom(renderContext = {}) {
+  replaceLayerChildrenForRenderKey(
+    renderContext.claimOverlayLayer || gClaimOverlays,
+    claimOverlayLayerRenderKeys,
+    CLAIM_OVERLAY_EMPTY_RENDER_KEY,
+    () => [],
+    'claimOverlayDomReplacements'
+  );
+  replaceLayerChildrenForRenderKey(
+    renderContext.claimLabelLayer || gClaimLabels,
+    claimLabelLayerRenderKeys,
+    CLAIM_LABEL_EMPTY_RENDER_KEY,
+    () => [],
+    'claimLabelDomReplacements'
+  );
+}
+function renderMapOverlay(model, renderContext = {}) {
+  setOverlayVisualState(model);
+  applyMapVisualState(renderContext);
+  const overlayDescriptors = claimOverlayPathDescriptors(model);
+  const labelDescriptors = claimLabelDescriptors(model);
+  replaceLayerChildrenForRenderKey(
+    renderContext.claimOverlayLayer || gClaimOverlays,
+    claimOverlayLayerRenderKeys,
+    claimOverlayPathRenderKey(model, overlayDescriptors),
+    () => createClaimOverlayPathFragment(overlayDescriptors),
+    'claimOverlayDomReplacements'
+  );
+  replaceLayerChildrenForRenderKey(
+    renderContext.claimLabelLayer || gClaimLabels,
+    claimLabelLayerRenderKeys,
+    claimLabelRenderKey(model, labelDescriptors),
+    () => createClaimLabelFragment(labelDescriptors),
+    'claimLabelDomReplacements'
+  );
   renderCapitalMarkers();
 }
 function renderClaimSummaryPill(model) {
@@ -2110,13 +2213,10 @@ function updateNationOverlay(nation) {
   setActiveNationState(nation);
   clearOverlayVisualState();
   applyMapVisualState();
-  recordRenderStat('claimOverlayDomReplacements');
-  replaceLayerChildren(gClaimOverlays);
-  recordRenderStat('claimLabelDomReplacements');
-  replaceLayerChildren(gClaimLabels);
   updateProjectOptions(getActiveNation());
   if (!getActiveNation()) {
     visibleNationRegionNames = new Set();
+    clearClaimOverlayDom({claimOverlayLayer: gClaimOverlays, claimLabelLayer: gClaimLabels});
     nationInfo.textContent = t('nationInfo.empty');
     setClaimsPillEmpty();
     applyFilters(false);

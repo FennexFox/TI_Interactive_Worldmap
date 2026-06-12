@@ -87,17 +87,50 @@ npm run test:e2e
 
 ## Progress
 
-- [ ] Overlay render key defined.
-- [ ] Claim overlay replacement guarded by key.
-- [ ] Claim label replacement guarded by key.
-- [ ] Language/filter invalidation verified.
-- [ ] Validation commands run.
+- [x] Overlay render key defined.
+- [x] Claim overlay replacement guarded by key.
+- [x] Claim label replacement guarded by key.
+- [x] Language/filter invalidation verified.
+- [x] Validation commands run.
 
 ## Decision Log
 
 - Split model caching and DOM skip keys into separate phases so stale-model bugs are easier to distinguish from stale-DOM bugs.
 - Empty state is a real render state and should be represented in the key instead of handled implicitly.
+- Claim overlay paths and claim labels use separate render keys so language changes can refresh labels without rebuilding identical path DOM.
+- Render keys are tracked per SVG layer with `WeakMap`s instead of single globals, keeping the path compatible with future replicated or alternate render contexts.
+- `updateNationOverlay` no longer clears claim overlay DOM before every active render; empty map state is cleared through an explicit keyed empty render state.
+- The path key is based on concrete path descriptors, including region, class, fill, and project dataset values. The label key is based on concrete label descriptors, including localized text and label positions.
 
 ## Outcomes
 
-Pending implementation.
+Implemented Phase 05 on 2026-06-13.
+
+Source changes:
+
+- Added keyed claim overlay and claim label DOM replacement helpers in `src/app.js`.
+- Split claim overlay path descriptors from claim label descriptors so each layer can skip replacement independently.
+- Preserved `setOverlayVisualState`, full visual-state application, panel rendering, project option updates, and capital marker refresh behavior.
+- Added explicit empty render keys for `#claimOverlays` and `#claimLabels`.
+- Added a Playwright regression proving unchanged active overlay state skips both DOM replacements, language changes replace labels only, filter changes replace both layers, and repeated empty clears do not replace again.
+- Rebuilt generated Pages app output with `npm run build`.
+
+Validation:
+
+- `npm run build` passed.
+- `npm run verify` passed: generated outputs verified, 5 Python unit tests passed.
+- `npm run test:e2e` passed: 12 Playwright tests passed.
+- Focused `npm run test:e2e -- --grep "overlay render skip"` passed: 1 Playwright test passed.
+
+Manual smoke notes:
+
+- Selecting Brazil and hovering within Brazil's claim range preserved the 26 overlay paths with `claimOverlayDomReplacements=0` and `claimLabelDomReplacements=0`.
+- Selecting the Gran Colombia project filter changed the overlay to 14 paths and replaced both overlay paths and labels.
+- Switching language to Korean refreshed claim labels and panel language state without replacing overlay path DOM.
+- Outgoing and incoming claim card clicks preserved active card styling and updated overlays correctly.
+- Clearing selection removed claim overlays and labels; the explicit empty state prevents repeated empty clears from replacing the layers again.
+
+Retrospective:
+
+- Path and label descriptors made the skip keys easier to reason about than a broad state-only key, because they encode the actual DOM the layer would render.
+- The remaining repeated work is now mostly visual-state, hover overlay, and marker churn rather than selected-claim overlay path replacement.
