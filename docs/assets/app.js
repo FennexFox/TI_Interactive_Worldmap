@@ -24,6 +24,7 @@ import {
 import {
   formatViewBoxForMapView,
   initializeMapView,
+  panMapView,
 } from './state/map-view-state.js';
 import {createAppData, getActiveData} from './data/active-data.js';
 import {buildDerivedIndices} from './data/derived-indices.js';
@@ -546,6 +547,9 @@ let pendingTooltipPoint = null;
 let foreignHoverVisualKey = '';
 let hoverOutlineVisualKey = '';
 let capitalMarkersKey = '';
+let mapViewFrame = 0;
+let mapPanState = null;
+let suppressMapClick = false;
 const nationChoiceByValue = new Map();
 const incomingClaimsByRegion = derivedIndices.incomingClaimsByRegion;
 const regionCenterCache = new Map();
@@ -557,6 +561,7 @@ const FOREIGN_HOVER_EMPTY_RENDER_KEY = 'foreign-hover:empty';
 const HOVER_OUTLINE_EMPTY_RENDER_KEY = 'hover-outline:empty';
 const claimOverlayLayerRenderKeys = new WeakMap();
 const claimLabelLayerRenderKeys = new WeakMap();
+const MAP_PAN_DRAG_THRESHOLD_PX = 4;
 
 function setActiveNationState(nation = '') {
   setSelectedNation(appState, nation);
@@ -1693,6 +1698,18 @@ function renderLabels(renderContext = {}) {
     ...renderContext,
   });
 }
+function applyMapViewToSvg() {
+  if (svg) svg.setAttribute('viewBox', formatViewBoxForMapView(mapView));
+  renderGrid({mapView});
+  invalidateTooltipLayout();
+}
+function scheduleMapViewRender() {
+  if (mapViewFrame) return;
+  mapViewFrame = window.requestAnimationFrame(() => {
+    mapViewFrame = 0;
+    applyMapViewToSvg();
+  });
+}
 function invalidateTooltipLayout() {
   svgWrapRectCache = null;
   tooltipSizeCache.valid = false;
@@ -1842,12 +1859,91 @@ function onHitLayerPointerOut(e) {
   onRegionLeave(e);
 }
 function onHitLayerClick(e) {
+  if (consumeSuppressedMapClick(e)) return;
   const region = resolveHitRegion(e);
   if (!region) return;
   e.stopPropagation();
   selectRegion(region);
 }
+function viewDeltaFromPointerDelta(deltaX, deltaY) {
+  const rect = svg?.getBoundingClientRect();
+  if (!rect?.width || !rect?.height) return {dx: 0, dy: 0};
+  return {
+    dx: -(deltaX * mapView.width) / rect.width,
+    dy: -(deltaY * mapView.height) / rect.height,
+  };
+}
+function markSuppressNextMapClick() {
+  suppressMapClick = true;
+  window.setTimeout(() => {
+    suppressMapClick = false;
+  }, 80);
+}
+function consumeSuppressedMapClick(e) {
+  if (!suppressMapClick) return false;
+  suppressMapClick = false;
+  e?.preventDefault?.();
+  e?.stopPropagation?.();
+  return true;
+}
+function finishMapPan({cancel=false} = {}) {
+  if (!mapPanState) return;
+  const wasDragging = mapPanState.dragging;
+  const pointerId = mapPanState.pointerId;
+  mapPanState = null;
+  svg?.classList.remove('is-panning-ready', 'is-panning');
+  try {
+    if (svg?.hasPointerCapture?.(pointerId)) svg.releasePointerCapture(pointerId);
+  } catch {}
+  if (!cancel && wasDragging) markSuppressNextMapClick();
+}
+function onMapPointerDown(e) {
+  if (!worldWrapReviewEnabled || e.button !== 0 || mapPanState) return;
+  mapPanState = {
+    pointerId: e.pointerId,
+    startX: e.clientX,
+    startY: e.clientY,
+    lastX: e.clientX,
+    lastY: e.clientY,
+    dragging: false,
+  };
+  svg?.classList.add('is-panning-ready');
+  try {
+    svg?.setPointerCapture?.(e.pointerId);
+  } catch {}
+}
+function onMapPointerMove(e) {
+  if (!worldWrapReviewEnabled || !mapPanState || e.pointerId !== mapPanState.pointerId) return;
+  const totalX = e.clientX - mapPanState.startX;
+  const totalY = e.clientY - mapPanState.startY;
+  if (!mapPanState.dragging && Math.hypot(totalX, totalY) < MAP_PAN_DRAG_THRESHOLD_PX) return;
+  if (!mapPanState.dragging) {
+    mapPanState.dragging = true;
+    svg?.classList.add('is-panning');
+    clearHoverPreview();
+  }
+  e.preventDefault();
+  const {dx, dy} = viewDeltaFromPointerDelta(e.clientX - mapPanState.lastX, e.clientY - mapPanState.lastY);
+  panMapView(mapView, {dx, dy});
+  mapPanState.lastX = e.clientX;
+  mapPanState.lastY = e.clientY;
+  scheduleMapViewRender();
+}
+function onMapPointerUp(e) {
+  if (!mapPanState || e.pointerId !== mapPanState.pointerId) return;
+  if (mapPanState.dragging) e.preventDefault();
+  finishMapPan();
+}
+function onMapPointerCancel(e) {
+  if (!mapPanState || e.pointerId !== mapPanState.pointerId) return;
+  finishMapPan({cancel: true});
+}
+function onMapLostPointerCapture(e) {
+  if (!mapPanState || e.pointerId !== mapPanState.pointerId) return;
+  finishMapPan({cancel: true});
+}
 function onMapMove(e) {
+  if (mapPanState?.dragging) return;
   const target = e.target;
   if (target?.classList?.contains('region') || target?.classList?.contains('region-hit')) return;
   const isBlankMap = target === svg || target === gGrid || target === gHitRegions || target?.classList?.contains('graticule');
@@ -2436,8 +2532,16 @@ if (gHitRegions) {
   gHitRegions.addEventListener('pointerout', onHitLayerPointerOut);
   gHitRegions.addEventListener('click', onHitLayerClick);
 }
+if (worldWrapReviewEnabled) {
+  svg.addEventListener('pointerdown', onMapPointerDown);
+  svg.addEventListener('pointermove', onMapPointerMove);
+  svg.addEventListener('pointerup', onMapPointerUp);
+  svg.addEventListener('pointercancel', onMapPointerCancel);
+  svg.addEventListener('lostpointercapture', onMapLostPointerCapture);
+}
 svg.addEventListener('mousemove', onMapMove);
 svg.addEventListener('click', e => {
+  if (consumeSuppressedMapClick(e)) return;
   const target = e.target;
   if (target === svg || target === gGrid || target === gHitRegions || target.classList?.contains('graticule')) clearSelection();
 });

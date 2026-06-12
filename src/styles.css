@@ -49,6 +49,8 @@
   .pill.selected { border-color:rgba(255,247,184,.42); color:#fff7b8; background:rgba(255,247,184,.11); font-weight:700; }
   .svgwrap { position:relative; flex:1; overflow:hidden; }
   svg { width:100%; height:100%; display:block; background: radial-gradient(circle at 50% 45%,#172033 0%,#0b1020 70%); }
+  svg.world-wrap-review { cursor:grab; touch-action:none; user-select:none; }
+  svg.world-wrap-review.is-panning { cursor:grabbing; }
   .graticule { stroke:rgba(255,255,255,.08); stroke-width:.006; fill:none; vector-effect:non-scaling-stroke; }
   .region { stroke:rgba(8,13,24,.82); stroke-width:.006; vector-effect:non-scaling-stroke; transition:filter .08s, opacity .08s, stroke-width .08s; cursor:pointer; }
   .region:hover, .region.hovered { filter:brightness(1.45); stroke:white; stroke-width:.012; }

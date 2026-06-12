@@ -16,6 +16,31 @@ function regionHit(page, regionName) {
   return page.locator(`#hitRegions .region-hit[data-region="${regionName}"]`);
 }
 
+async function mapViewBox(page) {
+  const value = await page.locator('#map').getAttribute('viewBox');
+  return String(value || '').split(/\s+/).map(Number);
+}
+
+async function dragMap(page, start, end, steps = 8) {
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(end.x, end.y, {steps});
+  await page.mouse.up();
+}
+
+async function dispatchPointerClick(locator, point = {x: 120, y: 120}) {
+  await locator.dispatchEvent('pointerdown', {bubbles: true, button: 0, pointerId: 7, clientX: point.x, clientY: point.y, pointerType: 'mouse'});
+  await locator.dispatchEvent('pointerup', {bubbles: true, button: 0, pointerId: 7, clientX: point.x, clientY: point.y, pointerType: 'mouse'});
+  await locator.dispatchEvent('click', {bubbles: true, clientX: point.x, clientY: point.y});
+}
+
+async function dispatchPointerDragAndClick(locator, start = {x: 120, y: 120}, end = {x: 152, y: 120}) {
+  await locator.dispatchEvent('pointerdown', {bubbles: true, button: 0, pointerId: 8, clientX: start.x, clientY: start.y, pointerType: 'mouse'});
+  await locator.dispatchEvent('pointermove', {bubbles: true, button: 0, pointerId: 8, clientX: end.x, clientY: end.y, pointerType: 'mouse'});
+  await locator.dispatchEvent('pointerup', {bubbles: true, button: 0, pointerId: 8, clientX: end.x, clientY: end.y, pointerType: 'mouse'});
+  await locator.dispatchEvent('click', {bubbles: true, clientX: end.x, clientY: end.y});
+}
+
 async function chooseNation(page, query, tag) {
   await page.locator('#search').fill(query);
   await page.locator('#nationDropdown .searchOption')
@@ -158,6 +183,67 @@ test('world-wrap review flag applies search filtering to every copy without dupl
   });
 
   expect(filterStats).toEqual({amazonia: 3, amazoniaHidden: 0, ontario: 3, ontarioHidden: 3});
+});
+
+test('world-wrap review panning updates viewBox and keeps horizontal offset bounded', async ({ page }) => {
+  await waitForWrappedMap(page);
+
+  const baseViewBox = await mapViewBox(page);
+  const mapBox = await page.locator('#map').boundingBox();
+  expect(mapBox).toBeTruthy();
+  const start = {x: mapBox.x + mapBox.width * 0.45, y: mapBox.y + mapBox.height * 0.50};
+  const east = {x: start.x + mapBox.width * 0.75, y: start.y};
+  const west = {x: start.x - mapBox.width * 0.75, y: start.y};
+  const minX = baseViewBox[0] - baseViewBox[2] / 2 - 0.0001;
+  const maxX = baseViewBox[0] + baseViewBox[2] / 2 + 0.0001;
+  let sawChangedX = false;
+
+  for (let i = 0; i < 5; i += 1) {
+    await dragMap(page, start, east);
+    const nextViewBox = await mapViewBox(page);
+    sawChangedX ||= Math.abs(nextViewBox[0] - baseViewBox[0]) > 0.01;
+    expect(nextViewBox[0]).toBeGreaterThanOrEqual(minX);
+    expect(nextViewBox[0]).toBeLessThan(maxX);
+    expect(nextViewBox[1]).toBeCloseTo(baseViewBox[1], 6);
+  }
+
+  for (let i = 0; i < 5; i += 1) {
+    await dragMap(page, start, west);
+    const nextViewBox = await mapViewBox(page);
+    sawChangedX ||= Math.abs(nextViewBox[0] - baseViewBox[0]) > 0.01;
+    expect(nextViewBox[0]).toBeGreaterThanOrEqual(minX);
+    expect(nextViewBox[0]).toBeLessThan(maxX);
+    expect(nextViewBox[1]).toBeCloseTo(baseViewBox[1], 6);
+  }
+
+  expect(sawChangedX).toBe(true);
+});
+
+test('world-wrap review panning preserves click selection but suppresses drag selection', async ({ page }) => {
+  await waitForWrappedMap(page);
+
+  const amazon = page.locator('#hitRegions .region-hit[data-region="Amazonia"][data-wrap-copy="0"]');
+  await dispatchPointerClick(amazon);
+  await expect(page.locator('#search')).toHaveValue(/Brazil/);
+  await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveText('Manaus');
+
+  await page.locator('#hitRegions').dispatchEvent('click', {bubbles: true});
+  await expect(page.locator('#search')).toHaveValue('');
+
+  await dispatchPointerDragAndClick(amazon);
+  await expect(page.locator('#search')).toHaveValue('');
+  await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
+});
+
+test('world-wrap panning is disabled without the review flag', async ({ page }) => {
+  await waitForMap(page);
+
+  const baseViewBox = await mapViewBox(page);
+  const mapBox = await page.locator('#map').boundingBox();
+  expect(mapBox).toBeTruthy();
+  const start = {x: mapBox.x + mapBox.width * 0.45, y: mapBox.y + mapBox.height * 0.50};
+  await dragMap(page, start, {x: start.x + mapBox.width * 0.75, y: start.y});
+  expect(await mapViewBox(page)).toEqual(baseViewBox);
 });
 
 test.skip('issue #2 acceptance: horizontal panning passes west and east map edges without a hard stop', async () => {});
