@@ -123,9 +123,11 @@ function createDebugRenderStats() {
   ];
   const stats = {};
   for (const key of keys) stats[key] = 0;
-  stats.reset = () => {
-    for (const key of keys) stats[key] = 0;
-  };
+  Object.defineProperty(stats, 'reset', {
+    value: () => {
+      for (const key of keys) stats[key] = 0;
+    },
+  });
   return stats;
 }
 

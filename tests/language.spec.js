@@ -170,6 +170,8 @@ test('debug render stats capture real pointer hover baseline', async ({ page }) 
   await page.goto('/?debugRenderStats=1');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
   await expect.poll(() => page.evaluate(() => Boolean(window.__TI_DEBUG_RENDER_STATS__))).toBe(true);
+  await expect.poll(() => page.evaluate(() => typeof window.__TI_DEBUG_RENDER_STATS__.reset)).toBe('function');
+  await expect.poll(() => page.evaluate(() => Object.keys(window.__TI_DEBUG_RENDER_STATS__).includes('reset'))).toBe(false);
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
 
   await chooseNation(page, 'Brazil', 'BRA');
