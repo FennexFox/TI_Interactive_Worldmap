@@ -79,19 +79,85 @@ npm run test:e2e -- --trace on
 
 ## Progress
 
-- [ ] Final cache/render review completed.
-- [ ] Regression tests hardened.
-- [ ] Full validation commands run.
-- [ ] Manual smoke matrix completed.
-- [ ] Cache immutability and empty render-key behavior reviewed.
-- [ ] Phase 07 implementation or deferral decision recorded.
-- [ ] Phase outcomes completed.
-- [ ] PR notes drafted.
+- [x] Final cache/render review completed.
+- [x] Regression tests hardened.
+- [x] Full validation commands run.
+- [x] Manual smoke matrix completed.
+- [x] Cache immutability and empty render-key behavior reviewed.
+- [x] Phase 07 implementation or deferral decision recorded.
+- [x] Phase outcomes completed.
+- [x] PR notes drafted.
 
 ## Decision Log
 
 - Final rollout should treat generated output as a build product and summarize generated diffs by cause, not line-by-line.
+- No additional source changes were needed in Phase 08 because Phases 01-06 already added focused real-pointer, bounded-hover, cache, render-key, empty-state, and hover/marker churn coverage.
+- Raw overlay-count assertions remain acceptable for this issue because Phase 07 deferred DOM node-count reduction; semantic assertions were added around optimized behavior where counts alone would not catch stale DOM.
+- Cache and render-key audit confirmed no render path mutates cached model `Set` values; mutable visual state receives copied set contents or cloned `resultSet` data.
+- Final rollout notes are captured in this phase document rather than a separate PR file so the repository-local execution plan remains the source of truth.
 
 ## Outcomes
 
-Pending implementation.
+Implemented Phase 08 on 2026-06-13.
+
+Final audit:
+
+- Overlay model cache key inputs cover active scenario, active data version, language, nation, claim mode, claim kind, project filter, active incoming claim, selected region set, and options cache key.
+- Overlay render keys are based on concrete claim path descriptors and label descriptors, with separate path and label keys.
+- Empty render states are explicit for claim overlays, claim labels, foreign-hover overlays, and ordinary hover outlines.
+- Cached overlay model values are treated as immutable; render code reads `Set` values and clones `model.resultSet` into `visibleNationRegionNames`.
+- Capital marker key coverage includes language, marker region, marker nation, and selected state.
+- Phase 07 was intentionally deferred after post-Phase-06 profiling showed unchanged overlay DOM replacement was already eliminated.
+
+Regression coverage:
+
+- Real-pointer debug baseline: `debug render stats capture real pointer hover baseline`.
+- Bounded hover fast path: `simple selected-overlay claim hover movement uses bounded visual updates` and `settled same-nation hover preview uses bounded visual updates`.
+- Overlay model cache: `overlay model cache reuses unchanged inputs and misses changed filters`.
+- Overlay render keys: `overlay render skip keys avoid unchanged DOM replacement`.
+- Hover and marker churn: `hover overlay and capital marker keys avoid unchanged churn`.
+- Existing semantic coverage still checks language, search, capital markers, claim controls, claim cards, incoming/outgoing claim navigation, and clear-map behavior.
+
+Validation:
+
+- `npm run build` passed.
+- `npm run verify` passed: generated outputs verified, 5 Python unit tests passed.
+- `npm run test:e2e` passed: 13 Playwright tests passed.
+- `git status --short` was clean before Phase 08 documentation was updated.
+
+Manual smoke matrix:
+
+- Dense Europe hover followed the pointer across available Austria, Czechia, Germany, and Poland hit regions.
+- South America hover resolved Amazonia, Bolivia, Brasilia, and French Guiana.
+- Selecting Brazil and hovering Bolivia preserved the selected overlay state.
+- Moving across Brazil's claim range kept claim overlay and label DOM replacements at 0.
+- Claim mode, project filter, claim kind, and only-claims controls updated overlays and hidden hit paths correctly.
+- Empty-map clear reset search text, claim mode, claim pill, claim overlays, selection outlines, and hover pill.
+- Tooltip and hover pill text updated for the resolved region/nation.
+- Visible overlay paths remained `pointer-events: none`; hit detection continued through `#hitRegions .region-hit`.
+
+Draft PR notes:
+
+Summary:
+
+- Added debug render counters gated by `?debugRenderStats=1`.
+- Added bounded visual-state application for safe hover transitions.
+- Cached overlay model construction using explicit semantic keys.
+- Added render keys to skip unchanged claim overlay and label DOM replacements.
+- Split hover overlay keys so foreign-hover and ordinary hover-outline layers no longer clear each other unnecessarily.
+- Deferred compound overlay DOM reduction after profiling showed unchanged overlay DOM replacement was no longer a meaningful bottleneck.
+
+Validation to report:
+
+- `npm run build`
+- `npm run verify`
+- `npm run test:e2e`
+- Full manual smoke matrix from `docs/plan/issue-20/00-master-plan.md`
+
+Remaining follow-up scope:
+
+- Scenario-switching invalidation once multiple active data sets exist.
+- World-wrap rendering and replicated layer support.
+- Secondary capital hover preview.
+- Optional formal debug panel or CI performance budget if counter stability proves useful.
+- Compound path experiments only after a fresh profile shows node count is again a meaningful bottleneck.

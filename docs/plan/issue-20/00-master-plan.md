@@ -119,7 +119,7 @@ These are deliberately out of scope for the issue #20 implementation, but should
 - [x] Phase 05 implemented.
 - [x] Phase 06 implemented.
 - [x] Phase 07 implemented.
-- [ ] Phase 08 implemented.
+- [x] Phase 08 implemented.
 
 ## Decision Log
 
@@ -132,4 +132,26 @@ These are deliberately out of scope for the issue #20 implementation, but should
 
 ## Outcomes
 
-Pending implementation.
+Completed issue #20 phased refactor on 2026-06-13.
+
+Final implementation summary:
+
+- Phase 01 added disabled-by-default render counters and a real-pointer Playwright baseline.
+- Phase 02 added a bounded visual-state helper for specific region IDs.
+- Phase 03 routed conservative simple hover transitions and safe hover clears through bounded visual updates.
+- Phase 04 cached nation overlay models for explicit semantic inputs.
+- Phase 05 skipped unchanged claim overlay and claim label DOM replacements with explicit empty render keys.
+- Phase 06 split foreign-hover and ordinary hover-outline keys, and verified capital marker key coverage.
+- Phase 07 was intentionally deferred after profiling showed unchanged selected-overlay DOM replacement was no longer a meaningful bottleneck.
+- Phase 08 completed final regression review, validation, smoke coverage, and rollout notes.
+
+Final validation:
+
+- `npm run build` passed.
+- `npm run verify` passed: generated outputs verified, 5 Python unit tests passed.
+- `npm run test:e2e` passed: 13 Playwright tests passed.
+- `git status --short` was clean before the Phase 08 documentation update.
+
+Final smoke coverage:
+
+- Dense Europe hover, South America hover, selected Brazil hover behavior, claim range movement, claim mode/project/kind/only-claims controls, language toggles, tooltip/hover pill behavior, hit-layer targeting, and clear-map reset all passed.
