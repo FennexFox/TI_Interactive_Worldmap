@@ -79,18 +79,30 @@ npx playwright test tests/language.spec.js -g "overlay render skip keys"
 
 ## Progress
 
-- [ ] Copy context shape chosen.
-- [ ] Single-copy plan wired through render helpers.
-- [ ] Multi-instance registries added.
-- [ ] Visual state application migrated.
-- [ ] Baseline behavior verified.
+- [x] Copy context shape chosen.
+- [x] Single-copy plan wired through render helpers.
+- [x] Multi-instance registries added.
+- [x] Visual state application migrated.
+- [x] Baseline behavior verified.
 
 ## Decision Log
 
 - Decision: Build multi-instance support before rendering extra copies so review can focus on data structures first.
 - Decision: Keep copy identity in renderer context and DOM metadata only, never in app state.
+- Decision: Use copy context objects shaped as `{copyIndex, xOffset, isCanonical}` and stamp rendered elements with `data-wrap-copy`, `data-wrap-offset`, and `data-wrap-canonical`.
+- Decision: Keep `pathByRegion` and `hitPathByRegion` populated only with canonical copy elements while adding `pathInstancesByRegion` and `hitPathInstancesByRegion` for all rendered instances.
+- Decision: Keep the active copy plan as a single canonical context from `defaultWorldCopyContext()`; no repeated copy groups are visible in this phase.
+- Decision: Update search filtering to derive result-side effects from canonical region paths only so future copy instances do not duplicate search matches.
 
 ## Outcomes
 
-Pending implementation.
-
+- Added renderer copy-context helpers and per-copy rendering scaffolding in `src/render/map-layers.js`.
+- Added multi-instance visual and hit registries while preserving legacy canonical maps for existing callers.
+- Updated `src/state/map-visual-state.js` so full and bounded visual-state application can touch every rendered instance of a canonical region.
+- Updated debug render stat accounting to count rendered hit path instances through `hitPathElements`.
+- Updated `tests/map-wrap.spec.js` to assert canonical single-copy metadata on visible and hit paths.
+- Rebuilt generated static assets under `docs/assets/**`.
+- Focused validation passed: `npx playwright test tests/language.spec.js -g "bounded visual updates"`, `npx playwright test tests/language.spec.js -g "overlay render skip keys"`, and `npx playwright test tests/map-wrap.spec.js`.
+- Full validation passed: `npm run build`, `npm run verify`, and `npm run test:e2e` with 19 active tests and 3 skipped future issue #2 markers.
+- Manual smoke checklist passed against the static `docs/` site: bounded same-nation hover updates, single overlay set, no duplicated map filtering, and no duplicated labels.
+- Retrospective: the current HTML shell has no `#results` element, so search-filter smoke checks should assert map filtering and canonical path counts rather than result-list rows until a result panel exists.

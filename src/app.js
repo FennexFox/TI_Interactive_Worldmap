@@ -30,6 +30,7 @@ import {buildDerivedIndices} from './data/derived-indices.js';
 import {
   createRegionPath,
   createSvgElement,
+  defaultWorldCopyContext,
   renderGrid as renderGridLayer,
   renderLabels as renderLabelsLayer,
   renderRegions as renderRegionLayers,
@@ -82,6 +83,7 @@ const svgWrap = document.querySelector('.svgwrap');
 const regionPathElements = [];
 const hitPathElements = [];
 const labelTextElements = [];
+const worldCopyContexts = [defaultWorldCopyContext()];
 
 const DEBUG_RENDER_STATS_QUERY = 'debugRenderStats';
 function shouldEnableDebugRenderStats() {
@@ -502,7 +504,9 @@ function applyStaticTranslations() {
 
 const regionByName = derivedIndices.regionByName;
 const pathByRegion = new Map();
+const pathInstancesByRegion = new Map();
 const hitPathByRegion = new Map();
+const hitPathInstancesByRegion = new Map();
 const nationRegions = derivedIndices.nationRegions;
 let labelsVisible = false;
 const selectedRegionIds = appState.selectedRegionIds;
@@ -596,15 +600,33 @@ function setHiddenVisualState(hiddenRegionIds) {
 }
 
 function applyMapVisualState(renderContext = {}, state = mapVisualState) {
-  const context = {svg, pathByRegion, regionPathElements, hitPathByRegion, ...renderContext};
+  const context = {
+    svg,
+    pathByRegion,
+    pathInstancesByRegion,
+    regionPathElements,
+    hitPathByRegion,
+    hitPathInstancesByRegion,
+    hitPathElements,
+    ...renderContext,
+  };
   recordRenderStat('fullVisualStateApplications');
   recordRenderStat('visiblePathsTouched', (context.regionPathElements || []).length);
-  recordRenderStat('hitPathsTouched', (context.hitPathByRegion || new Map()).size);
+  recordRenderStat('hitPathsTouched', (context.hitPathElements || []).length || (context.hitPathByRegion || new Map()).size);
   applyVisualState(context, state);
 }
 
 function applyMapVisualStateForRegions(regionIds, renderContext = {}, state = mapVisualState) {
-  const context = {svg, pathByRegion, hitPathByRegion, ...renderContext};
+  const context = {
+    svg,
+    pathByRegion,
+    pathInstancesByRegion,
+    regionPathElements,
+    hitPathByRegion,
+    hitPathInstancesByRegion,
+    hitPathElements,
+    ...renderContext,
+  };
   const result = applyVisualStateForRegions(context, state, regionIds);
   recordRenderStat('boundedVisualStateApplications');
   recordRenderStat('visiblePathsTouched', result.visiblePathsTouched);
@@ -1618,9 +1640,12 @@ function renderRegions(renderContext = {}) {
     hitLayer: gHitRegions,
     labelLayer: gLabels,
     indices: derivedIndices,
+    copyContexts: renderContext.copyContexts || worldCopyContexts,
     pathByRegion,
+    pathInstancesByRegion,
     regionPathElements,
     hitPathByRegion,
+    hitPathInstancesByRegion,
     hitPathElements,
     labelTextElements,
     labelsVisible,
@@ -1640,6 +1665,7 @@ function renderLabels(renderContext = {}) {
     regions: REGIONS,
     labelPosition,
     localizedRegionName,
+    copyContexts: renderContext.copyContexts || worldCopyContexts,
     ...renderContext,
   });
 }
@@ -2255,7 +2281,7 @@ function applyFilters(rerenderResults=true) {
   entries.forEach(e => e.regions.forEach(r => claimSet.add(r)));
   const baseSet = new Set((CLAIMS_BY_NATION[currentNation]?.baseRegions) || (nationRegions.get(currentNation) || []));
   let visible=0; const matches=[]; const hiddenRegionIds = new Set();
-  regionPathElements.forEach(p => {
+  regionPathElements.filter(p => p.dataset.wrapCanonical !== '0').forEach(p => {
     const r = REGIONS[Number(p.dataset.id)];
       const text = (r.name+' '+r.regionName+' '+localizedRegionName(r)+' '+(r.primaryCity || '')+' '+Object.values(r.displayName || {}).join(' ')+' '+r.nationTag).toLowerCase();
     const okQ = !q || text.includes(q);

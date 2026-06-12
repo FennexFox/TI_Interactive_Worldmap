@@ -68,10 +68,20 @@ function applyHitPathVisualState(hitPath, mapVisualState, regionId) {
   return true;
 }
 
-function visiblePathForRegion(renderContext, regionId) {
+function regionPathInstances(renderContext, regionId) {
+  const directInstances = renderContext.pathInstancesByRegion?.get?.(regionId);
+  if (directInstances?.length) return directInstances;
   const directPath = renderContext.pathByRegion?.get?.(regionId);
-  if (directPath) return directPath;
-  return (renderContext.regionPathElements || []).find(path => path.dataset.region === regionId) || null;
+  if (directPath) return [directPath];
+  return (renderContext.regionPathElements || []).filter(path => path.dataset.region === regionId);
+}
+
+function hitPathInstances(renderContext, regionId) {
+  const directInstances = renderContext.hitPathInstancesByRegion?.get?.(regionId);
+  if (directInstances?.length) return directInstances;
+  const directPath = renderContext.hitPathByRegion?.get?.(regionId);
+  if (directPath) return [directPath];
+  return (renderContext.hitPathElements || []).filter(path => path.dataset.region === regionId || path.dataset.regionId === regionId);
 }
 
 function uniqueRegionIds(regionIds = []) {
@@ -82,11 +92,11 @@ export function applyMapVisualStateForRegions(renderContext = {}, mapVisualState
   let visiblePathsTouched = 0;
   let hitPathsTouched = 0;
   for (const regionId of uniqueRegionIds(regionIds)) {
-    if (applyRegionPathVisualState(visiblePathForRegion(renderContext, regionId), mapVisualState, regionId)) {
-      visiblePathsTouched += 1;
+    for (const path of regionPathInstances(renderContext, regionId)) {
+      if (applyRegionPathVisualState(path, mapVisualState, regionId)) visiblePathsTouched += 1;
     }
-    if (applyHitPathVisualState(renderContext.hitPathByRegion?.get?.(regionId), mapVisualState, regionId)) {
-      hitPathsTouched += 1;
+    for (const hitPath of hitPathInstances(renderContext, regionId)) {
+      if (applyHitPathVisualState(hitPath, mapVisualState, regionId)) hitPathsTouched += 1;
     }
   }
   renderContext.svg?.classList.toggle('claims-active', !!mapVisualState.hasClaimOverlay);
@@ -98,7 +108,9 @@ export function applyMapVisualState(renderContext = {}, mapVisualState) {
   for (const path of renderContext.regionPathElements || []) {
     if (applyRegionPathVisualState(path, mapVisualState)) visiblePathsTouched += 1;
   }
-  const hitPaths = renderContext.hitPathByRegion || new Map();
+  const hitPaths = renderContext.hitPathElements?.length
+    ? renderContext.hitPathElements.map(path => [path.dataset.regionId || path.dataset.region, path])
+    : renderContext.hitPathByRegion || new Map();
   let hitPathsTouched = 0;
   for (const [regionId, hitPath] of hitPaths) {
     if (applyHitPathVisualState(hitPath, mapVisualState, regionId)) hitPathsTouched += 1;

@@ -44,6 +44,11 @@ test('baseline hit layer resolves one canonical region for hover and click', asy
   expect(regionRegistry.amazoniaHitCount).toBe(1);
   expect(regionRegistry.amazoniaVisualCount).toBe(1);
 
+  await expect(regionHit(page, 'Amazonia')).toHaveAttribute('data-wrap-copy', '0');
+  await expect(regionHit(page, 'Amazonia')).toHaveAttribute('data-wrap-canonical', '1');
+  await expect(page.locator('#regions .region[data-region="Amazonia"]')).toHaveAttribute('data-wrap-copy', '0');
+  await expect(page.locator('#regions .region[data-region="Amazonia"]')).toHaveAttribute('data-wrap-canonical', '1');
+
   await regionHit(page, 'Amazonia').hover();
   await expect(page.locator('#hoverPill')).toHaveText('Hover: BRA · Manaus');
   await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
