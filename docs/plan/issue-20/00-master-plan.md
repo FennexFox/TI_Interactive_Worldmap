@@ -117,7 +117,7 @@ These are deliberately out of scope for the issue #20 implementation, but should
 - [x] Phase 03 implemented.
 - [x] Phase 04 implemented.
 - [x] Phase 05 implemented.
-- [ ] Phase 06 implemented.
+- [x] Phase 06 implemented.
 - [ ] Phase 07 implemented.
 - [ ] Phase 08 implemented.
 

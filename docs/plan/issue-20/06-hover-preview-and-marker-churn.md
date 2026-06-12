@@ -66,16 +66,48 @@ npm run test:e2e
 
 ## Progress
 
-- [ ] Hover overlay key coverage reviewed.
-- [ ] Foreign hover churn reduced where safe.
-- [ ] Capital marker key coverage verified.
-- [ ] Hover/marker regression coverage updated.
-- [ ] Validation commands run.
+- [x] Hover overlay key coverage reviewed.
+- [x] Foreign hover churn reduced where safe.
+- [x] Capital marker key coverage verified.
+- [x] Hover/marker regression coverage updated.
+- [x] Validation commands run.
 
 ## Decision Log
 
 - This phase stays focused on hover-specific DOM churn after selected overlay caching is already stable.
+- `renderCapitalMarkers` already had the needed key coverage for language, marker region, nation, and selected state, so its behavior was preserved and covered with tests instead of refactored.
+- The combined hover key was split into `foreignHoverVisualKey` and `hoverOutlineVisualKey`; ordinary hover movement no longer clears the foreign-hover layer, and foreign hover movement no longer clears the ordinary hover outline layer.
+- Moving between regions in the same foreign-hover nation keeps the same foreign overlay key because the overlay represents the foreign nation's full relevant territory, not the individual hovered region.
+- Empty foreign-hover and ordinary-hover states are explicit keys so stale paths are cleared once when changing hover modes.
 
 ## Outcomes
 
-Pending implementation.
+Implemented Phase 06 on 2026-06-13.
+
+Source changes:
+
+- Split the hover render key state in `src/app.js` into separate foreign-hover overlay and ordinary hover-outline keys.
+- Replaced the shared hover-layer clear with keyed replacements for `#foreignHoverOverlays` and `#hoverOutlines`.
+- Left capital marker rendering semantics unchanged after verifying the existing key includes current language, marker region, marker nation, and selected state.
+- Added Playwright coverage for unchanged capital marker inputs, ordinary hover movement without foreign-layer churn, same-nation foreign-hover movement without hover DOM churn, and Brazil/Ontario/Bolivia/Brasilia/French Guiana interactions.
+- Rebuilt generated Pages app output with `npm run build`.
+
+Validation:
+
+- `npm run build` passed.
+- `npm run verify` passed: generated outputs verified, 5 Python unit tests passed.
+- `npm run test:e2e` passed: 13 Playwright tests passed.
+- Focused `npm run test:e2e -- --grep "hover overlay and capital marker"` passed: 1 Playwright test passed.
+
+Manual smoke notes:
+
+- Selecting Brazil and moving between Ontario and another Canadian region preserved the Canadian foreign hover overlay with `foreignHoverOverlayReplacements=0` and `hoverOutlineReplacements=0`.
+- Hovering Bolivia, Brasilia, French Guiana, and Ontario in sequence produced the expected ordinary hover fill, selected Brasilia capital star, Brazil-claim hover fill, and Canadian foreign overlay.
+- Selecting Brasilia kept the filled capital star and selection label correct.
+- Clearing the map removed selected overlays and reset capital markers.
+- Switching language with Brazil selected preserved the Brasilia capital marker while refreshing localized UI state.
+
+Retrospective:
+
+- Splitting the hover keys removes noisy empty-layer clears without changing hover semantics.
+- The existing capital marker key was already appropriately conservative; the added regression is the main Phase 06 protection for future marker changes.

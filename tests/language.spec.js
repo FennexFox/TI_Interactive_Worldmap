@@ -370,6 +370,49 @@ test('overlay render skip keys avoid unchanged DOM replacement', async ({ page }
   expect(stats.claimLabelDomReplacements).toBe(0);
 });
 
+test('hover overlay and capital marker keys avoid unchanged churn', async ({ page }) => {
+  await page.goto('/?debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  const canadaRegions = await page.locator('#hitRegions .region-hit[data-nation="CAN"]').evaluateAll(paths => (
+    paths.map(path => path.dataset.region).filter(Boolean)
+  ));
+  const firstCanadianRegion = canadaRegions.includes('Ontario') ? 'Ontario' : canadaRegions[0];
+  const secondCanadianRegion = canadaRegions.find(region => region && region !== firstCanadianRegion);
+  expect(firstCanadianRegion).toBeTruthy();
+  expect(secondCanadianRegion).toBeTruthy();
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]')).toHaveCount(1);
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await chooseNation(page, 'Brazil', 'BRA');
+  let stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.capitalMarkerRebuilds).toBe(0);
+
+  await hoverRegionWithMouse(page, 'Amazonia');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await hoverRegionWithMouse(page, 'FrenchGuiana');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="FrenchGuiana"]')).toHaveCount(1);
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.hoverOutlineReplacements).toBeGreaterThan(0);
+  expect(stats.foreignHoverOverlayReplacements).toBe(0);
+
+  await hoverRegionWithMouse(page, firstCanadianRegion);
+  await expect(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="CAN"]')).not.toHaveCount(0);
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await hoverRegionWithMouse(page, secondCanadianRegion);
+  await expect(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="CAN"]')).not.toHaveCount(0);
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.foreignHoverOverlayReplacements).toBe(0);
+  expect(stats.hoverOutlineReplacements).toBe(0);
+
+  await hoverRegionWithMouse(page, 'Bolivia');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Bolivia"]')).toHaveCount(1);
+  await hoverRegionWithMouse(page, 'Brasilia');
+  await expect(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]')).toHaveClass(/is-selected/);
+});
+
 test('selected nation marks its capital region with a fillable star', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });

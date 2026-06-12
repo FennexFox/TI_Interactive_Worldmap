@@ -531,7 +531,8 @@ let svgWrapRectCache = null;
 let tooltipSizeCache = {width: 160, height: 26, valid: false};
 let tooltipFrame = 0;
 let pendingTooltipPoint = null;
-let hoverVisualKey = '';
+let foreignHoverVisualKey = '';
+let hoverOutlineVisualKey = '';
 let capitalMarkersKey = '';
 const nationChoiceByValue = new Map();
 const incomingClaimsByRegion = derivedIndices.incomingClaimsByRegion;
@@ -540,6 +541,8 @@ const OVERLAY_MODEL_CACHE_LIMIT = 256;
 const overlayModelCache = new Map();
 const CLAIM_OVERLAY_EMPTY_RENDER_KEY = 'claim-overlay-paths:empty';
 const CLAIM_LABEL_EMPTY_RENDER_KEY = 'claim-labels:empty';
+const FOREIGN_HOVER_EMPTY_RENDER_KEY = 'foreign-hover:empty';
+const HOVER_OUTLINE_EMPTY_RENDER_KEY = 'hover-outline:empty';
 const claimOverlayLayerRenderKeys = new WeakMap();
 const claimLabelLayerRenderKeys = new WeakMap();
 
@@ -1432,35 +1435,43 @@ function appendForeignHoverNationOverlay(frag, nation) {
     appendForeignHoverRegion(frag, item.region, item.className, item.attrs);
   }
 }
-function clearHoverVisualLayers() {
+function replaceForeignHoverOverlayForKey(nextKey, buildChildren, {force=false} = {}) {
+  if (!gForeignHoverOverlays) return;
+  if (!force && nextKey === foreignHoverVisualKey) return;
+  foreignHoverVisualKey = nextKey;
   recordRenderStat('foreignHoverOverlayReplacements');
+  replaceLayerChildren(gForeignHoverOverlays, buildChildren());
+}
+function replaceHoverOutlinesForKey(nextKey, buildChildren, {force=false} = {}) {
+  if (!gHoverOutlines) return;
+  if (!force && nextKey === hoverOutlineVisualKey) return;
+  hoverOutlineVisualKey = nextKey;
   recordRenderStat('hoverOutlineReplacements');
-  replaceLayerChildren(gForeignHoverOverlays);
-  replaceLayerChildren(gHoverOutlines);
+  replaceLayerChildren(gHoverOutlines, buildChildren());
 }
 function renderHoverOutlines({force=false} = {}) {
   const rn = getHoveredRegionName();
   const r = rn ? regionByName[rn] : null;
   const hidden = !rn || selectedRegionIds.has(rn) || !r;
   const foreign = !hidden && shouldShowForeignHoverNationOverlay(r);
-  const key = hidden
-    ? 'empty'
-    : foreign
-      ? `foreign|${r.nationTag}|${claimModeSel.value}|${claimKindSel.value}|${getLockedNation() || getActiveNation()}|${visibleNationRegionNames.has(rn) ? 1 : 0}`
-      : `region|${rn}|${getLockedNation() || getActiveNation()}|${selectedRegionIds.has(rn) ? 1 : 0}`;
-  if (!force && key === hoverVisualKey) return;
-  hoverVisualKey = key;
-  clearHoverVisualLayers();
-  if (hidden) return;
-
-  const frag = document.createDocumentFragment();
-  if (foreign) {
+  const foreignKey = foreign
+    ? `foreign|${r.nationTag}|${claimModeSel.value}|${claimKindSel.value}|${getLockedNation() || getActiveNation()}|${visibleNationRegionNames.has(rn) ? 1 : 0}`
+    : FOREIGN_HOVER_EMPTY_RENDER_KEY;
+  const hoverKey = !hidden && !foreign
+    ? `region|${rn}|${getLockedNation() || getActiveNation()}|${selectedRegionIds.has(rn) ? 1 : 0}`
+    : HOVER_OUTLINE_EMPTY_RENDER_KEY;
+  replaceForeignHoverOverlayForKey(foreignKey, () => {
+    const frag = document.createDocumentFragment();
+    if (!foreign) return frag;
     appendForeignHoverNationOverlay(frag, r.nationTag);
-    gForeignHoverOverlays?.appendChild(frag);
-    return;
-  }
-  appendRegionHighlight(frag, r, 'hover');
-  gHoverOutlines?.appendChild(frag);
+    return frag;
+  }, {force});
+  replaceHoverOutlinesForKey(hoverKey, () => {
+    const frag = document.createDocumentFragment();
+    if (hidden || foreign) return frag;
+    appendRegionHighlight(frag, r, 'hover');
+    return frag;
+  }, {force});
 }
 function renderSelectionOutlines() {
   if (!gSelectionOutlines) return;
