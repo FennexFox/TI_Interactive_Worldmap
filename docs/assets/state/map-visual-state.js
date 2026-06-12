@@ -51,20 +51,58 @@ export function setHiddenVisualState(mapVisualState, hiddenRegionIds) {
   replaceSetContents(mapVisualState.hiddenRegionIds, hiddenRegionIds);
 }
 
-export function applyMapVisualState(renderContext = {}, mapVisualState) {
-  const regionPaths = renderContext.regionPathElements || [];
-  for (const path of regionPaths) {
-    const regionId = path.dataset.region;
-    path.classList.toggle('selected', mapVisualState.selectedRegionIds.has(regionId));
-    path.classList.toggle('owned-highlight', mapVisualState.ownedRegionIds.has(regionId));
-    path.classList.toggle('claim-target', mapVisualState.claimTargetRegionIds.has(regionId));
-    path.classList.toggle('hovered', mapVisualState.hoverRegionIds.has(regionId));
-    path.classList.toggle('dimmed', mapVisualState.dimmedRegionIds.has(regionId));
-    path.classList.toggle('hidden', mapVisualState.hiddenRegionIds.has(regionId));
-  }
-  const hitPaths = renderContext.hitPathByRegion || new Map();
-  for (const [regionId, hitPath] of hitPaths) {
-    hitPath.classList.toggle('hidden', mapVisualState.hiddenRegionIds.has(regionId));
+function applyRegionPathVisualState(path, mapVisualState, regionId = path?.dataset?.region) {
+  if (!path || !regionId) return false;
+  path.classList.toggle('selected', mapVisualState.selectedRegionIds.has(regionId));
+  path.classList.toggle('owned-highlight', mapVisualState.ownedRegionIds.has(regionId));
+  path.classList.toggle('claim-target', mapVisualState.claimTargetRegionIds.has(regionId));
+  path.classList.toggle('hovered', mapVisualState.hoverRegionIds.has(regionId));
+  path.classList.toggle('dimmed', mapVisualState.dimmedRegionIds.has(regionId));
+  path.classList.toggle('hidden', mapVisualState.hiddenRegionIds.has(regionId));
+  return true;
+}
+
+function applyHitPathVisualState(hitPath, mapVisualState, regionId) {
+  if (!hitPath || !regionId) return false;
+  hitPath.classList.toggle('hidden', mapVisualState.hiddenRegionIds.has(regionId));
+  return true;
+}
+
+function visiblePathForRegion(renderContext, regionId) {
+  const directPath = renderContext.pathByRegion?.get?.(regionId);
+  if (directPath) return directPath;
+  return (renderContext.regionPathElements || []).find(path => path.dataset.region === regionId) || null;
+}
+
+function uniqueRegionIds(regionIds = []) {
+  return [...new Set(regionIds || [])].filter(Boolean);
+}
+
+export function applyMapVisualStateForRegions(renderContext = {}, mapVisualState, regionIds = []) {
+  let visiblePathsTouched = 0;
+  let hitPathsTouched = 0;
+  for (const regionId of uniqueRegionIds(regionIds)) {
+    if (applyRegionPathVisualState(visiblePathForRegion(renderContext, regionId), mapVisualState, regionId)) {
+      visiblePathsTouched += 1;
+    }
+    if (applyHitPathVisualState(renderContext.hitPathByRegion?.get?.(regionId), mapVisualState, regionId)) {
+      hitPathsTouched += 1;
+    }
   }
   renderContext.svg?.classList.toggle('claims-active', !!mapVisualState.hasClaimOverlay);
+  return {visiblePathsTouched, hitPathsTouched};
+}
+
+export function applyMapVisualState(renderContext = {}, mapVisualState) {
+  let visiblePathsTouched = 0;
+  for (const path of renderContext.regionPathElements || []) {
+    if (applyRegionPathVisualState(path, mapVisualState)) visiblePathsTouched += 1;
+  }
+  const hitPaths = renderContext.hitPathByRegion || new Map();
+  let hitPathsTouched = 0;
+  for (const [regionId, hitPath] of hitPaths) {
+    if (applyHitPathVisualState(hitPath, mapVisualState, regionId)) hitPathsTouched += 1;
+  }
+  renderContext.svg?.classList.toggle('claims-active', !!mapVisualState.hasClaimOverlay);
+  return {visiblePathsTouched, hitPathsTouched};
 }

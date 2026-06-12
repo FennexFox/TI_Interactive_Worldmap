@@ -18,6 +18,28 @@ async function hoverRegion(page, regionName) {
   await target.dispatchEvent('pointermove', { bubbles: true, clientX: 126, clientY: 126, pointerType: 'mouse' });
 }
 
+async function hoverRegionWithMouse(page, regionName) {
+  await regionTarget(page, regionName).hover();
+}
+
+async function blankMapPoint(page) {
+  return page.evaluate(() => {
+    const map = document.querySelector('#map');
+    const rect = map.getBoundingClientRect();
+    for (let gy = 1; gy <= 9; gy += 1) {
+      for (let gx = 1; gx <= 9; gx += 1) {
+        const x = rect.left + (rect.width * gx) / 10;
+        const y = rect.top + (rect.height * gy) / 10;
+        const hit = document.elementFromPoint(x, y);
+        if (hit === map || hit?.id === 'grid' || hit?.id === 'hitRegions' || hit?.classList?.contains('graticule')) {
+          return {x, y};
+        }
+      }
+    }
+    return {x: rect.left + rect.width * 0.12, y: rect.top + rect.height * 0.46};
+  });
+}
+
 async function clickRegion(page, regionName) {
   await regionTarget(page, regionName).dispatchEvent('click', { bubbles: true });
 }
@@ -139,6 +161,259 @@ test('nation search matches claim project names to claimant nations', async ({ p
   await expect(nationOption('TUR').first()).toBeVisible();
 });
 
+
+test('debug render stats capture real pointer hover baseline', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+  await expect.poll(() => page.evaluate(() => Boolean(window.__TI_DEBUG_RENDER_STATS__))).toBe(false);
+
+  await page.goto('/?debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+  await expect.poll(() => page.evaluate(() => Boolean(window.__TI_DEBUG_RENDER_STATS__))).toBe(true);
+  await expect.poll(() => page.evaluate(() => typeof window.__TI_DEBUG_RENDER_STATS__.reset)).toBe('function');
+  await expect.poll(() => page.evaluate(() => Object.keys(window.__TI_DEBUG_RENDER_STATS__).includes('reset'))).toBe(false);
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#claimPill')).toContainText('Brazil');
+
+  await hoverRegionWithMouse(page, 'Amazonia');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
+
+  await hoverRegionWithMouse(page, 'Ontario');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Ontario"]')).toHaveCount(0);
+  await expect(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="CAN"]')).not.toHaveCount(0);
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.fullVisualStateApplications).toBeGreaterThan(0);
+  expect(stats.boundedVisualStateApplications).toBe(0);
+  expect(stats.visiblePathsTouched).toBeGreaterThan(0);
+  expect(stats.hitPathsTouched).toBeGreaterThan(0);
+  expect(stats.overlayModelBuilds).toBeGreaterThan(0);
+  expect(stats.claimOverlayDomReplacements).toBeGreaterThan(0);
+  expect(stats.claimLabelDomReplacements).toBeGreaterThan(0);
+  expect(stats.hoverOutlineReplacements).toBeGreaterThan(0);
+  expect(stats.foreignHoverOverlayReplacements).toBeGreaterThan(0);
+  expect(stats.capitalMarkerRebuilds).toBeGreaterThan(0);
+});
+
+test('simple selected-overlay claim hover movement uses bounded visual updates', async ({ page }) => {
+  await page.goto('/?debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+
+  await hoverRegionWithMouse(page, 'Amazonia');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+
+  await hoverRegionWithMouse(page, 'FrenchGuiana');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="FrenchGuiana"]')).toHaveCount(1);
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.boundedVisualStateApplications).toBeGreaterThan(0);
+  expect(stats.fullVisualStateApplications).toBe(0);
+  expect(stats.visiblePathsTouched).toBeLessThanOrEqual(2);
+  expect(stats.hitPathsTouched).toBeLessThanOrEqual(2);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  const blankPoint = await blankMapPoint(page);
+  await page.mouse.move(blankPoint.x, blankPoint.y);
+  await expect(page.locator('#hoverPill')).toHaveText('Hover: -');
+
+  const clearStats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(clearStats.boundedVisualStateApplications).toBeGreaterThan(0);
+  expect(clearStats.fullVisualStateApplications).toBe(0);
+  expect(clearStats.visiblePathsTouched).toBeLessThanOrEqual(1);
+  expect(clearStats.hitPathsTouched).toBeLessThanOrEqual(1);
+});
+
+test('settled same-nation hover preview uses bounded visual updates', async ({ page }) => {
+  await page.goto('/?debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await hoverRegionWithMouse(page, 'Amazonia');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+
+  await hoverRegionWithMouse(page, 'Belem');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Belem"]')).toHaveCount(1);
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.boundedVisualStateApplications).toBeGreaterThan(0);
+  expect(stats.fullVisualStateApplications).toBe(0);
+  expect(stats.overlayModelBuilds).toBe(0);
+  expect(stats.visiblePathsTouched).toBeLessThanOrEqual(2);
+  expect(stats.hitPathsTouched).toBeLessThanOrEqual(2);
+});
+
+test('overlay model cache reuses unchanged inputs and misses changed filters', async ({ page }) => {
+  await page.goto('/?debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  let stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelCacheHits).toBeGreaterThan(0);
+  expect(stats.overlayModelBuilds).toBe(0);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await page.selectOption('#projectSel', 'Project_GranColombia');
+  await expect(page.locator('#claimMode')).toHaveValue('project');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 5, research tiers 1');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(14);
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelBuilds).toBeGreaterThan(0);
+  expect(stats.overlayModelCacheHits).toBe(0);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await page.selectOption('#claimMode', 'all');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelCacheHits).toBeGreaterThan(0);
+  expect(stats.overlayModelBuilds).toBe(0);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await page.selectOption('#claimKind', 'hostile');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 11, research tiers 1');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(20);
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelBuilds).toBeGreaterThan(0);
+  expect(stats.overlayModelCacheHits).toBe(0);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await page.selectOption('#claimKind', 'all');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelCacheHits).toBeGreaterThan(0);
+  expect(stats.overlayModelBuilds).toBe(0);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await clickRegion(page, 'Amazonia');
+  await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveText('Manaus');
+  await expect(page.locator('.claimListItem[data-claim-kind="incoming"]')).toHaveCount(4);
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelBuilds).toBeGreaterThan(0);
+  expect(stats.overlayModelCacheHits).toBe(0);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await clickRegion(page, 'Amazonia');
+  await expect(page.locator('.claimListItem[data-claim-kind="incoming"]')).toHaveCount(4);
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelCacheHits).toBeGreaterThan(0);
+  expect(stats.overlayModelBuilds).toBe(0);
+});
+
+test('overlay render skip keys avoid unchanged DOM replacement', async ({ page }) => {
+  await page.goto('/?debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  await expect(page.locator('#claimLabels .claim-label')).not.toHaveCount(0);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  let stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.claimOverlayDomReplacements).toBe(0);
+  expect(stats.claimLabelDomReplacements).toBe(0);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await page.selectOption('#languageSel', 'ko');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ko');
+  await expect(page.locator('#claimLabels .claim-label')).not.toHaveCount(0);
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.claimOverlayDomReplacements).toBe(0);
+  expect(stats.claimLabelDomReplacements).toBeGreaterThan(0);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await page.selectOption('#languageSel', 'en');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.claimOverlayDomReplacements).toBe(0);
+  expect(stats.claimLabelDomReplacements).toBeGreaterThan(0);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await page.selectOption('#projectSel', 'Project_GranColombia');
+  await expect(page.locator('#claimMode')).toHaveValue('project');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(14);
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.claimOverlayDomReplacements).toBeGreaterThan(0);
+  expect(stats.claimLabelDomReplacements).toBeGreaterThan(0);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await clearMap(page);
+  await expect(page.locator('#claimPill')).toHaveText('Claims: -');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(0);
+  await expect(page.locator('#claimLabels .claim-label')).toHaveCount(0);
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.claimOverlayDomReplacements).toBeGreaterThan(0);
+  expect(stats.claimLabelDomReplacements).toBeGreaterThan(0);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await clearMap(page);
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(0);
+  await expect(page.locator('#claimLabels .claim-label')).toHaveCount(0);
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.claimOverlayDomReplacements).toBe(0);
+  expect(stats.claimLabelDomReplacements).toBe(0);
+});
+
+test('hover overlay and capital marker keys avoid unchanged churn', async ({ page }) => {
+  await page.goto('/?debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  const canadaRegions = await page.locator('#hitRegions .region-hit[data-nation="CAN"]').evaluateAll(paths => (
+    paths.map(path => path.dataset.region).filter(Boolean)
+  ));
+  const firstCanadianRegion = canadaRegions.includes('Ontario') ? 'Ontario' : canadaRegions[0];
+  const secondCanadianRegion = canadaRegions.find(region => region && region !== firstCanadianRegion);
+  expect(firstCanadianRegion).toBeTruthy();
+  expect(secondCanadianRegion).toBeTruthy();
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]')).toHaveCount(1);
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await chooseNation(page, 'Brazil', 'BRA');
+  let stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.capitalMarkerRebuilds).toBe(0);
+
+  await hoverRegionWithMouse(page, 'Amazonia');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await hoverRegionWithMouse(page, 'FrenchGuiana');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="FrenchGuiana"]')).toHaveCount(1);
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.hoverOutlineReplacements).toBeGreaterThan(0);
+  expect(stats.foreignHoverOverlayReplacements).toBe(0);
+
+  await hoverRegionWithMouse(page, firstCanadianRegion);
+  await expect(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="CAN"]')).not.toHaveCount(0);
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await hoverRegionWithMouse(page, secondCanadianRegion);
+  await expect(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="CAN"]')).not.toHaveCount(0);
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.foreignHoverOverlayReplacements).toBe(0);
+  expect(stats.hoverOutlineReplacements).toBe(0);
+
+  await hoverRegionWithMouse(page, 'Bolivia');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Bolivia"]')).toHaveCount(1);
+  await hoverRegionWithMouse(page, 'Brasilia');
+  await expect(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]')).toHaveClass(/is-selected/);
+});
 
 test('selected nation marks its capital region with a fillable star', async ({ page }) => {
   await page.goto('/');
