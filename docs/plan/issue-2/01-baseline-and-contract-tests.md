@@ -74,18 +74,25 @@ npm run test:e2e
 
 ## Progress
 
-- [ ] Baseline commands run.
-- [ ] Existing tests reviewed.
-- [ ] Reusable map test helpers identified.
-- [ ] Baseline contract tests added or confirmed.
-- [ ] Generated output sync checked.
+- [x] Baseline commands run.
+- [x] Existing tests reviewed.
+- [x] Reusable map test helpers identified.
+- [x] Baseline contract tests added or confirmed.
+- [x] Generated output sync checked.
 
 ## Decision Log
 
 - Decision: Use Playwright as the primary browser behavior gate because the app is a static SVG UI and existing coverage already uses Playwright.
 - Decision: Keep this phase behavior-preserving so later wrap regressions have a clean baseline.
+- Decision: Add `tests/map-wrap.spec.js` as a separate issue #2 contract spec instead of expanding `tests/language.spec.js`; this keeps future wrap acceptance work easy to locate.
+- Decision: Keep three issue #2 acceptance tests skipped in Phase 01 so later phases can convert them from markers into executable behavior checks without requiring panning or copied rendering before they exist.
 
 ## Outcomes
 
-Pending implementation.
-
+- Added baseline Playwright coverage for canonical hit-layer resolution, hover, click selection, clear-map behavior, and selected claim overlay stability.
+- Added skipped issue #2 acceptance markers for horizontal panning, wrapped copy canonical interaction, and copied claim overlays.
+- `npm run build` passed and produced no generated-output drift.
+- `npm run verify` passed.
+- `npm run test:e2e` passed with 15 active tests and 3 skipped future issue #2 markers.
+- Manual smoke checklist passed against the static `docs/` site: load, Brazil selection, hover transitions, capital marker, region selection, clear, and language toggle.
+- Retrospective: the current app has no stable `#selectedPill` element in the HTML shell even though `src/app.js` checks for it, so smoke coverage should continue to assert visible selection overlays and panel state instead of depending on that optional element.
