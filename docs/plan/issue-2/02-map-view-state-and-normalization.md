@@ -76,18 +76,29 @@ npx playwright test tests/map-view-state.spec.js
 
 ## Progress
 
-- [ ] Map-view helper API chosen.
-- [ ] Initial viewBox parity verified.
-- [ ] Normalization tests added.
-- [ ] Vertical bounds tests added.
-- [ ] Generated docs output rebuilt.
+- [x] Map-view helper API chosen.
+- [x] Initial viewBox parity verified.
+- [x] Normalization tests added.
+- [x] Vertical bounds tests added.
+- [x] Generated docs output rebuilt.
 
 ## Decision Log
 
 - Decision: Prefer explicit `mapView` helpers over embedding wrap math inside pointer handlers.
 - Decision: Normalize horizontal camera coordinates early so later phases do not need to handle unbounded values.
+- Decision: Put the helper API in `src/state/map-view-state.js` because the existing Phase #16 boundaries already keep app-level interaction state under `src/state/**`.
+- Decision: Normalize horizontal `x` into a centered one-world-width range around the original `boundsX`, preserving visual continuity by changing `x` only by whole `worldWidth` increments.
+- Decision: Clamp vertical movement against the original map summary bounds; when the viewport is already full-height, vertical pan resolves back to the original `boundsY`.
+- Decision: Set the runtime SVG `viewBox` from `mapView` so the app uses the exact generated summary viewBox while preserving the existing initial framing.
 
 ## Outcomes
 
-Pending implementation.
-
+- Added `src/state/map-view-state.js` with initialization, horizontal normalization, vertical clamping, pan delta, and viewBox formatting helpers.
+- Updated `src/app.js` to import map-view initialization and set the runtime SVG `viewBox` from the initialized `mapView`.
+- Added `tests/map-view-state.spec.js` for summary viewBox initialization, positive and negative horizontal normalization, multi-width pan normalization, and vertical clamping.
+- Updated `package.json` verification to syntax-check the generated `docs/assets/state/map-view-state.js` module.
+- Rebuilt generated static assets under `docs/assets/**`.
+- Focused validation passed: `npx playwright test tests/map-view-state.spec.js`.
+- Full validation passed: `npm run build`, `npm run verify`, and `npm run test:e2e` with 19 active tests and 3 skipped future issue #2 markers.
+- Manual smoke checklist passed against the static `docs/` site: exact runtime viewBox, Brazil select/hover, label toggle, claim filters, and refresh with no map position persistence.
+- Retrospective: setting the runtime viewBox to the exact generated summary gives later panning code one authoritative camera source, but it means browser assertions should compare the runtime `#map` viewBox rather than the rounded static value in `src/index.html`.

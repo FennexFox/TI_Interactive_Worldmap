@@ -21,6 +21,10 @@ import {
   setOverlayVisualState as setOverlayState,
   syncSelectedVisualState as syncSelectedState,
 } from './state/map-visual-state.js';
+import {
+  formatViewBoxForMapView,
+  initializeMapView,
+} from './state/map-view-state.js';
 import {createAppData, getActiveData} from './data/active-data.js';
 import {buildDerivedIndices} from './data/derived-indices.js';
 import {
@@ -34,25 +38,6 @@ import {
 
 window.TI_DATA_PROMISE.then(({regionMap, claimMap, catalogs = {}}) => {
 const appData = createAppData({regionMap, claimMap, catalogs});
-function createMapViewState() {
-  return {
-    x: 0,
-    y: 0,
-    width: 0,
-    height: 0,
-    worldWidth: 0,
-  };
-}
-function initializeMapView(activeData, target = createMapViewState()) {
-  const viewBox = activeData?.regionMap?.summary?.viewBox || [];
-  const [x = 0, y = 0, width = 0, height = 0] = viewBox.map(value => Number(value) || 0);
-  target.x = x;
-  target.y = y;
-  target.width = width;
-  target.height = height;
-  target.worldWidth = width;
-  return target;
-}
 const appState = createAppState({activeScenarioId: appData.defaultScenario});
 setActiveScenarioId(appState, appData.defaultScenario);
 const mapVisualState = createMapVisualState();
@@ -70,6 +55,7 @@ const NATION_CATALOG = derivedIndices.nationCatalog;
 const NATION_META = derivedIndices.nationMeta;
 
 const svg = document.getElementById('map');
+if (svg) svg.setAttribute('viewBox', formatViewBoxForMapView(mapView));
 const gRegions = document.getElementById('regions');
 const gHitRegions = document.getElementById('hitRegions');
 const gLabels = document.getElementById('labels');

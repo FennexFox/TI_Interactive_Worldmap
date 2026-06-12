@@ -1,0 +1,99 @@
+import { expect, test } from '@playwright/test';
+import {
+  clampMapViewY,
+  createMapViewState,
+  formatViewBoxForMapView,
+  initializeMapView,
+  normalizeWrappedX,
+  panMapView,
+  viewBoxForMapView,
+} from '../src/state/map-view-state.js';
+
+const SUMMARY_VIEW_BOX = [-3.17409138, -1.543560305, 6.52568676, 2.58888961];
+
+function sampleActiveData(viewBox = SUMMARY_VIEW_BOX) {
+  return {
+    regionMap: {
+      summary: {viewBox},
+    },
+  };
+}
+
+test('initializes map view from active region-map summary viewBox', () => {
+  const mapView = initializeMapView(sampleActiveData());
+
+  expect(viewBoxForMapView(mapView)).toEqual(SUMMARY_VIEW_BOX);
+  expect(mapView.worldWidth).toBe(SUMMARY_VIEW_BOX[2]);
+  expect(mapView.boundsX).toBe(SUMMARY_VIEW_BOX[0]);
+  expect(mapView.boundsY).toBe(SUMMARY_VIEW_BOX[1]);
+  expect(mapView.boundsWidth).toBe(SUMMARY_VIEW_BOX[2]);
+  expect(mapView.boundsHeight).toBe(SUMMARY_VIEW_BOX[3]);
+  expect(formatViewBoxForMapView(mapView)).toBe('-3.17409138 -1.543560305 6.52568676 2.58888961');
+});
+
+test('normalizes positive and negative horizontal offsets by whole world widths', () => {
+  const mapView = createMapViewState({
+    x: -3,
+    y: -1,
+    width: 6,
+    height: 2,
+    worldWidth: 6,
+    boundsX: -3,
+    boundsY: -1,
+    boundsWidth: 6,
+    boundsHeight: 2,
+  });
+
+  for (const rawX of [-28, -10, -4, -3, -2, 2, 8, 20, 44]) {
+    const normalized = normalizeWrappedX(rawX, mapView);
+    const offset = normalized - mapView.boundsX;
+    expect(offset).toBeGreaterThanOrEqual(-mapView.worldWidth / 2);
+    expect(offset).toBeLessThan(mapView.worldWidth / 2);
+    expect((rawX - normalized) / mapView.worldWidth).toBeCloseTo(
+      Math.round((rawX - normalized) / mapView.worldWidth),
+      8
+    );
+  }
+});
+
+test('pans map view with horizontal normalization and vertical bounds', () => {
+  const mapView = createMapViewState({
+    x: -3,
+    y: 0,
+    width: 6,
+    height: 2,
+    worldWidth: 6,
+    boundsX: -3,
+    boundsY: -1,
+    boundsWidth: 6,
+    boundsHeight: 6,
+  });
+
+  panMapView(mapView, {dx: 19, dy: 10});
+  expect(mapView.x).toBeCloseTo(-2);
+  expect(mapView.y).toBe(3);
+
+  panMapView(mapView, {dx: -18, dy: -20});
+  expect(mapView.x).toBeCloseTo(-2);
+  expect(mapView.y).toBe(-1);
+});
+
+test('clamps vertical movement to the original map extent when the viewport is full height', () => {
+  const mapView = createMapViewState({
+    x: -3,
+    y: -1,
+    width: 6,
+    height: 6,
+    worldWidth: 6,
+    boundsX: -3,
+    boundsY: -1,
+    boundsWidth: 6,
+    boundsHeight: 6,
+  });
+
+  expect(clampMapViewY(-20, mapView)).toBe(-1);
+  expect(clampMapViewY(20, mapView)).toBe(-1);
+  panMapView(mapView, {dy: 5});
+  expect(mapView.y).toBe(-1);
+});
+
