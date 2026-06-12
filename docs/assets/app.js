@@ -536,6 +536,8 @@ let capitalMarkersKey = '';
 const nationChoiceByValue = new Map();
 const incomingClaimsByRegion = derivedIndices.incomingClaimsByRegion;
 const regionCenterCache = new Map();
+const OVERLAY_MODEL_CACHE_LIMIT = 256;
+const overlayModelCache = new Map();
 
 function setActiveNationState(nation = '') {
   setSelectedNation(appState, nation);
@@ -1878,6 +1880,54 @@ function getVisibleProjectEntries(nation) {
   }
   return directEntries;
 }
+function overlayModelDataVersionKey(activeData, indices) {
+  const summary = activeData?.regionMap?.summary || {};
+  const claimStats = activeData?.claimMap?.claimStats || {};
+  return [
+    summary.scenarioYear || '',
+    summary.regions ?? indices?.regions?.length ?? '',
+    claimStats.claimRowsNormalized ?? '',
+    claimStats.projectClaimRowsNormalized ?? '',
+    claimStats.projectCount ?? '',
+  ].join(':');
+}
+function selectedRegionOverlayKey() {
+  return [...selectedRegionIds].filter(Boolean).sort().join(',');
+}
+function buildOverlayModelCacheKey(activeData, indices, nationId, options = {}) {
+  return JSON.stringify({
+    scenario: appState.activeScenarioId || appData.defaultScenario || '',
+    data: overlayModelDataVersionKey(activeData, indices),
+    language: currentLanguage,
+    nation: nationId || '',
+    claimMode: claimModeSel.value || '',
+    claimKind: claimKindSel.value || '',
+    project: getProjectFilter(),
+    activeIncomingClaim: getActiveIncomingClaimKey(),
+    selectedRegions: selectedRegionOverlayKey(),
+    options: options.cacheKey || '',
+  });
+}
+function pruneOverlayModelCache() {
+  while (overlayModelCache.size > OVERLAY_MODEL_CACHE_LIMIT) {
+    const oldestKey = overlayModelCache.keys().next().value;
+    overlayModelCache.delete(oldestKey);
+  }
+}
+function getNationOverlayModel(activeData, indices, nationId, options = {}) {
+  const cacheKey = buildOverlayModelCacheKey(activeData, indices, nationId, options);
+  if (overlayModelCache.has(cacheKey)) {
+    const model = overlayModelCache.get(cacheKey);
+    overlayModelCache.delete(cacheKey);
+    overlayModelCache.set(cacheKey, model);
+    recordRenderStat('overlayModelCacheHits');
+    return model;
+  }
+  const model = buildNationOverlayModel(activeData, indices, nationId, options);
+  overlayModelCache.set(cacheKey, model);
+  pruneOverlayModelCache();
+  return model;
+}
 function buildNationOverlayModel(activeData, indices, nationId, options = {}) {
   recordRenderStat('overlayModelBuilds');
   const nation = nationId || '';
@@ -2073,7 +2123,7 @@ function updateNationOverlay(nation) {
     updateSelectedRegions();
     return;
   }
-  const overlayModel = buildNationOverlayModel(activeData, derivedIndices, getActiveNation());
+  const overlayModel = getNationOverlayModel(activeData, derivedIndices, getActiveNation());
   setActiveIncomingClaimKeyState(overlayModel.activeIncomingClaimKey);
   visibleNationRegionNames = new Set(overlayModel.resultSet);
   renderMapOverlay(overlayModel, {claimOverlayLayer: gClaimOverlays, claimLabelLayer: gClaimLabels, mapView});

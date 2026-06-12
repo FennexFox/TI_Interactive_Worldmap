@@ -251,6 +251,69 @@ test('settled same-nation hover preview uses bounded visual updates', async ({ p
   expect(stats.hitPathsTouched).toBeLessThanOrEqual(2);
 });
 
+test('overlay model cache reuses unchanged inputs and misses changed filters', async ({ page }) => {
+  await page.goto('/?debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  let stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelCacheHits).toBeGreaterThan(0);
+  expect(stats.overlayModelBuilds).toBe(0);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await page.selectOption('#projectSel', 'Project_GranColombia');
+  await expect(page.locator('#claimMode')).toHaveValue('project');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 5, research tiers 1');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(14);
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelBuilds).toBeGreaterThan(0);
+  expect(stats.overlayModelCacheHits).toBe(0);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await page.selectOption('#claimMode', 'all');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelCacheHits).toBeGreaterThan(0);
+  expect(stats.overlayModelBuilds).toBe(0);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await page.selectOption('#claimKind', 'hostile');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 11, research tiers 1');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(20);
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelBuilds).toBeGreaterThan(0);
+  expect(stats.overlayModelCacheHits).toBe(0);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await page.selectOption('#claimKind', 'all');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelCacheHits).toBeGreaterThan(0);
+  expect(stats.overlayModelBuilds).toBe(0);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await clickRegion(page, 'Amazonia');
+  await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveText('Manaus');
+  await expect(page.locator('.claimListItem[data-claim-kind="incoming"]')).toHaveCount(4);
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelBuilds).toBeGreaterThan(0);
+  expect(stats.overlayModelCacheHits).toBe(0);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await clickRegion(page, 'Amazonia');
+  await expect(page.locator('.claimListItem[data-claim-kind="incoming"]')).toHaveCount(4);
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelCacheHits).toBeGreaterThan(0);
+  expect(stats.overlayModelBuilds).toBe(0);
+});
+
 test('selected nation marks its capital region with a fillable star', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
