@@ -22,6 +22,24 @@ async function hoverRegionWithMouse(page, regionName) {
   await regionTarget(page, regionName).hover();
 }
 
+async function blankMapPoint(page) {
+  return page.evaluate(() => {
+    const map = document.querySelector('#map');
+    const rect = map.getBoundingClientRect();
+    for (let gy = 1; gy <= 9; gy += 1) {
+      for (let gx = 1; gx <= 9; gx += 1) {
+        const x = rect.left + (rect.width * gx) / 10;
+        const y = rect.top + (rect.height * gy) / 10;
+        const hit = document.elementFromPoint(x, y);
+        if (hit === map || hit?.id === 'grid' || hit?.id === 'hitRegions' || hit?.classList?.contains('graticule')) {
+          return {x, y};
+        }
+      }
+    }
+    return {x: rect.left + rect.width * 0.12, y: rect.top + rect.height * 0.46};
+  });
+}
+
 async function clickRegion(page, regionName) {
   await regionTarget(page, regionName).dispatchEvent('click', { bubbles: true });
 }
@@ -175,6 +193,62 @@ test('debug render stats capture real pointer hover baseline', async ({ page }) 
   expect(stats.hoverOutlineReplacements).toBeGreaterThan(0);
   expect(stats.foreignHoverOverlayReplacements).toBeGreaterThan(0);
   expect(stats.capitalMarkerRebuilds).toBeGreaterThan(0);
+});
+
+test('simple selected-overlay claim hover movement uses bounded visual updates', async ({ page }) => {
+  await page.goto('/?debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+
+  await hoverRegionWithMouse(page, 'Amazonia');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+
+  await hoverRegionWithMouse(page, 'FrenchGuiana');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="FrenchGuiana"]')).toHaveCount(1);
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.boundedVisualStateApplications).toBeGreaterThan(0);
+  expect(stats.fullVisualStateApplications).toBe(0);
+  expect(stats.visiblePathsTouched).toBeLessThanOrEqual(2);
+  expect(stats.hitPathsTouched).toBeLessThanOrEqual(2);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  const blankPoint = await blankMapPoint(page);
+  await page.mouse.move(blankPoint.x, blankPoint.y);
+  await expect(page.locator('#hoverPill')).toHaveText('Hover: -');
+
+  const clearStats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(clearStats.boundedVisualStateApplications).toBeGreaterThan(0);
+  expect(clearStats.fullVisualStateApplications).toBe(0);
+  expect(clearStats.visiblePathsTouched).toBeLessThanOrEqual(1);
+  expect(clearStats.hitPathsTouched).toBeLessThanOrEqual(1);
+});
+
+test('settled same-nation hover preview uses bounded visual updates', async ({ page }) => {
+  await page.goto('/?debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await hoverRegionWithMouse(page, 'Amazonia');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+
+  await hoverRegionWithMouse(page, 'Belem');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Belem"]')).toHaveCount(1);
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.boundedVisualStateApplications).toBeGreaterThan(0);
+  expect(stats.fullVisualStateApplications).toBe(0);
+  expect(stats.overlayModelBuilds).toBe(0);
+  expect(stats.visiblePathsTouched).toBeLessThanOrEqual(2);
+  expect(stats.hitPathsTouched).toBeLessThanOrEqual(2);
 });
 
 test('selected nation marks its capital region with a fillable star', async ({ page }) => {

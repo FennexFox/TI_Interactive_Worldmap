@@ -80,17 +80,52 @@ npm run test:e2e -- --grep "hover"
 
 ## Progress
 
-- [ ] Safe-hover predicate defined.
-- [ ] Previous/next region delta applied.
-- [ ] Full sync retained for broad changes.
-- [ ] Hover regression coverage added or updated.
-- [ ] Validation commands run.
+- [x] Safe-hover predicate defined.
+- [x] Previous/next region delta applied.
+- [x] Full sync retained for broad changes.
+- [x] Hover regression coverage added or updated.
+- [x] Validation commands run.
 
 ## Decision Log
 
 - The fast path should be opt-in from clearly simple hover transitions, not a replacement for the full visual-state model.
 - Prefer a too-narrow fast path over one that risks stale selected overlays, foreign hover overlays, marker state, or filtered visibility.
+- Region-to-region `pointerover` now stops forcing full sync when the previous hit region is known; first entry from non-region space still forces full sync.
+- The bounded path is allowed for locked-nation ordinary hover transitions when neither endpoint is selected, hidden, foreign-hover, or capital-marker-sensitive.
+- The bounded path is also allowed for unlocked same-nation hover only after the hover preview has settled on that same active/hover nation and no preview frame or pending hover nation exists.
+- Bolivia and Brasilia are intentionally full-sync cases because they can affect capital marker selected state.
+- Ontario while Brazil is selected is intentionally a full-sync case because it triggers foreign hover overlay behavior.
 
 ## Outcomes
 
-Pending implementation.
+Implemented Phase 03 on 2026-06-12.
+
+Source changes:
+
+- Added conservative safe-hover and safe-hover-clear predicates in `src/app.js`.
+- Applied `applyMapVisualStateForRegions` only for safe previous/next hover deltas and safe hover clears.
+- Preserved full `applyMapVisualState` for first hover entry, active hover-preview transitions, foreign hover overlays, capital-marker-sensitive regions, hidden/selected regions, and all uncertain cases.
+- Updated hit-layer pointer-over handling so movement from one known hit region to another is not automatically forced into the full path.
+- Added Playwright coverage for selected-overlay bounded hover movement, bounded hover clear, and settled same-nation hover preview movement.
+- Rebuilt generated Pages app output with `npm run build`.
+
+Validation:
+
+- `npm run build` passed.
+- `npm run verify` passed: generated outputs verified, 5 Python unit tests passed.
+- `npm run test:e2e` passed: 10 Playwright tests passed.
+- Focused `npm run test:e2e -- --grep "bounded visual|debug render stats"` passed: 3 Playwright tests passed.
+
+Manual smoke notes:
+
+- No-selection Europe hover across Austria, Czechia, Germany, and Poland remained responsive and resolved the expected hover pills/regions.
+- No-selection South America and North America hover across Amazonia, Bolivia, Brasilia, French Guiana, and Ontario remained correct; these still full-sync when active hover preview state changes.
+- Selecting Brazil and moving from Amazonia to French Guiana used the bounded path: `fullVisualStateApplications=0`, `boundedVisualStateApplications=1`, `visiblePathsTouched=2`, `hitPathsTouched=2`, overlay model builds and claim overlay replacements stayed at 0.
+- Selecting Brazil and moving to Ontario fell back to full sync and showed the Canadian foreign hover overlay, preserving selected Brazil overlay state.
+- Moving from a region to empty map space cleared hover state. The automated regression also verifies a safe locked-region clear can use the bounded path with at most one visible path and one hit path touched.
+
+Retrospective:
+
+- The phase achieves a measurable fast path without weakening broader synchronization: safe deltas touch only old/new paths, while preview, foreign overlay, capital marker, selection, and visibility risks remain full-sync cases.
+- The debug counters are useful for proving both sides of the predicate: the fast path shows bounded-only updates, and Ontario/Bolivia/Brasilia demonstrate intentional full-sync fallbacks.
+- Further gains now depend on overlay model and render churn phases because unlocked cross-nation hover still rebuilds preview overlay state by design.

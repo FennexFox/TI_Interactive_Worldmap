@@ -1220,10 +1220,13 @@ function scheduleHoverPreviewNation(nation) {
 function clearHoverPreview() {
   cancelPendingHoverPreview();
   hideRegionTooltip();
+  const previousRegionName = getHoveredRegionName();
+  const useHoverDelta = canUseSimpleHoverClearDelta(previousRegionName);
   setHoverPill();
   setHoveredRegionState();
   setHoverVisualState();
-  applyMapVisualState();
+  if (useHoverDelta) applyMapVisualStateForRegions([previousRegionName]);
+  else applyMapVisualState();
   renderHoverOutlines();
   if (getLockedNation()) {
     setHoverNationState();
@@ -1699,21 +1702,61 @@ function resolveRelatedHitRegion(event, indices = derivedIndices) {
   const regionName = hitTarget.dataset.regionId || hitTarget.dataset.region;
   return indices.regionByName[regionName] || null;
 }
+function hoverRegionAffectsCapitalSelection(region) {
+  if (!region?.regionName) return true;
+  const pinnedNation = getLockedNation() || getActiveNation();
+  return !!(
+    (pinnedNation && isCapitalRegionForNation(pinnedNation, region.regionName)) ||
+    isCapitalRegionForNation(region.nationTag, region.regionName)
+  );
+}
+function regionHasSimpleHoverDeltaHazard(regionName) {
+  const region = regionName ? regionByName[regionName] : null;
+  if (!region) return true;
+  if (selectedRegionIds.has(regionName)) return true;
+  if (mapVisualState.hiddenRegionIds.has(regionName)) return true;
+  if (shouldShowForeignHoverNationOverlay(region)) return true;
+  if (hoverRegionAffectsCapitalSelection(region)) return true;
+  return false;
+}
+function canUseSimpleHoverVisualDelta(previousRegionName, nextRegion, {force=false, regionChanged=false} = {}) {
+  if (force || !regionChanged || !previousRegionName || !nextRegion?.regionName) return false;
+  const previousRegion = regionByName[previousRegionName];
+  if (!previousRegion) return false;
+  const lockedNation = getLockedNation();
+  const stableUnlockedNation = !lockedNation
+    && !hoverPreviewFrame
+    && !pendingHoverNation
+    && previousRegion.nationTag === nextRegion.nationTag
+    && getActiveNation() === nextRegion.nationTag
+    && getHoverNation() === nextRegion.nationTag;
+  if (!lockedNation && !stableUnlockedNation) return false;
+  if (regionHasSimpleHoverDeltaHazard(previousRegionName)) return false;
+  if (regionHasSimpleHoverDeltaHazard(nextRegion.regionName)) return false;
+  return true;
+}
+function canUseSimpleHoverClearDelta(previousRegionName) {
+  if (!previousRegionName || !getLockedNation()) return false;
+  return !regionHasSimpleHoverDeltaHazard(previousRegionName);
+}
 function updateHoveredRegion(r, {force=false} = {}) {
-  const regionChanged = getHoveredRegionName() !== r.regionName;
+  const previousRegionName = getHoveredRegionName();
+  const regionChanged = previousRegionName !== r.regionName;
   const nationChanged = getHoverNation() !== r.nationTag;
   if (!force && !regionChanged && (!getLockedNation() || !nationChanged)) return;
+  const useHoverDelta = canUseSimpleHoverVisualDelta(previousRegionName, r, {force, regionChanged});
   setHoveredRegionState(r.regionName, r.nationTag);
   setHoverVisualState(r.regionName);
-  applyMapVisualState();
+  if (useHoverDelta) applyMapVisualStateForRegions([previousRegionName, r.regionName]);
+  else applyMapVisualState();
   if (!getLockedNation()) scheduleHoverPreviewNation(r.nationTag);
   else setHoverNationState(r.nationTag);
   renderHoverOutlines();
   renderCapitalMarkers();
   setHoverPill(r);
 }
-function onRegionEnter(e, r) {
-  updateHoveredRegion(r, {force:true});
+function onRegionEnter(e, r, {force=true} = {}) {
+  updateHoveredRegion(r, {force});
   showRegionTooltip(e, r);
 }
 function onRegionMove(e, r) {
@@ -1731,7 +1774,7 @@ function onHitLayerPointerOver(e) {
   if (!region) return;
   const previousRegion = resolveRelatedHitRegion(e);
   if (previousRegion?.regionName === region.regionName) return;
-  onRegionEnter(e, region);
+  onRegionEnter(e, region, {force: !previousRegion});
 }
 function onHitLayerPointerMove(e) {
   const region = resolveHitRegion(e);

@@ -114,7 +114,7 @@ These are deliberately out of scope for the issue #20 implementation, but should
 - [x] Phase plan files created.
 - [x] Phase 01 implemented.
 - [x] Phase 02 implemented.
-- [ ] Phase 03 implemented.
+- [x] Phase 03 implemented.
 - [ ] Phase 04 implemented.
 - [ ] Phase 05 implemented.
 - [ ] Phase 06 implemented.
