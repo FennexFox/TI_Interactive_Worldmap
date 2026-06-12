@@ -13,6 +13,7 @@ import {
 } from './state/app-state.js';
 import {
   applyMapVisualState as applyVisualState,
+  applyMapVisualStateForRegions as applyVisualStateForRegions,
   clearOverlayVisualState as clearOverlayState,
   createMapVisualState,
   setHiddenVisualState as setHiddenState,
@@ -598,11 +599,20 @@ function setHiddenVisualState(hiddenRegionIds) {
 }
 
 function applyMapVisualState(renderContext = {}, state = mapVisualState) {
-  const context = {svg, regionPathElements, hitPathByRegion, ...renderContext};
+  const context = {svg, pathByRegion, regionPathElements, hitPathByRegion, ...renderContext};
   recordRenderStat('fullVisualStateApplications');
   recordRenderStat('visiblePathsTouched', (context.regionPathElements || []).length);
   recordRenderStat('hitPathsTouched', (context.hitPathByRegion || new Map()).size);
   applyVisualState(context, state);
+}
+
+function applyMapVisualStateForRegions(regionIds, renderContext = {}, state = mapVisualState) {
+  const context = {svg, pathByRegion, hitPathByRegion, ...renderContext};
+  const result = applyVisualStateForRegions(context, state, regionIds);
+  recordRenderStat('boundedVisualStateApplications');
+  recordRenderStat('visiblePathsTouched', result.visiblePathsTouched);
+  recordRenderStat('hitPathsTouched', result.hitPathsTouched);
+  return result;
 }
 
 const CLAIM_GRADIENT_START_HUE = 155;

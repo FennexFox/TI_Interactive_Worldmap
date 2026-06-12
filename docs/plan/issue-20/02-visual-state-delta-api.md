@@ -66,15 +66,44 @@ npm run test:e2e
 
 ## Progress
 
-- [ ] Per-region class helper extracted.
-- [ ] Bounded exported helper added.
-- [ ] Full synchronization path verified unchanged.
-- [ ] Validation commands run.
+- [x] Per-region class helper extracted.
+- [x] Bounded exported helper added.
+- [x] Full synchronization path verified unchanged.
+- [x] Validation commands run.
 
 ## Decision Log
 
 - This phase intentionally creates the helper seam before changing hover behavior to keep the review narrow.
+- Added `applyMapVisualStateForRegions` as the bounded export and kept `applyMapVisualState` as the full synchronization path.
+- Kept the bounded helper unused by hover in this phase; Phase 03 will decide when it is safe to call.
+- Did not add a separate UI test for the bounded helper because it is not user-reachable until Phase 03. Existing e2e coverage verifies the unchanged full path.
 
 ## Outcomes
 
-Pending implementation.
+Implemented Phase 02 on 2026-06-12.
+
+Source changes:
+
+- Extracted per-visible-region and per-hit-region class application helpers in `src/state/map-visual-state.js`.
+- Added `applyMapVisualStateForRegions(renderContext, mapVisualState, regionIds)` for future bounded updates.
+- Updated the `src/app.js` wrapper plumbing to pass `pathByRegion` and expose a local bounded wrapper for later phases.
+- Rebuilt generated Pages app output with `npm run build`.
+
+Validation:
+
+- `npm run build` passed.
+- `npm run verify` passed: generated outputs verified, 5 Python unit tests passed.
+- `npm run test:e2e` passed: 8 Playwright tests passed.
+
+Manual smoke notes:
+
+- Initial map load rendered 363 visible region paths and 363 visible hit paths.
+- Hovering Amazonia showed `Hover: BRA - Manaus`, displayed the tooltip, and rendered the Brasilia capital marker.
+- Selecting Brazil showed `Brazil: territory 9, claims 17, research tiers 2`, 26 claim overlays, 2 claim labels, and the Brasilia marker.
+- Toggling "show claim targets only" hid 337 visible regions and 337 hit regions; the hidden region and hidden hit-path sets matched exactly.
+
+Retrospective:
+
+- The full synchronization path remains behaviorally unchanged after extraction.
+- The bounded helper has the right inputs for Phase 03: explicit render context, explicit visual state, and explicit region IDs. It does not import app state into render modules.
+- The main risk for Phase 03 is choosing the safe-hover predicate correctly; the helper itself now updates the same classes as the full path for the requested region IDs.
