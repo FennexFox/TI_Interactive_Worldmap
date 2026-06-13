@@ -8,6 +8,7 @@ import {
   setHoveredNation,
   setHoveredRegion,
   setLockedNation,
+  setSecondaryHoverNation,
   setSelectedNation,
   setSelectedRegions,
 } from './state/app-state.js';
@@ -28,7 +29,7 @@ import {
   zoomMapView,
 } from './state/map-view-state.js';
 import {createAppData, getActiveData} from './data/active-data.js';
-import {buildDerivedIndices} from './data/derived-indices.js';
+import {buildDerivedIndices, resolveSecondaryCapitalPreview} from './data/derived-indices.js';
 import {
   appendWorldCopyFragment,
   createRegionPath,
@@ -104,6 +105,7 @@ const gClaimLabels = document.getElementById('claimLabels');
 const gGrid = document.getElementById('grid');
 const gForeignHoverOverlays = document.getElementById('foreignHoverOverlays');
 const gClaimOverlays = document.getElementById('claimOverlays');
+const gSecondaryHoverOverlays = document.getElementById('secondaryHoverOverlays');
 const gCapitalMarkers = document.getElementById('capitalMarkers');
 const gHoverOutlines = document.getElementById('hoverOutlines');
 const gSelectionOutlines = document.getElementById('selectionOutlines');
@@ -158,6 +160,7 @@ function createDebugRenderStats() {
     'claimLabelDomReplacements',
     'hoverOutlineReplacements',
     'foreignHoverOverlayReplacements',
+    'secondaryHoverOverlayReplacements',
     'capitalMarkerRebuilds',
   ];
   const stats = {};
@@ -582,12 +585,14 @@ let regionChoices = derivedIndices.regionChoices;
 let pendingHoverNation = '';
 let hoverPreviewFrame = 0;
 let visibleNationRegionNames = new Set();
+let currentOverlayModel = null;
 let tooltipRegionId = null;
 let svgWrapRectCache = null;
 let tooltipSizeCache = {width: 160, height: 26, valid: false};
 let tooltipFrame = 0;
 let pendingTooltipPoint = null;
 let foreignHoverVisualKey = '';
+let secondaryHoverVisualKey = '';
 let hoverOutlineVisualKey = '';
 let capitalMarkersKey = '';
 let mapViewFrame = 0;
@@ -608,6 +613,7 @@ const foreignHoverDescriptorCache = new Map();
 const CLAIM_OVERLAY_EMPTY_RENDER_KEY = 'claim-overlay-paths:empty';
 const CLAIM_LABEL_EMPTY_RENDER_KEY = 'claim-labels:empty';
 const FOREIGN_HOVER_EMPTY_RENDER_KEY = 'foreign-hover:empty';
+const SECONDARY_HOVER_EMPTY_RENDER_KEY = 'secondary-hover:empty';
 const HOVER_OUTLINE_EMPTY_RENDER_KEY = 'hover-outline:empty';
 const claimOverlayLayerRenderKeys = new WeakMap();
 const claimLabelLayerRenderKeys = new WeakMap();
@@ -647,6 +653,10 @@ function setHoverNationState(nation = '') {
   setHoveredNation(appState, nation);
 }
 
+function setSecondaryHoverNationState(nation = '') {
+  setSecondaryHoverNation(appState, nation);
+}
+
 function setLockedNationState(nation = '') {
   setLockedNation(appState, nation);
 }
@@ -678,6 +688,7 @@ function syncSelectedVisualState() {
 
 function getActiveNation() { return appState.selectedNationId || ''; }
 function getHoverNation() { return appState.hoveredNationId || ''; }
+function getSecondaryHoverNation() { return appState.interaction?.secondaryHoverNationId || ''; }
 function getLockedNation() { return appState.lockedNationId || ''; }
 function getHoveredRegionName() { return appState.hoveredRegionId || ''; }
 function getProjectFilter() { return appState.filters.projectId || ''; }
@@ -753,7 +764,9 @@ const CLAIM_TIER_COLORS = [
 // Reuse the same hue as the single-region hover fill, then fade it by tier.
 // The final hidden step is no overlay at all, which returns to the muted non-hover map.
 const HOVER_NATION_OVERLAY_COLOR = 'oklch(0.86 0.17 95)';
+const SECONDARY_CAPITAL_OVERLAY_COLOR = 'oklch(0.91 0.16 72)';
 const HOVER_NATION_BASE_TERRITORY_OPACITY = 0.18;
+const SECONDARY_CAPITAL_BASE_TERRITORY_OPACITY = 0.24;
 const HOVER_NATION_TIER_OPACITIES = [
   0.145, // no-research claim
   0.120, // research tier 1
@@ -762,6 +775,7 @@ const HOVER_NATION_TIER_OPACITIES = [
   0.050, // research tier 4
   0.032, // research tier 5+
 ];
+const SECONDARY_CAPITAL_TIER_OPACITY_BOOST = 0.035;
 
 function injectClaimOverlayStyles() {
   const style = document.createElement('style');
@@ -1307,6 +1321,7 @@ function chooseNationFromDropdown(index=highlightedNationChoiceIndex) {
 }
 function resetTransientClaimState() {
   clearTransientClaimAppState(appState);
+  setSecondaryHoverNationState();
   setProjectFilterState('');
   setActiveIncomingClaimKeyState('');
   projectSel.value = '';
@@ -1348,6 +1363,7 @@ function clearHoverPreview() {
   setHoverPill();
   setHoveredRegionState();
   setHoverVisualState();
+  setSecondaryHoverNationState();
   if (useHoverDelta) applyMapVisualStateForRegions([previousRegionName]);
   else applyMapVisualState();
   renderHoverOutlines();
@@ -1504,14 +1520,43 @@ function shouldShowForeignHoverNationOverlay(region) {
   if (visibleNationRegionNames.has(region.regionName)) return false;
   return region.nationTag !== pinnedNation;
 }
-function appendForeignHoverRegion(frag, region, className, attrs={}, copyContext = defaultWorldCopyContext()) {
+function resolveSecondaryCapitalPreviewNation(region) {
+  const selectedNation = getLockedNation();
+  if (!selectedNation || !region?.regionName) return '';
+  return resolveSecondaryCapitalPreview({
+    activeData,
+    indices: derivedIndices,
+    selectedNationId: selectedNation,
+    hoveredRegionId: region.regionName,
+    selectedOverlayModel: currentOverlayModel,
+  }) || '';
+}
+function updateSecondaryCapitalPreview(region) {
+  const nextNation = resolveSecondaryCapitalPreviewNation(region);
+  if (getSecondaryHoverNation() === nextNation) return false;
+  setSecondaryHoverNationState(nextNation);
+  return true;
+}
+function refreshSecondaryCapitalPreviewForHoveredRegion() {
+  const regionName = getHoveredRegionName();
+  return updateSecondaryCapitalPreview(regionName ? regionByName[regionName] : null);
+}
+function secondaryCapitalFillOpacity(fillOpacity) {
+  const base = Number(fillOpacity);
+  if (!Number.isFinite(base)) return SECONDARY_CAPITAL_BASE_TERRITORY_OPACITY;
+  return Math.min(SECONDARY_CAPITAL_BASE_TERRITORY_OPACITY, base + SECONDARY_CAPITAL_TIER_OPACITY_BOOST);
+}
+function appendForeignHoverRegion(frag, region, className, attrs={}, copyContext = defaultWorldCopyContext(), {variant='foreign'} = {}) {
   if (!region?.path) return;
   const {fillOpacity, ...dataAttrs} = attrs;
+  const secondary = variant === 'secondary-capital';
   const p = createRegionPath(region, {
-    class: className,
-    fill: HOVER_NATION_OVERLAY_COLOR,
-    'fill-opacity': fillOpacity ?? HOVER_NATION_BASE_TERRITORY_OPACITY,
-  }, {id: null, nation: null, ...dataAttrs, ...worldCopyDataset(copyContext)});
+    class: `${className}${secondary ? ' secondary-capital-preview' : ''}`,
+    fill: secondary ? SECONDARY_CAPITAL_OVERLAY_COLOR : HOVER_NATION_OVERLAY_COLOR,
+    'fill-opacity': secondary
+      ? secondaryCapitalFillOpacity(fillOpacity)
+      : fillOpacity ?? HOVER_NATION_BASE_TERRITORY_OPACITY,
+  }, {id: null, nation: null, preview: variant, ...dataAttrs, ...worldCopyDataset(copyContext)});
   frag.appendChild(p);
 }
 function queueForeignHoverDescriptor(candidates, region, className, attrs={}) {
@@ -1581,9 +1626,9 @@ function getForeignHoverOverlayDescriptorSet(nation) {
     FOREIGN_HOVER_DESCRIPTOR_CACHE_LIMIT
   );
 }
-function appendForeignHoverNationOverlay(frag, descriptorSet, copyContext = defaultWorldCopyContext()) {
+function appendForeignHoverNationOverlay(frag, descriptorSet, copyContext = defaultWorldCopyContext(), options = {}) {
   for (const descriptor of descriptorSet?.descriptors || []) {
-    appendForeignHoverRegion(frag, regionByName[descriptor.region], descriptor.className, descriptor.attrs, copyContext);
+    appendForeignHoverRegion(frag, regionByName[descriptor.region], descriptor.className, descriptor.attrs, copyContext, options);
   }
 }
 function replaceForeignHoverOverlayForKey(nextKey, buildChildren, {force=false} = {}) {
@@ -1592,6 +1637,13 @@ function replaceForeignHoverOverlayForKey(nextKey, buildChildren, {force=false} 
   foreignHoverVisualKey = nextKey;
   recordRenderStat('foreignHoverOverlayReplacements');
   replaceLayerChildren(gForeignHoverOverlays, buildChildren());
+}
+function replaceSecondaryHoverOverlayForKey(nextKey, buildChildren, {force=false} = {}) {
+  if (!gSecondaryHoverOverlays) return;
+  if (!force && nextKey === secondaryHoverVisualKey) return;
+  secondaryHoverVisualKey = nextKey;
+  recordRenderStat('secondaryHoverOverlayReplacements');
+  replaceLayerChildren(gSecondaryHoverOverlays, buildChildren());
 }
 function replaceHoverOutlinesForKey(nextKey, buildChildren, {force=false} = {}) {
   if (!gHoverOutlines) return;
@@ -1604,25 +1656,39 @@ function renderHoverOutlines({force=false, copyContexts=worldCopyContexts} = {})
   const rn = getHoveredRegionName();
   const r = rn ? regionByName[rn] : null;
   const hidden = !rn || selectedRegionIds.has(rn) || !r;
-  const foreign = !hidden && shouldShowForeignHoverNationOverlay(r);
+  const secondaryNation = getSecondaryHoverNation();
+  const secondary = !hidden && !!secondaryNation;
+  const foreign = !hidden && !secondary && shouldShowForeignHoverNationOverlay(r);
   const copyKey = copyContextRenderKey(copyContexts);
   const foreignDescriptorSet = foreign ? getForeignHoverOverlayDescriptorSet(r.nationTag) : null;
+  const secondaryDescriptorSet = secondary ? getForeignHoverOverlayDescriptorSet(secondaryNation) : null;
   const foreignKey = foreign
     ? `${copyKey}|foreign|${foreignDescriptorSet.cacheKey}|${getLockedNation() || getActiveNation()}|${visibleNationRegionNames.has(rn) ? 1 : 0}`
     : FOREIGN_HOVER_EMPTY_RENDER_KEY;
-  const hoverKey = !hidden && !foreign
+  const secondaryKey = secondary
+    ? `${copyKey}|secondary-capital|${secondaryDescriptorSet.cacheKey}|${getLockedNation() || getActiveNation()}|${visibleNationRegionNames.has(rn) ? 1 : 0}`
+    : SECONDARY_HOVER_EMPTY_RENDER_KEY;
+  const hoverKey = !hidden && !foreign && !secondary
     ? `${copyKey}|region|${rn}|${getLockedNation() || getActiveNation()}|${selectedRegionIds.has(rn) ? 1 : 0}`
     : HOVER_OUTLINE_EMPTY_RENDER_KEY;
   replaceForeignHoverOverlayForKey(foreignKey, () => {
     if (!foreign) return document.createDocumentFragment();
     return createProjectedCopyFragment(copyContexts, 'foreign-hover-copy', copyContext => {
       const frag = document.createDocumentFragment();
-      appendForeignHoverNationOverlay(frag, foreignDescriptorSet, copyContext);
+      appendForeignHoverNationOverlay(frag, foreignDescriptorSet, copyContext, {variant: 'foreign'});
+      return frag;
+    });
+  }, {force});
+  replaceSecondaryHoverOverlayForKey(secondaryKey, () => {
+    if (!secondary) return document.createDocumentFragment();
+    return createProjectedCopyFragment(copyContexts, 'secondary-hover-copy', copyContext => {
+      const frag = document.createDocumentFragment();
+      appendForeignHoverNationOverlay(frag, secondaryDescriptorSet, copyContext, {variant: 'secondary-capital'});
       return frag;
     });
   }, {force});
   replaceHoverOutlinesForKey(hoverKey, () => {
-    if (hidden || foreign) return document.createDocumentFragment();
+    if (hidden || foreign || secondary) return document.createDocumentFragment();
     return createProjectedCopyFragment(copyContexts, 'hover-outline-copy', copyContext => {
       const frag = document.createDocumentFragment();
       appendRegionHighlight(frag, r, 'hover', copyContext);
@@ -1707,6 +1773,7 @@ function clearSelection({clearSearch=true} = {}) {
   clearSelectionState(appState);
   setActiveNationState();
   setHoverNationState();
+  setSecondaryHoverNationState();
   setHoveredRegionState();
   setHoverVisualState();
   setLockedNationState();
@@ -1733,6 +1800,7 @@ function focusNation(nation, {fillSearch=true} = {}) {
   cancelPendingHoverPreview();
   setLockedNationState(nation);
   setHoverNationState();
+  setSecondaryHoverNationState();
   setProjectFilterState('');
   setActiveIncomingClaimKeyState('');
   if (fillSearch) {
@@ -2027,6 +2095,7 @@ function updateHoveredRegion(r, {force=false} = {}) {
   const useHoverDelta = canUseSimpleHoverVisualDelta(previousRegionName, r, {force, regionChanged});
   setHoveredRegionState(r.regionName, r.nationTag);
   setHoverVisualState(r.regionName);
+  updateSecondaryCapitalPreview(r);
   if (useHoverDelta) {
     applyMapVisualStateForRegions([previousRegionName, r.regionName]);
   } else {
@@ -2795,7 +2864,10 @@ function updateNationOverlay(nation) {
     clearOverlayVisualState();
     applyMapVisualState();
     visibleNationRegionNames = new Set();
+    currentOverlayModel = null;
+    setSecondaryHoverNationState();
     clearClaimOverlayDom({claimOverlayLayer: gClaimOverlays, claimLabelLayer: gClaimLabels});
+    renderHoverOutlines();
     nationInfo.textContent = t('nationInfo.empty');
     setClaimsPillEmpty();
     applyFilters(false);
@@ -2804,8 +2876,11 @@ function updateNationOverlay(nation) {
   }
   const overlayModel = getNationOverlayModel(activeData, derivedIndices, getActiveNation());
   setActiveIncomingClaimKeyState(overlayModel.activeIncomingClaimKey);
+  currentOverlayModel = overlayModel;
   visibleNationRegionNames = new Set(overlayModel.resultSet);
   renderMapOverlay(overlayModel, {claimOverlayLayer: gClaimOverlays, claimLabelLayer: gClaimLabels, mapView});
+  refreshSecondaryCapitalPreviewForHoveredRegion();
+  renderHoverOutlines();
   renderClaimSummaryPill(overlayModel);
   renderNationInfoPanel(nationInfo, overlayModel);
   bindNationOverlayPanelEvents(nationInfo, overlayModel);

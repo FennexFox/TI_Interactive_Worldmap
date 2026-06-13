@@ -124,6 +124,15 @@
   .foreign-hover-base { stroke:rgba(255,251,235,.68); stroke-width:.014; }
   .foreign-hover-basic,
   .foreign-hover-research { stroke:rgba(255,245,226,.46); }
+  .foreign-hover-overlay.secondary-capital-preview {
+    stroke:rgba(255,255,255,.78);
+    stroke-width:.014;
+    stroke-dasharray:.032 .018;
+  }
+  .foreign-hover-base.secondary-capital-preview {
+    stroke:rgba(255,251,214,.88);
+    stroke-width:.018;
+  }
   .selection-fill { pointer-events:none; fill:oklch(0.86 0.17 95 / .26); stroke:none; mix-blend-mode:screen; }
   .selection-outline-glow { pointer-events:none; fill:none; stroke:oklch(0.87 0.18 92 / .92); stroke-width:.082; vector-effect:non-scaling-stroke; }
   .selection-outline { pointer-events:none; fill:none; stroke:white; stroke-width:.034; vector-effect:non-scaling-stroke; }

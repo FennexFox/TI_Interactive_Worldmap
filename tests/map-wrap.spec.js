@@ -393,6 +393,23 @@ test('world-wrap default hover claim overlays reuse cached descriptors across bo
   expect(stats.claimLabelStaleRenderSkips).toBe(0);
 });
 
+test('world-wrap default secondary capital hover projects foreign preview copies', async ({ page }) => {
+  await waitForWrappedMap(page, '/?debugRenderStats=1');
+
+  await chooseNation(page, 'France', 'EUA');
+  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay[data-region="Moskva"]'));
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await hoverWrappedRegion(page, 'Moskva', '1');
+  await waitForHoverPreviewFrame(page);
+
+  await expect(page.locator('#claimPill')).toContainText('France');
+  await expectProjectedCopies(page.locator('#secondaryHoverOverlays .secondary-capital-preview[data-preview="secondary-capital"][data-nation="RUS"][data-region="Moskva"]'));
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelBuilds).toBe(0);
+  expect(stats.secondaryHoverOverlayReplacements).toBeGreaterThan(0);
+});
+
 test('world-wrap default projects hover, selection, and foreign hover overlays', async ({ page }) => {
   await waitForWrappedMap(page);
 
