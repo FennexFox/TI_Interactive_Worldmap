@@ -1327,6 +1327,20 @@ function resetTransientClaimState() {
   projectSel.value = '';
   if (claimModeSel.value === 'project') claimModeSel.value = 'all';
 }
+function resetHoverPreviewClaimState() {
+  clearTransientClaimAppState(appState);
+  setSecondaryHoverNationState();
+}
+function shouldRenderCommittedNationDetails() {
+  return !!getLockedNation();
+}
+function updateHoverNationPreview(nation) {
+  updateNationOverlay(nation, {
+    renderDetails: false,
+    updateFilters: false,
+    updateSelected: false,
+  });
+}
 function cancelPendingHoverPreview() {
   if (hoverPreviewFrame) {
     window.cancelAnimationFrame(hoverPreviewFrame);
@@ -1338,9 +1352,8 @@ function setHoverPreviewNation(nation) {
   if (getLockedNation()) return;
   if (getHoverNation() === nation && getActiveNation() === nation) return;
   setHoverNationState(nation);
-  resetTransientClaimState();
-  setSelectedRegionIds();
-  updateNationOverlay(getHoverNation());
+  resetHoverPreviewClaimState();
+  updateHoverNationPreview(getHoverNation());
 }
 function scheduleHoverPreviewNation(nation) {
   if (getLockedNation()) return;
@@ -1374,10 +1387,8 @@ function clearHoverPreview() {
   }
   if (!getHoverNation() && !getActiveNation()) return;
   setHoverNationState();
-  resetTransientClaimState();
-  setSelectedRegionIds();
-  updateNationOverlay('');
-  updateSelectedRegions();
+  resetHoverPreviewClaimState();
+  updateHoverNationPreview('');
 }
 function buildIncomingClaimIndex() {
   incomingClaimsByRegion.clear();
@@ -1791,7 +1802,7 @@ function clearSelection({clearSearch=true} = {}) {
   setOnlyClaimsState(false);
   updateOnlyClaimsButtonLabel();
   setHoverPill();
-  updateNationOverlay('');
+  updateNationOverlay('', {renderDetails: true, updateFilters: true, updateSelected: true});
   applyFilters(true);
   updateSelectedRegions();
 }
@@ -2857,9 +2868,16 @@ function bindNationOverlayPanelEvents(panelRoot, model) {
     if (rn) focusRegions([rn], {selectSingle:true, preserveNation:true, refreshOverlay:true});
   }));
 }
-function updateNationOverlay(nation) {
+function updateNationOverlay(
+  nation,
+  {
+    renderDetails = shouldRenderCommittedNationDetails(),
+    updateFilters = renderDetails,
+    updateSelected = renderDetails,
+  } = {}
+) {
   setActiveNationState(nation);
-  updateProjectOptions(getActiveNation());
+  if (renderDetails) updateProjectOptions(getActiveNation());
   if (!getActiveNation()) {
     clearOverlayVisualState();
     applyMapVisualState();
@@ -2868,10 +2886,10 @@ function updateNationOverlay(nation) {
     setSecondaryHoverNationState();
     clearClaimOverlayDom({claimOverlayLayer: gClaimOverlays, claimLabelLayer: gClaimLabels});
     renderHoverOutlines();
-    nationInfo.textContent = t('nationInfo.empty');
+    if (renderDetails) nationInfo.textContent = t('nationInfo.empty');
     setClaimsPillEmpty();
-    applyFilters(false);
-    updateSelectedRegions();
+    if (updateFilters) applyFilters(false);
+    if (updateSelected) updateSelectedRegions();
     return;
   }
   const overlayModel = getNationOverlayModel(activeData, derivedIndices, getActiveNation());
@@ -2882,10 +2900,12 @@ function updateNationOverlay(nation) {
   refreshSecondaryCapitalPreviewForHoveredRegion();
   renderHoverOutlines();
   renderClaimSummaryPill(overlayModel);
-  renderNationInfoPanel(nationInfo, overlayModel);
-  bindNationOverlayPanelEvents(nationInfo, overlayModel);
-  applyFilters(false);
-  updateSelectedRegions();
+  if (renderDetails) {
+    renderNationInfoPanel(nationInfo, overlayModel);
+    bindNationOverlayPanelEvents(nationInfo, overlayModel);
+  }
+  if (updateFilters) applyFilters(false);
+  if (updateSelected) updateSelectedRegions();
 }
 function updateProjectOptions(nation) {
   const current = getProjectFilter() && getProjectFilter() !== '__base__' ? getProjectFilter() : '';

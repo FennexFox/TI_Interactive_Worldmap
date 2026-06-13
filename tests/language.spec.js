@@ -389,6 +389,23 @@ test('secondary capital hover previews a foreign nation inside selected expansio
   expect(stats.overlayModelBuilds).toBe(0);
 });
 
+
+test('unlocked hover preview leaves committed detail panel stable', async ({ page }) => {
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#nationInfo')).toContainText('Hover a nation or region on the map.');
+
+  await hoverRegion(page, 'Amazonia');
+  await waitForHoverPreviewFrame(page);
+  await expect(page.locator('#claimPill')).toContainText('Brazil');
+  await expect(page.locator('#claimOverlays .claim-overlay[data-region="Amazonia"]')).toHaveCount(1);
+  await expect(page.locator('#nationInfo')).toContainText('Hover a nation or region on the map.');
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#claimPill')).toContainText('Brazil');
+  await expect(page.locator('#nationInfo')).toContainText('Brazil');
+});
+
 test('overlay model cache reuses unchanged inputs and misses changed filters', async ({ page }) => {
   await page.goto('/?worldWrap=0&debugRenderStats=1');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
