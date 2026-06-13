@@ -23,7 +23,7 @@ export function normalizeWorldCopyContexts(copyContexts = [DEFAULT_COPY_CONTEXT]
   });
 }
 
-function copyDataset(copyContext) {
+export function worldCopyDataset(copyContext) {
   return {
     wrapCopy: copyContext.copyIndex,
     wrapOffset: copyContext.xOffset,
@@ -41,8 +41,9 @@ function clearRegistry(registry) {
   if (registry?.clear) registry.clear();
 }
 
-function appendCopyFragment(parentFragment, copyContext, copyCount, className, buildChildren) {
+export function appendWorldCopyFragment(parentFragment, copyContext, copyCount, className, buildChildren) {
   const copyFragment = buildChildren();
+  if (!copyFragment?.childNodes?.length) return;
   if (copyCount === 1 && copyContext.isCanonical && !copyContext.xOffset) {
     parentFragment.appendChild(copyFragment);
     return;
@@ -50,7 +51,7 @@ function appendCopyFragment(parentFragment, copyContext, copyCount, className, b
   const group = createSvgElement('g', {
     class: className,
     transform: copyContext.xOffset ? `translate(${copyContext.xOffset} 0)` : null,
-  }, copyDataset(copyContext));
+  }, worldCopyDataset(copyContext));
   group.appendChild(copyFragment);
   parentFragment.appendChild(group);
 }
@@ -97,19 +98,19 @@ export function renderGrid({layer, mapView, copyContexts}) {
   const {x, y, width: w, height: h} = mapView;
   const frag = document.createDocumentFragment();
   for (const copyContext of contexts) {
-    appendCopyFragment(frag, copyContext, contexts.length, 'grid-copy', () => {
+    appendWorldCopyFragment(frag, copyContext, contexts.length, 'grid-copy', () => {
       const copyFrag = document.createDocumentFragment();
       for (let lon = -3; lon <= 3.01; lon += 0.5) {
         copyFrag.appendChild(createSvgElement('path', {
           class: 'graticule',
           d: `M ${lon} ${y} L ${lon} ${y + h}`,
-        }, copyDataset(copyContext)));
+        }, worldCopyDataset(copyContext)));
       }
       for (let lat = -1.25; lat <= 1.01; lat += 0.25) {
         copyFrag.appendChild(createSvgElement('path', {
           class: 'graticule',
           d: `M ${x} ${lat} L ${x + w} ${lat}`,
-        }, copyDataset(copyContext)));
+        }, worldCopyDataset(copyContext)));
       }
       return copyFrag;
     });
@@ -131,14 +132,14 @@ export function renderHitLayer({
   hitPathElements.length = 0;
   const frag = document.createDocumentFragment();
   for (const copyContext of contexts) {
-    appendCopyFragment(frag, copyContext, contexts.length, 'hit-copy', () => {
+    appendWorldCopyFragment(frag, copyContext, contexts.length, 'hit-copy', () => {
       const copyFrag = document.createDocumentFragment();
       for (const region of indices.regions) {
         const hitPath = createRegionPath(region, {
           class: 'region-hit',
           fill: 'transparent',
           stroke: 'none',
-        }, {regionId: region.regionName, ...copyDataset(copyContext)});
+        }, {regionId: region.regionName, ...worldCopyDataset(copyContext)});
         if (copyContext.isCanonical) hitPathByRegion.set(region.regionName, hitPath);
         registerRegionInstance(hitPathInstancesByRegion, region.regionName, hitPath);
         hitPathElements.push(hitPath);
@@ -166,7 +167,7 @@ export function renderLabels({
   if (!labelsVisible) return;
   const frag = document.createDocumentFragment();
   for (const copyContext of contexts) {
-    appendCopyFragment(frag, copyContext, contexts.length, 'label-copy', () => {
+    appendWorldCopyFragment(frag, copyContext, contexts.length, 'label-copy', () => {
       const copyFrag = document.createDocumentFragment();
       for (const region of regions) {
         const label = labelPosition(region);
@@ -180,7 +181,7 @@ export function renderLabels({
           id: region.id,
           region: region.regionName,
           nation: region.nationTag,
-          ...copyDataset(copyContext),
+          ...worldCopyDataset(copyContext),
         });
         labelTextElements.push(text);
         copyFrag.appendChild(text);
@@ -215,13 +216,13 @@ export function renderRegions({
   regionPathElements.length = 0;
   const frag = document.createDocumentFragment();
   for (const copyContext of contexts) {
-    appendCopyFragment(frag, copyContext, contexts.length, 'region-copy', () => {
+    appendWorldCopyFragment(frag, copyContext, contexts.length, 'region-copy', () => {
       const copyFrag = document.createDocumentFragment();
       for (const region of indices.regions) {
         const path = createRegionPath(region, {
           class: 'region',
           fill: colorFor(region),
-        }, copyDataset(copyContext));
+        }, worldCopyDataset(copyContext));
         if (copyContext.isCanonical) pathByRegion.set(region.regionName, path);
         registerRegionInstance(pathInstancesByRegion, region.regionName, path);
         regionPathElements.push(path);

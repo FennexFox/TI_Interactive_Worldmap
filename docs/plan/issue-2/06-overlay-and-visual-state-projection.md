@@ -85,18 +85,31 @@ npx playwright test tests/map-wrap.spec.js -g "overlay"
 
 ## Progress
 
-- [ ] Copy plan passed to overlay render context.
-- [ ] Claim overlays projected to copies.
-- [ ] Hover and selection overlays projected to copies.
-- [ ] Capital markers projected to copies.
-- [ ] Overlay panning tests added.
+- [x] Copy plan passed to overlay render context.
+- [x] Claim overlays projected to copies.
+- [x] Hover and selection overlays projected to copies.
+- [x] Capital markers projected to copies.
+- [x] Overlay panning tests added.
 
 ## Decision Log
 
 - Decision: Keep overlay models canonical and project them during rendering.
 - Decision: Treat copy offset as render context, not model state.
+- Decision: Reuse the renderer's world-copy grouping helper for overlays so base, hit, label, and overlay layers share the same transform and copy metadata conventions.
+- Decision: Include the copy-plan key in claim, label, hover, and capital marker render keys, but keep pan-normalized camera coordinates out of those keys.
+- Decision: Skip empty projected copy groups so cleared selection and disabled claim overlays still leave empty layers.
+- Decision: Add `data-region` and `data-wrap-*` metadata to projected claim overlays and labels to make alignment and copy coverage testable.
+- Decision: Treat hover clearing at drag start as hover-state churn, not pan churn; pan cache tests start from blank map space to isolate ordinary panning.
 
 ## Outcomes
 
-Pending implementation.
-
+- Projected claim overlays, claim labels, hover outlines, selection outlines, foreign-hover overlays, and capital markers across all active world-copy contexts behind `?worldWrap=1`.
+- Kept claim and hover models canonical; only SVG rendering receives the copy context.
+- Added stable copy-plan render keys for projected overlay layers without including `mapView.x`, so ordinary panning does not replace overlay DOM.
+- Exported shared copy projection helpers from `src/render/map-layers.js` and used them for app-level overlay layers.
+- Added `tests/map-wrap.spec.js` coverage for copied hover/selection outputs, copied claim overlays, capital markers, pan-with-overlay cache stability, and copied foreign-hover overlays.
+- Rebuilt generated static assets under `docs/assets/**`.
+- Focused validation passed: `npx playwright test tests/language.spec.js -g "overlay"` and `npx playwright test tests/map-wrap.spec.js -g "overlay|world-wrap review projects|copied hit|panning preserves"`.
+- Full validation passed: `npm run build`, `npm run verify`, and `npm run test:e2e` with 27 active tests and 3 skipped future issue #2 markers.
+- Manual smoke passed against the static `docs/` site: selected Brazil, panned east and west, confirmed copied overlay alignment, hovered Brazilian and foreign copied regions, clicked copied Amazonia, and toggled claim mode, claim kind, project, labels, and only-claims while panned.
+- Retrospective: overlay projection now matches wrapped base and hit layers, but antimeridian path tearing and final default enablement remain Phase 07 and Phase 08 work.

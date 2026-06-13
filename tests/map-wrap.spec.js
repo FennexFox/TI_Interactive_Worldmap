@@ -6,14 +6,19 @@ async function waitForMap(page) {
   await expect(page.locator('body')).not.toContainText('Failed to load generated Terra Invicta map data.');
 }
 
-async function waitForWrappedMap(page) {
-  await page.goto('/?worldWrap=1');
+async function waitForWrappedMap(page, path = '/?worldWrap=1') {
+  await page.goto(path);
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
   await expect(page.locator('body')).not.toContainText('Failed to load generated Terra Invicta map data.');
 }
 
 function regionHit(page, regionName) {
   return page.locator(`#hitRegions .region-hit[data-region="${regionName}"]`);
+}
+
+async function expectProjectedCopies(locator, copies = ['-1', '0', '1']) {
+  await expect(locator).toHaveCount(copies.length);
+  await expect.poll(async () => locator.evaluateAll(nodes => nodes.map(node => node.dataset.wrapCopy))).toEqual(copies);
 }
 
 async function mapViewBox(page) {
@@ -26,6 +31,24 @@ async function dragMap(page, start, end, steps = 8) {
   await page.mouse.down();
   await page.mouse.move(end.x, end.y, {steps});
   await page.mouse.up();
+}
+
+async function blankMapPoint(page) {
+  return page.evaluate(() => {
+    const map = document.querySelector('#map');
+    const rect = map.getBoundingClientRect();
+    for (let gy = 1; gy <= 9; gy += 1) {
+      for (let gx = 1; gx <= 9; gx += 1) {
+        const x = rect.left + (rect.width * gx) / 10;
+        const y = rect.top + (rect.height * gy) / 10;
+        const hit = document.elementFromPoint(x, y);
+        if (hit === map || hit?.id === 'grid' || hit?.id === 'hitRegions' || hit?.classList?.contains('graticule')) {
+          return {x, y};
+        }
+      }
+    }
+    return {x: rect.left + rect.width * 0.12, y: rect.top + rect.height * 0.46};
+  });
 }
 
 async function dispatchPointerClick(locator, point = {x: 120, y: 120}) {
@@ -155,11 +178,12 @@ test('world-wrap review flag resolves copied hit paths to canonical region state
   await copiedAmazonia.dispatchEvent('pointerover', { bubbles: true, clientX: 120, clientY: 120, pointerType: 'mouse' });
   await copiedAmazonia.dispatchEvent('pointermove', { bubbles: true, clientX: 126, clientY: 126, pointerType: 'mouse' });
   await expect(page.locator('#hoverPill')).toHaveText('Hover: BRA · Manaus');
-  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
+  await expectProjectedCopies(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]'));
 
   await copiedAmazonia.dispatchEvent('click', { bubbles: true });
   await expect(page.locator('#search')).toHaveValue(/Brazil/);
-  await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveText('Manaus');
+  await expectProjectedCopies(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]'));
+  await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveText(['Manaus', 'Manaus', 'Manaus']);
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
 });
 
@@ -225,7 +249,8 @@ test('world-wrap review panning preserves click selection but suppresses drag se
   const amazon = page.locator('#hitRegions .region-hit[data-region="Amazonia"][data-wrap-copy="0"]');
   await dispatchPointerClick(amazon);
   await expect(page.locator('#search')).toHaveValue(/Brazil/);
-  await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveText('Manaus');
+  await expectProjectedCopies(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]'));
+  await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveText(['Manaus', 'Manaus', 'Manaus']);
 
   await page.locator('#hitRegions').dispatchEvent('click', {bubbles: true});
   await expect(page.locator('#search')).toHaveValue('');
@@ -233,6 +258,52 @@ test('world-wrap review panning preserves click selection but suppresses drag se
   await dispatchPointerDragAndClick(amazon);
   await expect(page.locator('#search')).toHaveValue('');
   await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
+});
+
+test('world-wrap review projects claim overlays and markers without pan churn', async ({ page }) => {
+  await waitForWrappedMap(page, '/?worldWrap=1&debugRenderStats=1');
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(78);
+  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
+  await expectProjectedCopies(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]'));
+
+  const mapBox = await page.locator('#map').boundingBox();
+  expect(mapBox).toBeTruthy();
+  const start = await blankMapPoint(page);
+  const end = {x: Math.min(mapBox.x + mapBox.width - 10, start.x + mapBox.width * 0.35), y: start.y};
+  await page.mouse.move(start.x, start.y);
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await page.mouse.down();
+  await page.mouse.move(end.x, end.y, {steps: 8});
+  await page.mouse.up();
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelBuilds).toBe(0);
+  expect(stats.claimOverlayDomReplacements).toBe(0);
+  expect(stats.claimLabelDomReplacements).toBe(0);
+  expect(stats.hoverOutlineReplacements).toBe(0);
+  expect(stats.foreignHoverOverlayReplacements).toBe(0);
+  expect(stats.capitalMarkerRebuilds).toBe(0);
+});
+
+test('world-wrap review projects hover, selection, and foreign hover overlays', async ({ page }) => {
+  await waitForWrappedMap(page);
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  const copiedAmazonia = page.locator('#hitRegions .region-hit[data-region="Amazonia"][data-wrap-copy="-1"]');
+  await copiedAmazonia.dispatchEvent('pointerover', { bubbles: true, clientX: 120, clientY: 120, pointerType: 'mouse' });
+  await copiedAmazonia.dispatchEvent('pointermove', { bubbles: true, clientX: 126, clientY: 126, pointerType: 'mouse' });
+  await expectProjectedCopies(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]'));
+
+  await copiedAmazonia.dispatchEvent('click', { bubbles: true });
+  await expectProjectedCopies(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]'));
+
+  const copiedOntario = page.locator('#hitRegions .region-hit[data-region="Ontario"][data-wrap-copy="1"]');
+  await copiedOntario.dispatchEvent('pointerover', { bubbles: true, clientX: 140, clientY: 140, pointerType: 'mouse' });
+  await copiedOntario.dispatchEvent('pointermove', { bubbles: true, clientX: 146, clientY: 146, pointerType: 'mouse' });
+  await expectProjectedCopies(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="CAN"][data-region="Ontario"]'));
 });
 
 test('world-wrap panning is disabled without the review flag', async ({ page }) => {

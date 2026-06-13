@@ -29,13 +29,16 @@ import {
 import {createAppData, getActiveData} from './data/active-data.js';
 import {buildDerivedIndices} from './data/derived-indices.js';
 import {
+  appendWorldCopyFragment,
   createRegionPath,
   createSvgElement,
   defaultWorldCopyContext,
+  normalizeWorldCopyContexts,
   renderGrid as renderGridLayer,
   renderLabels as renderLabelsLayer,
   renderRegions as renderRegionLayers,
   replaceLayerChildren,
+  worldCopyDataset,
 } from './render/map-layers.js';
 
 window.TI_DATA_PROMISE.then(({regionMap, claimMap, catalogs = {}}) => {
@@ -65,6 +68,19 @@ const activeData = getActiveData(appData, appState.activeScenarioId);
 const mapView = initializeMapView(activeData);
 const worldWrapReviewEnabled = shouldEnableWorldWrapReview();
 const worldCopyContexts = createWorldCopyContexts(mapView, {enabled: worldWrapReviewEnabled});
+function copyContextRenderKey(copyContexts = worldCopyContexts) {
+  return normalizeWorldCopyContexts(copyContexts)
+    .map(context => `${context.copyIndex}:${context.xOffset}:${context.isCanonical ? 1 : 0}`)
+    .join('|');
+}
+function createProjectedCopyFragment(copyContexts, groupClassName, buildChildren) {
+  const contexts = normalizeWorldCopyContexts(copyContexts || worldCopyContexts);
+  const frag = document.createDocumentFragment();
+  for (const copyContext of contexts) {
+    appendWorldCopyFragment(frag, copyContext, contexts.length, groupClassName, () => buildChildren(copyContext));
+  }
+  return frag;
+}
 const derivedIndices = buildDerivedIndices(activeData);
 const REGIONS = derivedIndices.regions;
 const SUMMARY = derivedIndices.summary;
@@ -969,45 +985,48 @@ function collectCapitalMarkers() {
   if (!markers.size) addCapitalMarkerNation(markers, getHoverNation());
   return [...markers.values()];
 }
-function renderCapitalMarkers({force=false} = {}) {
+function renderCapitalMarkers({force=false, copyContexts=worldCopyContexts} = {}) {
   if (!gCapitalMarkers) return;
   const markers = collectCapitalMarkers()
     .sort((a, b) => a.regionName.localeCompare(b.regionName) || a.nation.localeCompare(b.nation));
-  const key = `${currentLanguage}|${markers.map(m => `${m.regionName}:${m.nation}:${m.selected ? 1 : 0}`).join('|')}`;
+  const key = `${copyContextRenderKey(copyContexts)}|${currentLanguage}|${markers.map(m => `${m.regionName}:${m.nation}:${m.selected ? 1 : 0}`).join('|')}`;
   if (!force && key === capitalMarkersKey) return;
   capitalMarkersKey = key;
   recordRenderStat('capitalMarkerRebuilds');
   replaceLayerChildren(gCapitalMarkers);
   if (!markers.length) return;
-  const frag = document.createDocumentFragment();
-  for (const markerInfo of markers) {
-    const region = regionByName[markerInfo.regionName];
-    const lab = labelPosition(region);
-    if (!lab) continue;
-    const group = createSvgElement('g', {
-      class: `capital-marker${markerInfo.selected ? ' is-selected' : ' is-idle'}`,
-      'aria-label': `${t('nationInfo.kv.capitalRegion')}: ${localizedRegionName(region)}`,
-    }, {
-      region: markerInfo.regionName,
-      nation: markerInfo.nation,
-    });
+  gCapitalMarkers.appendChild(createProjectedCopyFragment(copyContexts, 'capital-marker-copy', copyContext => {
+    const frag = document.createDocumentFragment();
+    for (const markerInfo of markers) {
+      const region = regionByName[markerInfo.regionName];
+      const lab = labelPosition(region);
+      if (!lab) continue;
+      const group = createSvgElement('g', {
+        class: `capital-marker${markerInfo.selected ? ' is-selected' : ' is-idle'}`,
+        'aria-label': `${t('nationInfo.kv.capitalRegion')}: ${localizedRegionName(region)}`,
+      }, {
+        region: markerInfo.regionName,
+        nation: markerInfo.nation,
+        ...worldCopyDataset(copyContext),
+      });
 
-    const points = starPoints(lab.x, lab.y);
-    const shadow = createSvgElement('polygon', {
-      class: 'capital-star-shadow',
-      points,
-      'aria-hidden': 'true',
-    });
-    group.appendChild(shadow);
+      const points = starPoints(lab.x, lab.y);
+      const shadow = createSvgElement('polygon', {
+        class: 'capital-star-shadow',
+        points,
+        'aria-hidden': 'true',
+      });
+      group.appendChild(shadow);
 
-    const star = createSvgElement('polygon', {
-      class: 'capital-star',
-      points,
-    });
-    group.appendChild(star);
-    frag.appendChild(group);
-  }
-  gCapitalMarkers.appendChild(frag);
+      const star = createSvgElement('polygon', {
+        class: 'capital-star',
+        points,
+      });
+      group.appendChild(star);
+      frag.appendChild(group);
+    }
+    return frag;
+  }));
 }
 
 function localizedDisplayName(displayName) {
@@ -1387,22 +1406,27 @@ function selectedRegionSummary() {
   }
   return t('selected.regions', {count: names.length});
 }
-function appendRegionHighlight(frag, r, classPrefix) {
+function appendRegionHighlight(frag, r, classPrefix, copyContext = defaultWorldCopyContext()) {
   for (const suffix of ['fill', 'outline-glow', 'outline']) {
-    const p = createRegionPath(r, {class: `${classPrefix}-${suffix}`}, {id: null, nation: null});
+    const p = createRegionPath(r, {class: `${classPrefix}-${suffix}`}, {
+      id: null,
+      nation: null,
+      ...worldCopyDataset(copyContext),
+    });
     frag.appendChild(p);
   }
 }
-function appendSelectedRegionMarker(frag, r, {showDot=true} = {}) {
+function appendSelectedRegionMarker(frag, r, {showDot=true, copyContext=defaultWorldCopyContext()} = {}) {
   const lab = labelPosition(r);
   if (!lab) return;
+  const copyData = worldCopyDataset(copyContext);
   if (showDot) {
     const dot = createSvgElement('circle', {
       class: 'selection-dot',
       cx: lab.x,
       cy: lab.y,
       r: '.032',
-    }, {region: r.regionName});
+    }, {region: r.regionName, ...copyData});
     frag.appendChild(dot);
   }
   const text = createSvgElement('text', {
@@ -1410,7 +1434,7 @@ function appendSelectedRegionMarker(frag, r, {showDot=true} = {}) {
     x: lab.x,
     y: lab.y - 0.052,
     textContent: localizedRegionName(r),
-  }, {region: r.regionName});
+  }, {region: r.regionName, ...copyData});
   frag.appendChild(text);
 }
 function shouldShowForeignHoverNationOverlay(region) {
@@ -1420,14 +1444,14 @@ function shouldShowForeignHoverNationOverlay(region) {
   if (visibleNationRegionNames.has(region.regionName)) return false;
   return region.nationTag !== pinnedNation;
 }
-function appendForeignHoverRegion(frag, region, className, attrs={}) {
+function appendForeignHoverRegion(frag, region, className, attrs={}, copyContext = defaultWorldCopyContext()) {
   if (!region?.path) return;
   const {fillOpacity, ...dataAttrs} = attrs;
   const p = createRegionPath(region, {
     class: className,
     fill: HOVER_NATION_OVERLAY_COLOR,
     'fill-opacity': fillOpacity ?? HOVER_NATION_BASE_TERRITORY_OPACITY,
-  }, {id: null, nation: null, ...dataAttrs});
+  }, {id: null, nation: null, ...dataAttrs, ...worldCopyDataset(copyContext)});
   frag.appendChild(p);
 }
 function queueForeignHoverRegion(candidates, region, className, attrs={}) {
@@ -1437,7 +1461,7 @@ function queueForeignHoverRegion(candidates, region, className, attrs={}) {
   if (existing && existing.fillOpacity >= fillOpacity) return;
   candidates.set(region.regionName, {region, className, attrs:{...attrs, fillOpacity}, fillOpacity});
 }
-function appendForeignHoverNationOverlay(frag, nation) {
+function appendForeignHoverNationOverlay(frag, nation, copyContext = defaultWorldCopyContext()) {
   if (!nation || claimModeSel.value === 'off') return;
   const data = CLAIMS_BY_NATION[nation] || {nation, baseRegions:nationRegions.get(nation)||[], projects:[]};
   const baseSet = new Set(data.baseRegions || nationRegions.get(nation) || []);
@@ -1467,7 +1491,7 @@ function appendForeignHoverNationOverlay(frag, nation) {
     }
   }
   for (const item of candidates.values()) {
-    appendForeignHoverRegion(frag, item.region, item.className, item.attrs);
+    appendForeignHoverRegion(frag, item.region, item.className, item.attrs, copyContext);
   }
 }
 function replaceForeignHoverOverlayForKey(nextKey, buildChildren, {force=false} = {}) {
@@ -1484,41 +1508,48 @@ function replaceHoverOutlinesForKey(nextKey, buildChildren, {force=false} = {}) 
   recordRenderStat('hoverOutlineReplacements');
   replaceLayerChildren(gHoverOutlines, buildChildren());
 }
-function renderHoverOutlines({force=false} = {}) {
+function renderHoverOutlines({force=false, copyContexts=worldCopyContexts} = {}) {
   const rn = getHoveredRegionName();
   const r = rn ? regionByName[rn] : null;
   const hidden = !rn || selectedRegionIds.has(rn) || !r;
   const foreign = !hidden && shouldShowForeignHoverNationOverlay(r);
+  const copyKey = copyContextRenderKey(copyContexts);
   const foreignKey = foreign
-    ? `foreign|${r.nationTag}|${claimModeSel.value}|${claimKindSel.value}|${getLockedNation() || getActiveNation()}|${visibleNationRegionNames.has(rn) ? 1 : 0}`
+    ? `${copyKey}|foreign|${r.nationTag}|${claimModeSel.value}|${claimKindSel.value}|${getLockedNation() || getActiveNation()}|${visibleNationRegionNames.has(rn) ? 1 : 0}`
     : FOREIGN_HOVER_EMPTY_RENDER_KEY;
   const hoverKey = !hidden && !foreign
-    ? `region|${rn}|${getLockedNation() || getActiveNation()}|${selectedRegionIds.has(rn) ? 1 : 0}`
+    ? `${copyKey}|region|${rn}|${getLockedNation() || getActiveNation()}|${selectedRegionIds.has(rn) ? 1 : 0}`
     : HOVER_OUTLINE_EMPTY_RENDER_KEY;
   replaceForeignHoverOverlayForKey(foreignKey, () => {
-    const frag = document.createDocumentFragment();
-    if (!foreign) return frag;
-    appendForeignHoverNationOverlay(frag, r.nationTag);
-    return frag;
+    if (!foreign) return document.createDocumentFragment();
+    return createProjectedCopyFragment(copyContexts, 'foreign-hover-copy', copyContext => {
+      const frag = document.createDocumentFragment();
+      appendForeignHoverNationOverlay(frag, r.nationTag, copyContext);
+      return frag;
+    });
   }, {force});
   replaceHoverOutlinesForKey(hoverKey, () => {
-    const frag = document.createDocumentFragment();
-    if (hidden || foreign) return frag;
-    appendRegionHighlight(frag, r, 'hover');
-    return frag;
+    if (hidden || foreign) return document.createDocumentFragment();
+    return createProjectedCopyFragment(copyContexts, 'hover-outline-copy', copyContext => {
+      const frag = document.createDocumentFragment();
+      appendRegionHighlight(frag, r, 'hover', copyContext);
+      return frag;
+    });
   }, {force});
 }
-function renderSelectionOutlines() {
+function renderSelectionOutlines({copyContexts=worldCopyContexts} = {}) {
   if (!gSelectionOutlines) return;
   replaceLayerChildren(gSelectionOutlines);
-  const frag = document.createDocumentFragment();
-  for (const rn of selectedRegionIds) {
-    const r = regionByName[rn];
-    if (!r) continue;
-    appendRegionHighlight(frag, r, 'selection');
-    appendSelectedRegionMarker(frag, r, {showDot: !selectedRegionIsCapital(rn)});
-  }
-  gSelectionOutlines.appendChild(frag);
+  gSelectionOutlines.appendChild(createProjectedCopyFragment(copyContexts, 'selection-outline-copy', copyContext => {
+    const frag = document.createDocumentFragment();
+    for (const rn of selectedRegionIds) {
+      const r = regionByName[rn];
+      if (!r) continue;
+      appendRegionHighlight(frag, r, 'selection', copyContext);
+      appendSelectedRegionMarker(frag, r, {showDot: !selectedRegionIsCapital(rn), copyContext});
+    }
+    return frag;
+  }));
 }
 function updateSelectedRegions() {
   syncSelectedVisualState();
@@ -2191,47 +2222,62 @@ function claimLabelDescriptors(model) {
   });
   return descriptors;
 }
-function claimOverlayPathRenderKey(model, descriptors) {
+function claimOverlayPathRenderKey(model, descriptors, copyContexts = worldCopyContexts) {
   if (!model) return CLAIM_OVERLAY_EMPTY_RENDER_KEY;
   return JSON.stringify({
     kind: 'claim-overlay-paths',
+    copyPlan: copyContextRenderKey(copyContexts),
     ...overlayModelRenderDataKey(model),
     descriptors,
   });
 }
-function claimLabelRenderKey(model, descriptors) {
+function claimLabelRenderKey(model, descriptors, copyContexts = worldCopyContexts) {
   if (!model) return CLAIM_LABEL_EMPTY_RENDER_KEY;
   return JSON.stringify({
     kind: 'claim-labels',
+    copyPlan: copyContextRenderKey(copyContexts),
     ...overlayModelRenderDataKey(model),
     language: currentLanguage,
     descriptors,
   });
 }
-function createClaimOverlayPathFragment(descriptors) {
-  const frag = document.createDocumentFragment();
-  for (const descriptor of descriptors) {
-    const r = regionByName[descriptor.region];
-    if (!r) continue;
-    frag.appendChild(createSvgElement('path', {
-      d: r.path,
-      class: descriptor.className,
-      fill: descriptor.fill,
-    }, {project: descriptor.project}));
-  }
-  return frag;
+function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyContexts} = {}) {
+  return createProjectedCopyFragment(copyContexts, 'claim-overlay-copy', copyContext => {
+    const frag = document.createDocumentFragment();
+    const copyData = worldCopyDataset(copyContext);
+    for (const descriptor of descriptors) {
+      const r = regionByName[descriptor.region];
+      if (!r) continue;
+      frag.appendChild(createSvgElement('path', {
+        d: r.path,
+        class: descriptor.className,
+        fill: descriptor.fill,
+      }, {
+        region: descriptor.region,
+        project: descriptor.project,
+        ...copyData,
+      }));
+    }
+    return frag;
+  });
 }
-function createClaimLabelFragment(descriptors) {
-  const frag = document.createDocumentFragment();
-  for (const descriptor of descriptors) {
-    frag.appendChild(createSvgElement('text', {
-      class: 'claim-label',
-      x: descriptor.x,
-      y: descriptor.y,
-      textContent: descriptor.text,
-    }));
-  }
-  return frag;
+function createClaimLabelFragment(descriptors, {copyContexts=worldCopyContexts} = {}) {
+  return createProjectedCopyFragment(copyContexts, 'claim-label-copy', copyContext => {
+    const frag = document.createDocumentFragment();
+    const copyData = worldCopyDataset(copyContext);
+    for (const descriptor of descriptors) {
+      frag.appendChild(createSvgElement('text', {
+        class: 'claim-label',
+        x: descriptor.x,
+        y: descriptor.y,
+        textContent: descriptor.text,
+      }, {
+        region: descriptor.region,
+        ...copyData,
+      }));
+    }
+    return frag;
+  });
 }
 function replaceLayerChildrenForRenderKey(layer, keyStore, nextKey, buildChildren, statKey) {
   if (!layer) return false;
@@ -2258,6 +2304,7 @@ function clearClaimOverlayDom(renderContext = {}) {
   );
 }
 function renderMapOverlay(model, renderContext = {}) {
+  const copyContexts = renderContext.copyContexts || worldCopyContexts;
   setOverlayVisualState(model);
   applyMapVisualState(renderContext);
   const overlayDescriptors = claimOverlayPathDescriptors(model);
@@ -2265,18 +2312,18 @@ function renderMapOverlay(model, renderContext = {}) {
   replaceLayerChildrenForRenderKey(
     renderContext.claimOverlayLayer || gClaimOverlays,
     claimOverlayLayerRenderKeys,
-    claimOverlayPathRenderKey(model, overlayDescriptors),
-    () => createClaimOverlayPathFragment(overlayDescriptors),
+    claimOverlayPathRenderKey(model, overlayDescriptors, copyContexts),
+    () => createClaimOverlayPathFragment(overlayDescriptors, {copyContexts}),
     'claimOverlayDomReplacements'
   );
   replaceLayerChildrenForRenderKey(
     renderContext.claimLabelLayer || gClaimLabels,
     claimLabelLayerRenderKeys,
-    claimLabelRenderKey(model, labelDescriptors),
-    () => createClaimLabelFragment(labelDescriptors),
+    claimLabelRenderKey(model, labelDescriptors, copyContexts),
+    () => createClaimLabelFragment(labelDescriptors, {copyContexts}),
     'claimLabelDomReplacements'
   );
-  renderCapitalMarkers();
+  renderCapitalMarkers({copyContexts});
 }
 function renderClaimSummaryPill(model) {
   document.getElementById('claimPill').textContent = t('pill.claimSummary', {
