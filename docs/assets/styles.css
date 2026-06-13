@@ -48,21 +48,55 @@
   .pill.warn { border-color:rgba(255,180,168,.25); color:#ffd0c8; }
   .pill.selected { border-color:rgba(255,247,184,.42); color:#fff7b8; background:rgba(255,247,184,.11); font-weight:700; }
   .svgwrap { position:relative; flex:1; overflow:hidden; }
+
+  .mapViewControls {
+    position:absolute;
+    z-index:6;
+    top:12px;
+    right:12px;
+    display:flex;
+    gap:6px;
+    align-items:center;
+    pointer-events:auto;
+  }
+  .mapViewControl {
+    width:auto;
+    min-width:34px;
+    height:32px;
+    padding:5px 10px;
+    border-radius:999px;
+    background:rgba(11,16,32,.82);
+    border:1px solid rgba(255,255,255,.18);
+    color:#e8eefc;
+    font-weight:800;
+    box-shadow:0 6px 18px rgba(0,0,0,.26);
+  }
+  .mapViewControl:hover {
+    background:rgba(34,48,82,.92);
+    border-color:rgba(145,183,255,.38);
+  }
+  .mapViewControlReset {
+    font-size:12px;
+    font-weight:700;
+  }
   svg { width:100%; height:100%; display:block; background: radial-gradient(circle at 50% 45%,#172033 0%,#0b1020 70%); }
+  svg.world-wrap-enabled { cursor:grab; touch-action:none; user-select:none; }
+  svg.world-wrap-enabled.is-panning { cursor:grabbing; }
   .graticule { stroke:rgba(255,255,255,.08); stroke-width:.006; fill:none; vector-effect:non-scaling-stroke; }
   .region { stroke:rgba(8,13,24,.82); stroke-width:.006; vector-effect:non-scaling-stroke; transition:filter .08s, opacity .08s, stroke-width .08s; cursor:pointer; }
-  .region:hover { filter:brightness(1.45); stroke:white; stroke-width:.012; }
+  .region:hover, .region.hovered { filter:brightness(1.45); stroke:white; stroke-width:.012; }
   .region.dimmed { opacity:.18; }
   .region.owned-highlight { stroke:white; stroke-width:.016; filter:brightness(1.55); opacity:1; }
   .region.selected { stroke:#fff; stroke-width:.02; filter:brightness(1.75); }
-  .region.hidden { display:none; }
-  svg:has(#claimOverlays .claim-overlay) .region { opacity:1; filter:saturate(.42) brightness(.62); }
-  svg:has(#claimOverlays .claim-overlay) .region.dimmed { opacity:1; filter:saturate(.18) brightness(.38); }
-  svg:has(#claimOverlays .claim-overlay) .region.owned-highlight { fill:transparent; opacity:.82; filter:none; }
-  svg:has(#claimOverlays .claim-overlay) .region.selected { opacity:1; filter:saturate(.55) brightness(.78); }
-  svg:has(#claimOverlays .claim-overlay) .region:hover { filter:saturate(.6) brightness(.82); }
+  .region.hidden, .region-hit.hidden { display:none; }
+  .region-hit { fill:transparent; stroke:none; pointer-events:fill; cursor:pointer; }
+  svg.claims-active .region { opacity:1; filter:saturate(.42) brightness(.62); }
+  svg.claims-active .region.dimmed { opacity:1; filter:saturate(.18) brightness(.38); }
+  svg.claims-active .region.claim-target, svg.claims-active .region.owned-highlight { fill:transparent; opacity:.82; filter:none; }
+  svg.claims-active .region.selected { opacity:1; filter:saturate(.55) brightness(.78); }
+  svg.claims-active .region:hover, svg.claims-active .region.hovered { filter:saturate(.6) brightness(.82); }
   .claim-overlay { pointer-events:none; stroke:rgba(255,255,255,.55); stroke-width:.012; vector-effect:non-scaling-stroke; mix-blend-mode:screen; }
-  svg:has(#claimOverlays .claim-overlay) .claim-overlay { mix-blend-mode:normal; filter:saturate(1.45) brightness(1.35); }
+  svg.claims-active .claim-overlay { mix-blend-mode:normal; filter: none; opacity: 1;}
   .claim-overlay.peaceful { stroke:#9ee7ff; stroke-width:.015; }
   .claim-overlay.hostile { stroke:var(--hostile); stroke-width:.023; }
   .claim-overlay.capital { stroke-dasharray:.035 .018; stroke-width:.027; }
@@ -90,6 +124,15 @@
   .foreign-hover-base { stroke:rgba(255,251,235,.68); stroke-width:.014; }
   .foreign-hover-basic,
   .foreign-hover-research { stroke:rgba(255,245,226,.46); }
+  .foreign-hover-overlay.secondary-capital-preview {
+    stroke:rgba(255,255,255,.78);
+    stroke-width:.014;
+    stroke-dasharray:.032 .018;
+  }
+  .foreign-hover-base.secondary-capital-preview {
+    stroke:rgba(255,251,214,.88);
+    stroke-width:.018;
+  }
   .selection-fill { pointer-events:none; fill:oklch(0.86 0.17 95 / .26); stroke:none; mix-blend-mode:screen; }
   .selection-outline-glow { pointer-events:none; fill:none; stroke:oklch(0.87 0.18 92 / .92); stroke-width:.082; vector-effect:non-scaling-stroke; }
   .selection-outline { pointer-events:none; fill:none; stroke:white; stroke-width:.034; vector-effect:non-scaling-stroke; }
@@ -139,16 +182,30 @@
   .claimListItem { width:100%; display:flex; flex-direction:column; gap:6px; align-items:stretch; text-align:left; padding:7px 9px; border-radius:9px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); color:var(--text); font:inherit; }
   .claimListItem:hover { background:rgba(255,255,255,.08); border-color:rgba(145,183,255,.28); }
   .claimListItem.active { background:rgba(145,183,255,.14); border-color:rgba(145,183,255,.42); }
-  .claimCardTitle { display:grid; grid-template-columns:minmax(0,1fr) min-content; column-gap:4px; row-gap:5px; width:100%; align-items:stretch; }
+  .claimCardTitle { display:grid; grid-template-columns:minmax(0,1fr) max-content; column-gap:6px; row-gap:5px; width:100%; align-items:stretch; }
   .claimCardTitleField { min-width:0; display:flex; flex-direction:column; gap:1px; padding:4px 6px; border-radius:7px; background:rgba(15,23,42,.32); border:1px solid rgba(255,255,255,.06); }
   .claimCardTitleField--nation { grid-column:1; grid-row:1; }
-  .claimCardTitleField--research { grid-column:2; grid-row:1; align-items:flex-end; text-align:right; min-width:1.75rem; max-width:2.15rem; padding-left:4px; padding-right:4px; }
+  .claimCardTitleField--research { grid-column:2; grid-row:1; align-items:center; text-align:center; min-width:3rem; padding-left:6px; padding-right:6px; }
   .claimCardTitleField--project { grid-column:1 / -1; grid-row:2; }
   .claimCardTitleLabel { color:var(--muted); font-size:9.5px; font-weight:700; line-height:1.1; letter-spacing:.01em; }
   .claimCardTitleValue { min-width:0; color:var(--text); font-size:12.5px; line-height:1.28; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .claimCardTitleField--research .claimCardTitleLabel, .claimCardTitleField--research .claimCardTitleValue { white-space:nowrap; }
   .claimCardTitleField--research .claimCardTitleValue { font-size:12px; line-height:1.15; }
   .claimCardTitleField--nation .claimCardTitleValue, .claimCardTitleField--project .claimCardTitleValue { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; white-space:normal; }
   .claimListMeta { color:var(--muted); font-size:12px; }
   .muted { color:var(--muted); }
   .hint { color:#cbd5e1; font-size:12px; margin-top:8px; }
   @media (max-width:1000px) { .app { grid-template-columns:1fr; height:auto; } aside { border-right:0; border-bottom:1px solid rgba(255,255,255,.08); } main { height:72vh; } }
+
+/* Prevent accidental SVG text/label selection during map interaction. */
+svg text,
+svg .label,
+svg .claim-label,
+svg .region-label,
+svg .capital-label,
+svg .selection-label,
+svg.is-panning,
+svg.is-panning * {
+  -webkit-user-select: none;
+  user-select: none;
+}

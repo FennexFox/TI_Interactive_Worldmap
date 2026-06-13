@@ -9,6 +9,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 INLINE_DATA_COMMENT_RE = re.compile(r"(^|\s)//")
+JS_IMPORT_RE = re.compile(r"import\s+(?:[^;]*?\s+from\s+)?[\"'](\.[^\"']+)[\"']\s*;", re.DOTALL)
+EXPECTED_MODULE_ASSETS = (
+    "docs/assets/app.js",
+    "docs/assets/state/app-state.js",
+    "docs/assets/state/map-visual-state.js",
+    "docs/assets/data/active-data.js",
+    "docs/assets/data/derived-indices.js",
+    "docs/assets/render/map-layers.js",
+)
 
 
 def strings_with_inline_comments(value: object, path: str = "$", limit: int = 5) -> list[str]:
@@ -41,6 +50,31 @@ def load_json(path: Path, label: str) -> object:
     except json.JSONDecodeError as exc:
         require(False, f"{label} is not valid JSON: {exc}")
     raise AssertionError("unreachable")
+
+
+def verify_relative_js_imports(entry: Path, module_root: Path) -> None:
+    root = module_root.resolve()
+    stack = [entry.resolve()]
+    visited: set[Path] = set()
+    while stack:
+        path = stack.pop()
+        if path in visited:
+            continue
+        visited.add(path)
+        try:
+            path.relative_to(root)
+        except ValueError:
+            require(False, f"module import escapes docs/assets: {path}")
+        require(path.exists(), f"module file missing: {path.relative_to(ROOT)}")
+        text = path.read_text(encoding="utf-8")
+        for match in JS_IMPORT_RE.finditer(text):
+            target = (path.parent / match.group(1)).resolve()
+            try:
+                target.relative_to(root)
+            except ValueError:
+                require(False, f"relative import escapes docs/assets: {match.group(1)} in {path.relative_to(ROOT)}")
+            require(target.exists(), f"relative import target missing: {match.group(1)} in {path.relative_to(ROOT)}")
+            stack.append(target)
 
 
 def object_value(value: object) -> dict[str, object]:
@@ -77,6 +111,9 @@ def region_by_name(region_map: dict[str, object], name: str) -> dict[str, object
 def main() -> int:
     require((ROOT / "docs/index.html").exists(), "docs/index.html missing")
     require((ROOT / "docs/assets/data.generated.js").exists(), "generated JS data missing")
+    for module_asset in EXPECTED_MODULE_ASSETS:
+        require((ROOT / module_asset).exists(), f"{module_asset} missing")
+    verify_relative_js_imports(ROOT / "docs/assets/app.js", ROOT / "docs/assets")
     require((ROOT / "docs/data/nations.catalog.json").exists(), "docs nation catalog missing")
     require((ROOT / "docs/data/research.catalog.json").exists(), "docs research catalog missing")
     region = object_value(load_json(ROOT / "data/generated/region_map.generated.json", "region map JSON"))

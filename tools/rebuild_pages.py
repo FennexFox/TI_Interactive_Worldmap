@@ -24,6 +24,9 @@ GENERATED_PATHS = (
     "docs/data/claim_map.generated.json",
     "docs/assets/data.generated.js",
     "docs/assets/app.js",
+    "docs/assets/state",
+    "docs/assets/data",
+    "docs/assets/render",
     "docs/assets/styles.css",
     "docs/index.html",
 )
