@@ -2331,7 +2331,7 @@ function claimLabelDescriptors(model) {
       region: labelRegion.regionName,
       x: lab.x,
       y: lab.y,
-      text: projectDisplay(entry.project).slice(0, 18),
+      text: entry.project ? projectDisplay(entry.project) : t('claimCard.projectBaseline'),
     });
   });
   return descriptors;
