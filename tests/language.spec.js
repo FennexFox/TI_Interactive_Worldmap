@@ -22,6 +22,12 @@ async function hoverRegionWithMouse(page, regionName) {
   await regionTarget(page, regionName).hover();
 }
 
+async function waitForHoverPreviewFrame(page) {
+  await page.evaluate(() => new Promise(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  }));
+}
+
 async function blankMapPoint(page) {
   return page.evaluate(() => {
     const map = document.querySelector('#map');
@@ -251,6 +257,38 @@ test('settled same-nation hover preview uses bounded visual updates', async ({ p
   expect(stats.overlayModelBuilds).toBe(0);
   expect(stats.visiblePathsTouched).toBeLessThanOrEqual(2);
   expect(stats.hitPathsTouched).toBeLessThanOrEqual(2);
+});
+
+test('border hover preview updates next frame and reuses cached descriptors', async ({ page }) => {
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await hoverRegion(page, 'Bolivia');
+  await waitForHoverPreviewFrame(page);
+  await expect(page.locator('#hoverPill')).toContainText('BOL');
+  await expect(page.locator('#claimPill')).toContainText('Bolivia');
+  await expect(page.locator('#claimOverlays .claim-overlay')).not.toHaveCount(0);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await hoverRegion(page, 'Amazonia');
+  await waitForHoverPreviewFrame(page);
+  await expect(page.locator('#hoverPill')).toContainText('BRA');
+  await expect(page.locator('#claimPill')).toContainText('Brazil');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
+
+  await hoverRegion(page, 'Bolivia');
+  await waitForHoverPreviewFrame(page);
+  await expect(page.locator('#hoverPill')).toContainText('BOL');
+  await expect(page.locator('#claimPill')).toContainText('Bolivia');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Bolivia"]')).toHaveCount(1);
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelBuilds).toBeGreaterThan(0);
+  expect(stats.overlayModelCacheHits).toBeGreaterThan(0);
+  expect(stats.claimOverlayDescriptorBuilds).toBeGreaterThan(0);
+  expect(stats.claimOverlayDescriptorCacheHits).toBeGreaterThan(0);
+  expect(stats.claimLabelDescriptorBuilds).toBeGreaterThan(0);
+  expect(stats.claimLabelDescriptorCacheHits).toBeGreaterThan(0);
 });
 
 test('overlay model cache reuses unchanged inputs and misses changed filters', async ({ page }) => {

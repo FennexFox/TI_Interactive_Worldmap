@@ -142,6 +142,12 @@ function createDebugRenderStats() {
     'hitPathsTouched',
     'overlayModelBuilds',
     'overlayModelCacheHits',
+    'claimOverlayDescriptorBuilds',
+    'claimOverlayDescriptorCacheHits',
+    'claimLabelDescriptorBuilds',
+    'claimLabelDescriptorCacheHits',
+    'foreignHoverDescriptorBuilds',
+    'foreignHoverDescriptorCacheHits',
     'claimOverlayDomReplacements',
     'claimLabelDomReplacements',
     'hoverOutlineReplacements',
@@ -575,7 +581,12 @@ const nationChoiceByValue = new Map();
 const incomingClaimsByRegion = derivedIndices.incomingClaimsByRegion;
 const regionCenterCache = new Map();
 const OVERLAY_MODEL_CACHE_LIMIT = 256;
+const OVERLAY_DESCRIPTOR_CACHE_LIMIT = 256;
+const FOREIGN_HOVER_DESCRIPTOR_CACHE_LIMIT = 128;
 const overlayModelCache = new Map();
+const claimOverlayDescriptorCache = new Map();
+const claimLabelDescriptorCache = new Map();
+const foreignHoverDescriptorCache = new Map();
 const CLAIM_OVERLAY_EMPTY_RENDER_KEY = 'claim-overlay-paths:empty';
 const CLAIM_LABEL_EMPTY_RENDER_KEY = 'claim-labels:empty';
 const FOREIGN_HOVER_EMPTY_RENDER_KEY = 'foreign-hover:empty';
@@ -585,6 +596,28 @@ const claimLabelLayerRenderKeys = new WeakMap();
 const MAP_PAN_DRAG_THRESHOLD_PX = 4;
 const MAP_ZOOM_BUTTON_FACTOR = 1.25;
 const MAP_WHEEL_ZOOM_FACTOR = 1.18;
+
+function pruneLruCache(cache, limit) {
+  while (cache.size > limit) {
+    const oldestKey = cache.keys().next().value;
+    cache.delete(oldestKey);
+  }
+}
+
+function getCachedLruValue(cache, key, hitStatKey) {
+  if (!cache.has(key)) return null;
+  const value = cache.get(key);
+  cache.delete(key);
+  cache.set(key, value);
+  recordRenderStat(hitStatKey);
+  return value;
+}
+
+function setCachedLruValue(cache, key, value, limit) {
+  cache.set(key, value);
+  pruneLruCache(cache, limit);
+  return value;
+}
 
 function setActiveNationState(nation = '') {
   setSelectedNation(appState, nation);
@@ -1259,14 +1292,7 @@ function resetTransientClaimState() {
   projectSel.value = '';
   if (claimModeSel.value === 'project') claimModeSel.value = 'all';
 }
-const HOVER_PREVIEW_DELAY_MS = 80;
-let hoverPreviewTimer = 0;
-
 function cancelPendingHoverPreview() {
-  if (hoverPreviewTimer) {
-    window.clearTimeout(hoverPreviewTimer);
-    hoverPreviewTimer = 0;
-  }
   if (hoverPreviewFrame) {
     window.cancelAnimationFrame(hoverPreviewFrame);
     hoverPreviewFrame = 0;
@@ -1286,17 +1312,13 @@ function scheduleHoverPreviewNation(nation) {
   const nextNation = nation || '';
   if (getHoverNation() === nextNation && getActiveNation() === nextNation) return;
   pendingHoverNation = nextNation;
-  if (hoverPreviewTimer) window.clearTimeout(hoverPreviewTimer);
-  hoverPreviewTimer = window.setTimeout(() => {
-    hoverPreviewTimer = 0;
-    if (hoverPreviewFrame) return;
-    hoverPreviewFrame = window.requestAnimationFrame(() => {
-      hoverPreviewFrame = 0;
-      const next = pendingHoverNation;
-      pendingHoverNation = '';
-      if (!getLockedNation() && next) setHoverPreviewNation(next);
-    });
-  }, HOVER_PREVIEW_DELAY_MS);
+  if (hoverPreviewFrame) return;
+  hoverPreviewFrame = window.requestAnimationFrame(() => {
+    hoverPreviewFrame = 0;
+    const next = pendingHoverNation;
+    pendingHoverNation = '';
+    if (!getLockedNation() && next) setHoverPreviewNation(next);
+  });
 }
 function clearHoverPreview() {
   cancelPendingHoverPreview();
@@ -1472,21 +1494,36 @@ function appendForeignHoverRegion(frag, region, className, attrs={}, copyContext
   }, {id: null, nation: null, ...dataAttrs, ...worldCopyDataset(copyContext)});
   frag.appendChild(p);
 }
-function queueForeignHoverRegion(candidates, region, className, attrs={}) {
+function queueForeignHoverDescriptor(candidates, region, className, attrs={}) {
   if (!region?.path) return;
   const fillOpacity = attrs.fillOpacity ?? HOVER_NATION_BASE_TERRITORY_OPACITY;
   const existing = candidates.get(region.regionName);
   if (existing && existing.fillOpacity >= fillOpacity) return;
-  candidates.set(region.regionName, {region, className, attrs:{...attrs, fillOpacity}, fillOpacity});
+  candidates.set(region.regionName, {
+    region: region.regionName,
+    className,
+    attrs: {...attrs, fillOpacity},
+    fillOpacity,
+  });
 }
-function appendForeignHoverNationOverlay(frag, nation, copyContext = defaultWorldCopyContext()) {
-  if (!nation || claimModeSel.value === 'off') return;
+function foreignHoverDescriptorCacheKey(nation) {
+  return JSON.stringify({
+    scenario: appState.activeScenarioId || appData.defaultScenario || '',
+    data: overlayModelDataVersionKey(activeData, derivedIndices),
+    nation: nation || '',
+    claimMode: claimModeSel.value || '',
+    claimKind: claimKindSel.value || '',
+  });
+}
+function buildForeignHoverOverlayDescriptorSet(nation, cacheKey) {
+  recordRenderStat('foreignHoverDescriptorBuilds');
+  if (!nation || claimModeSel.value === 'off') return {cacheKey, descriptors: []};
   const data = CLAIMS_BY_NATION[nation] || {nation, baseRegions:nationRegions.get(nation)||[], projects:[]};
   const baseSet = new Set(data.baseRegions || nationRegions.get(nation) || []);
   const tierByProject = countryProjectTierMap(nation, baseSet);
   const candidates = new Map();
   for (const rn of baseSet) {
-    queueForeignHoverRegion(
+    queueForeignHoverDescriptor(
       candidates,
       regionByName[rn],
       'foreign-hover-overlay foreign-hover-base',
@@ -1500,7 +1537,7 @@ function appendForeignHoverNationOverlay(frag, nation, copyContext = defaultWorl
     const fillOpacity = hoverNationProjectOpacity(entry.project, tier);
     const tierLabel = entry.project ? String(tier + 1) : 'basic';
     for (const rn of visibleClaimRegions) {
-      queueForeignHoverRegion(
+      queueForeignHoverDescriptor(
         candidates,
         regionByName[rn],
         `foreign-hover-overlay ${entry.project ? 'foreign-hover-research' : 'foreign-hover-basic'}`,
@@ -1508,8 +1545,25 @@ function appendForeignHoverNationOverlay(frag, nation, copyContext = defaultWorl
       );
     }
   }
-  for (const item of candidates.values()) {
-    appendForeignHoverRegion(frag, item.region, item.className, item.attrs, copyContext);
+  return {
+    cacheKey,
+    descriptors: [...candidates.values()],
+  };
+}
+function getForeignHoverOverlayDescriptorSet(nation) {
+  const cacheKey = foreignHoverDescriptorCacheKey(nation);
+  const cached = getCachedLruValue(foreignHoverDescriptorCache, cacheKey, 'foreignHoverDescriptorCacheHits');
+  if (cached) return cached;
+  return setCachedLruValue(
+    foreignHoverDescriptorCache,
+    cacheKey,
+    buildForeignHoverOverlayDescriptorSet(nation, cacheKey),
+    FOREIGN_HOVER_DESCRIPTOR_CACHE_LIMIT
+  );
+}
+function appendForeignHoverNationOverlay(frag, descriptorSet, copyContext = defaultWorldCopyContext()) {
+  for (const descriptor of descriptorSet?.descriptors || []) {
+    appendForeignHoverRegion(frag, regionByName[descriptor.region], descriptor.className, descriptor.attrs, copyContext);
   }
 }
 function replaceForeignHoverOverlayForKey(nextKey, buildChildren, {force=false} = {}) {
@@ -1532,8 +1586,9 @@ function renderHoverOutlines({force=false, copyContexts=worldCopyContexts} = {})
   const hidden = !rn || selectedRegionIds.has(rn) || !r;
   const foreign = !hidden && shouldShowForeignHoverNationOverlay(r);
   const copyKey = copyContextRenderKey(copyContexts);
+  const foreignDescriptorSet = foreign ? getForeignHoverOverlayDescriptorSet(r.nationTag) : null;
   const foreignKey = foreign
-    ? `${copyKey}|foreign|${r.nationTag}|${claimModeSel.value}|${claimKindSel.value}|${getLockedNation() || getActiveNation()}|${visibleNationRegionNames.has(rn) ? 1 : 0}`
+    ? `${copyKey}|foreign|${foreignDescriptorSet.cacheKey}|${getLockedNation() || getActiveNation()}|${visibleNationRegionNames.has(rn) ? 1 : 0}`
     : FOREIGN_HOVER_EMPTY_RENDER_KEY;
   const hoverKey = !hidden && !foreign
     ? `${copyKey}|region|${rn}|${getLockedNation() || getActiveNation()}|${selectedRegionIds.has(rn) ? 1 : 0}`
@@ -1542,7 +1597,7 @@ function renderHoverOutlines({force=false, copyContexts=worldCopyContexts} = {})
     if (!foreign) return document.createDocumentFragment();
     return createProjectedCopyFragment(copyContexts, 'foreign-hover-copy', copyContext => {
       const frag = document.createDocumentFragment();
-      appendForeignHoverNationOverlay(frag, r.nationTag, copyContext);
+      appendForeignHoverNationOverlay(frag, foreignDescriptorSet, copyContext);
       return frag;
     });
   }, {force});
@@ -2228,20 +2283,12 @@ function buildOverlayModelCacheKey(activeData, indices, nationId, options = {}) 
   });
 }
 function pruneOverlayModelCache() {
-  while (overlayModelCache.size > OVERLAY_MODEL_CACHE_LIMIT) {
-    const oldestKey = overlayModelCache.keys().next().value;
-    overlayModelCache.delete(oldestKey);
-  }
+  pruneLruCache(overlayModelCache, OVERLAY_MODEL_CACHE_LIMIT);
 }
 function getNationOverlayModel(activeData, indices, nationId, options = {}) {
   const cacheKey = buildOverlayModelCacheKey(activeData, indices, nationId, options);
-  if (overlayModelCache.has(cacheKey)) {
-    const model = overlayModelCache.get(cacheKey);
-    overlayModelCache.delete(cacheKey);
-    overlayModelCache.set(cacheKey, model);
-    recordRenderStat('overlayModelCacheHits');
-    return model;
-  }
+  const cached = getCachedLruValue(overlayModelCache, cacheKey, 'overlayModelCacheHits');
+  if (cached) return cached;
   const model = buildNationOverlayModel(activeData, indices, nationId, options);
   overlayModelCache.set(cacheKey, model);
   pruneOverlayModelCache();
@@ -2257,6 +2304,23 @@ function overlayModelRenderDataKey(model) {
     project: getProjectFilter(),
     activeIncomingClaim: model?.activeIncomingClaimKey || '',
   };
+}
+function claimOverlayDescriptorCacheKey(model) {
+  return JSON.stringify({
+    kind: 'claim-overlay-path-descriptors',
+    ...overlayModelRenderDataKey(model),
+    selectedRegions: selectedRegionOverlayKey(),
+    options: model?.options?.cacheKey || '',
+  });
+}
+function claimLabelDescriptorCacheKey(model) {
+  return JSON.stringify({
+    kind: 'claim-label-descriptors',
+    ...overlayModelRenderDataKey(model),
+    selectedRegions: selectedRegionOverlayKey(),
+    options: model?.options?.cacheKey || '',
+    language: currentLanguage,
+  });
 }
 function buildNationOverlayModel(activeData, indices, nationId, options = {}) {
   recordRenderStat('overlayModelBuilds');
@@ -2361,23 +2425,44 @@ function claimLabelDescriptors(model) {
   });
   return descriptors;
 }
-function claimOverlayPathRenderKey(model, descriptors, copyContexts = worldCopyContexts) {
+function getClaimOverlayDescriptorSet(model) {
+  const cacheKey = claimOverlayDescriptorCacheKey(model);
+  const cached = getCachedLruValue(claimOverlayDescriptorCache, cacheKey, 'claimOverlayDescriptorCacheHits');
+  if (cached) return cached;
+  recordRenderStat('claimOverlayDescriptorBuilds');
+  return setCachedLruValue(
+    claimOverlayDescriptorCache,
+    cacheKey,
+    {cacheKey, descriptors: claimOverlayPathDescriptors(model)},
+    OVERLAY_DESCRIPTOR_CACHE_LIMIT
+  );
+}
+function getClaimLabelDescriptorSet(model) {
+  const cacheKey = claimLabelDescriptorCacheKey(model);
+  const cached = getCachedLruValue(claimLabelDescriptorCache, cacheKey, 'claimLabelDescriptorCacheHits');
+  if (cached) return cached;
+  recordRenderStat('claimLabelDescriptorBuilds');
+  return setCachedLruValue(
+    claimLabelDescriptorCache,
+    cacheKey,
+    {cacheKey, descriptors: claimLabelDescriptors(model)},
+    OVERLAY_DESCRIPTOR_CACHE_LIMIT
+  );
+}
+function claimOverlayPathRenderKey(model, descriptorSet, copyContexts = worldCopyContexts) {
   if (!model) return CLAIM_OVERLAY_EMPTY_RENDER_KEY;
   return JSON.stringify({
     kind: 'claim-overlay-paths',
     copyPlan: copyContextRenderKey(copyContexts),
-    ...overlayModelRenderDataKey(model),
-    descriptors,
+    descriptorKey: descriptorSet?.cacheKey || '',
   });
 }
-function claimLabelRenderKey(model, descriptors, copyContexts = worldCopyContexts) {
+function claimLabelRenderKey(model, descriptorSet, copyContexts = worldCopyContexts) {
   if (!model) return CLAIM_LABEL_EMPTY_RENDER_KEY;
   return JSON.stringify({
     kind: 'claim-labels',
     copyPlan: copyContextRenderKey(copyContexts),
-    ...overlayModelRenderDataKey(model),
-    language: currentLanguage,
-    descriptors,
+    descriptorKey: descriptorSet?.cacheKey || '',
   });
 }
 function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyContexts} = {}) {
@@ -2446,20 +2531,20 @@ function renderMapOverlay(model, renderContext = {}) {
   const copyContexts = renderContext.copyContexts || worldCopyContexts;
   setOverlayVisualState(model);
   applyMapVisualState(renderContext);
-  const overlayDescriptors = claimOverlayPathDescriptors(model);
-  const labelDescriptors = claimLabelDescriptors(model);
+  const overlayDescriptorSet = getClaimOverlayDescriptorSet(model);
+  const labelDescriptorSet = getClaimLabelDescriptorSet(model);
   replaceLayerChildrenForRenderKey(
     renderContext.claimOverlayLayer || gClaimOverlays,
     claimOverlayLayerRenderKeys,
-    claimOverlayPathRenderKey(model, overlayDescriptors, copyContexts),
-    () => createClaimOverlayPathFragment(overlayDescriptors, {copyContexts}),
+    claimOverlayPathRenderKey(model, overlayDescriptorSet, copyContexts),
+    () => createClaimOverlayPathFragment(overlayDescriptorSet.descriptors, {copyContexts}),
     'claimOverlayDomReplacements'
   );
   replaceLayerChildrenForRenderKey(
     renderContext.claimLabelLayer || gClaimLabels,
     claimLabelLayerRenderKeys,
-    claimLabelRenderKey(model, labelDescriptors, copyContexts),
-    () => createClaimLabelFragment(labelDescriptors, {copyContexts}),
+    claimLabelRenderKey(model, labelDescriptorSet, copyContexts),
+    () => createClaimLabelFragment(labelDescriptorSet.descriptors, {copyContexts}),
     'claimLabelDomReplacements'
   );
   renderCapitalMarkers({copyContexts});
@@ -2542,10 +2627,10 @@ function bindNationOverlayPanelEvents(panelRoot, model) {
 }
 function updateNationOverlay(nation) {
   setActiveNationState(nation);
-  clearOverlayVisualState();
-  applyMapVisualState();
   updateProjectOptions(getActiveNation());
   if (!getActiveNation()) {
+    clearOverlayVisualState();
+    applyMapVisualState();
     visibleNationRegionNames = new Set();
     clearClaimOverlayDom({claimOverlayLayer: gClaimOverlays, claimLabelLayer: gClaimLabels});
     nationInfo.textContent = t('nationInfo.empty');

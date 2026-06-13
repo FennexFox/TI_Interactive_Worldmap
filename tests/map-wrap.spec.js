@@ -23,8 +23,20 @@ async function waitForWrappedMap(page, path = '/') {
   await expect(page.locator('body')).not.toContainText('Failed to load generated Terra Invicta map data.');
 }
 
+async function waitForHoverPreviewFrame(page) {
+  await page.evaluate(() => new Promise(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  }));
+}
+
 function regionHit(page, regionName) {
   return page.locator(`#hitRegions .region-hit[data-region="${regionName}"]`);
+}
+
+async function hoverWrappedRegion(page, regionName, copy = '0') {
+  const target = page.locator(`#hitRegions .region-hit[data-region="${regionName}"][data-wrap-copy="${copy}"]`);
+  await target.dispatchEvent('pointerover', { bubbles: true, clientX: 120, clientY: 120, pointerType: 'mouse' });
+  await target.dispatchEvent('pointermove', { bubbles: true, clientX: 126, clientY: 126, pointerType: 'mouse' });
 }
 
 async function expectProjectedCopies(locator, copies = ['-1', '0', '1']) {
@@ -335,6 +347,31 @@ test('world-wrap default projects claim overlays and markers without pan churn',
   expect(stats.hoverOutlineReplacements).toBe(0);
   expect(stats.foreignHoverOverlayReplacements).toBe(0);
   expect(stats.capitalMarkerRebuilds).toBe(0);
+});
+
+test('world-wrap default hover claim overlays reuse cached descriptors across borders', async ({ page }) => {
+  await waitForWrappedMap(page, '/?debugRenderStats=1');
+
+  await hoverWrappedRegion(page, 'Amazonia');
+  await waitForHoverPreviewFrame(page);
+  await expect(page.locator('#claimPill')).toContainText('Brazil');
+  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await hoverWrappedRegion(page, 'Bolivia');
+  await waitForHoverPreviewFrame(page);
+  await expect(page.locator('#claimPill')).toContainText('Bolivia');
+  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Bolivia"]'));
+
+  await hoverWrappedRegion(page, 'Amazonia');
+  await waitForHoverPreviewFrame(page);
+  await expect(page.locator('#claimPill')).toContainText('Brazil');
+  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelCacheHits).toBeGreaterThan(0);
+  expect(stats.claimOverlayDescriptorCacheHits).toBeGreaterThan(0);
+  expect(stats.claimLabelDescriptorCacheHits).toBeGreaterThan(0);
 });
 
 test('world-wrap default projects hover, selection, and foreign hover overlays', async ({ page }) => {
