@@ -66,30 +66,103 @@ npm run test:e2e
 
 ## Progress
 
-- [ ] Deferred scope reviewed after implementation.
-- [ ] Future issue boundaries drafted.
-- [ ] Temporary constraints documented.
-- [ ] Stale plan notes removed or updated.
+- [x] Deferred scope reviewed after implementation.
+- [x] Future issue boundaries drafted.
+- [x] Temporary constraints documented.
+- [x] Stale plan notes removed or updated.
 
 ## Decision Log
 
 - Decision: Keep post-MVP scope visible but outside the issue #2 acceptance gate.
 - Decision: Split future work by module and user-facing behavior, not by vague theme.
+- Decision: Keep `?worldWrap=0` documented as a rollback/debug fallback, not as a separate user-facing mode.
+- Decision: Treat fixed three-copy rendering as sufficient for the MVP because zoom and viewport-aware copy counts are not part of issue #2.
+- Decision: Keep future work issue-ready in this document rather than creating GitHub issues during this phase.
 
 ## Outcomes
 
-Pending implementation.
+- Reviewed the completed issue #2 implementation and confirmed no follow-up work blocks the MVP.
+- Updated `00-master-plan.md` with the final MVP state and canonical-selector invariant.
+- Grouped future scope by owner boundary and likely affected modules.
+- Documented temporary constraints: fixed three-copy renderer, no zoom, no inertia, no keyboard or touch polish beyond pointer drag, no scenario switching, and no general antimeridian preprocessing.
+- Validation for this documentation-only phase: `git status --short --branch` and `git diff --check`.
+- Manual smoke reuse: Phase 08 default-route smoke already covered the final implementation after source changes; no additional app behavior changed in this phase.
 
-## Follow-up Candidates
+## Follow-up Issue Notes
 
-- Scenario switching: generate and load `2022`, `2026`, and `2070` data, add scenario selector UI, and rebuild derived indices on scenario changes.
-- Globe view: separate 3D projection, hit testing, labels, and overlay rendering from the flat map.
-- Zoom support: define min/max zoom, viewport-aware copy count, and focus-region behavior.
-- Keyboard and touch panning: arrow keys, touch drag, pinch prevention or support, and accessibility affordances.
-- Inertial panning: kinetic motion after drag release, with strict normalization and cancel rules.
-- Focus-region camera movement: update the existing `focusRegions` TODOs so search and side-panel selections keep regions visible.
-- Overlay performance: compound paths, nation-level path caches, dirty layer scheduling, and offscreen copy culling.
-- Antimeridian preprocessing: general split or normalization if targeted region fixes become brittle.
-- Visual polish: cursor states, subtle edge continuity hints, and optional reset-view control.
-- Test coverage expansion: visual screenshot checks for seam candidates and performance assertions for pan without overlay rebuilds.
+### Scenario Switching
 
+- Goal: Generate and load multiple scenario datasets such as `2022`, `2026`, and `2070`.
+- Scope: Scenario selector UI, active data reload, derived-index rebuilds, selected-state reset or migration rules, and generated catalog naming.
+- Likely files: `src/data/active-data.js`, `src/data/derived-indices.js`, `src/app.js`, `tools/build_pages.py`, catalog builders, and generated `docs/data/**`.
+- Validation: Unit tests for active scenario resolution and E2E tests for switching while overlays, labels, and wrap panning are active.
+
+### Save-File Data Import
+
+- Goal: Support user-provided Terra Invicta save-derived state without changing the static Pages MVP.
+- Scope: Input format, parsing, validation, merge rules with generated templates, and privacy handling.
+- Likely files: new tools under `tools/**`, source data documentation, and possibly a separate local-only UI flow.
+- Validation: Parser fixtures, malformed input tests, and explicit no-network/static-site checks.
+
+### Globe View
+
+- Goal: Add an optional 3D globe or alternate projection.
+- Scope: Separate projection math, camera, hit testing, labels, overlays, and antimeridian handling from the flat map renderer.
+- Likely files: new render modules under `src/render/**`, new state for globe camera, and separate E2E/visual tests.
+- Validation: Browser screenshots, interaction tests for globe picking, and regression tests proving flat wrap still works.
+
+### Zoom Support
+
+- Goal: Add bounded zoom while preserving horizontal wrapping.
+- Scope: Min/max zoom, wheel or button controls, viewBox scaling, viewport-aware copy counts, label density, and reset-view behavior.
+- Likely files: `src/state/map-view-state.js`, `src/app.js`, `src/render/map-layers.js`, `src/styles.css`, and `tests/map-wrap.spec.js`.
+- Validation: Unit tests for zoom normalization, E2E tests for copied hit alignment at min/max zoom, and manual smoke on desktop and narrow viewports.
+
+### Keyboard And Touch Panning
+
+- Goal: Make panning usable beyond mouse drag.
+- Scope: Arrow-key panning, touch drag, pointer-type handling, pinch prevention or zoom integration, focus management, and accessible control labels.
+- Likely files: `src/app.js`, `src/styles.css`, and Playwright input tests.
+- Validation: Keyboard E2E, touch emulation tests, and checks that click selection is not suppressed after non-drag input.
+
+### Inertial Panning
+
+- Goal: Add kinetic continuation after drag release.
+- Scope: Velocity tracking, animation cancellation, normalization during animation, reduced-motion behavior, and interaction handoff.
+- Likely files: `src/state/map-view-state.js`, `src/app.js`, and tests for animation bounds.
+- Validation: Deterministic unit tests for velocity/normalization helpers and E2E tests using mocked animation frames.
+
+### Focus-Region Camera Movement
+
+- Goal: Make search and side-panel selections pan the map to visible wrapped copies.
+- Scope: Implement the existing focus-region TODOs, choose nearest visible copy, avoid fighting user pan state, and keep selected overlays canonical.
+- Likely files: `src/app.js`, `src/state/map-view-state.js`, and `tests/map-wrap.spec.js`.
+- Validation: E2E tests selecting regions near the seam and checking the chosen copy remains visible.
+
+### Overlay Performance
+
+- Goal: Reduce DOM and layout cost if wrapped overlays become slow with larger datasets or zoom.
+- Scope: Compound paths, nation-level overlay caches, dirty layer scheduling, offscreen copy culling, and copy-aware render keys.
+- Likely files: `src/app.js`, `src/render/map-layers.js`, `src/state/map-visual-state.js`, and debug-stat tests.
+- Validation: Debug render stats, focused E2E interaction loops, and optional browser performance trace comparison.
+
+### Antimeridian Preprocessing
+
+- Goal: Generalize geometry splitting if future generated data introduces single subpaths that cross most of the world width.
+- Scope: Region outline normalization, generated-data tests, migration notes, and visual verification of affected regions.
+- Likely files: `tools/build_region_outline_data.py`, `tools/extract_region_outlines.py`, generated map data, and Python tests.
+- Validation: Path-span unit tests, generated-output verification, and E2E seam candidate interaction tests.
+
+### Visual Polish
+
+- Goal: Refine wrap affordances without changing core mechanics.
+- Scope: Reset-view control, subtle copy continuity hints, cursor polish, hover tooltip placement while panned, and optional current-offset diagnostics.
+- Likely files: `src/app.js`, `src/styles.css`, and user-facing E2E tests.
+- Validation: Manual desktop/mobile smoke and screenshot comparison if visual assets are introduced.
+
+### Test Coverage Expansion
+
+- Goal: Add heavier regression coverage after the MVP is stable.
+- Scope: Seam candidate screenshots, canvas/pixel checks if rendering moves beyond SVG DOM assertions, performance assertions for pan without overlay rebuilds, and mobile viewport coverage.
+- Likely files: `tests/**`, `playwright.config.js`, and optional image snapshots.
+- Validation: CI runtime review and clear snapshot update policy.

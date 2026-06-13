@@ -56,6 +56,12 @@ Preserve current review safety by staging the work:
 - [08 Enable Wrap and Performance Hardening](08-enable-wrap-and-performance-hardening.md)
 - [09 Post-MVP Follow-up Scope](09-post-mvp-follow-up-scope.md)
 
+## Final MVP State
+
+The issue #2 MVP enables flat horizontal world-wrap panning by default on `/`. The renderer creates left, canonical, and right world-copy instances while app state, derived indices, overlay models, and region/nation identifiers remain canonical. The explicit fallback query `?worldWrap=0` keeps the single-copy route available for rollback, debugging, and legacy single-copy assertions.
+
+The implementation intentionally keeps copy count fixed at three copies, preserves the original vertical view extent, and avoids adding zoom, inertia, keyboard/touch polish, scenario switching, a globe, or a general geospatial preprocessing layer.
+
 ## Review Invariants
 
 Every implementation phase should be reviewable on its own and leave the default app working.
@@ -69,6 +75,7 @@ Required invariants:
 - Hit paths and visible paths stay aligned for every visible copy.
 - Ordinary panning does not rebuild derived claim or nation indices.
 - Static GitHub Pages output in `docs/` is regenerated for source changes.
+- Tests or future code that need exactly one region path should select `data-wrap-canonical="1"` or use canonical registries instead of assuming one DOM path per region.
 
 ## Validation Cadence
 
@@ -101,4 +108,3 @@ These are intentionally outside the issue #2 MVP unless a later review explicitl
 - Nation-level compound path rendering and heavier overlay caching beyond what panning requires.
 - A general antimeridian preprocessing framework if targeted Terra Invicta fixes are enough for the MVP.
 - Accessibility help text or tutorial overlays beyond necessary cursor and focus affordances.
-
