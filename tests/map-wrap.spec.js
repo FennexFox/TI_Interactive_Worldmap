@@ -11,13 +11,13 @@ const SEAM_CANDIDATES = [
   'SakhalinKurils',
 ];
 
-async function waitForMap(page) {
-  await page.goto('/');
+async function waitForSingleCopyMap(page, path = '/?worldWrap=0') {
+  await page.goto(path);
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
   await expect(page.locator('body')).not.toContainText('Failed to load generated Terra Invicta map data.');
 }
 
-async function waitForWrappedMap(page, path = '/?worldWrap=1') {
+async function waitForWrappedMap(page, path = '/') {
   await page.goto(path);
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
   await expect(page.locator('body')).not.toContainText('Failed to load generated Terra Invicta map data.');
@@ -88,7 +88,7 @@ async function chooseNation(page, query, tag) {
 }
 
 test('baseline hit layer resolves one canonical region for hover and click', async ({ page }) => {
-  await waitForMap(page);
+  await waitForSingleCopyMap(page);
 
   const regionRegistry = await page.evaluate(() => {
     const hitRegions = [...document.querySelectorAll('#hitRegions .region-hit')]
@@ -133,7 +133,7 @@ test('baseline hit layer resolves one canonical region for hover and click', asy
 });
 
 test('baseline selected overlays stay canonical across hover and claim controls', async ({ page }) => {
-  await waitForMap(page);
+  await waitForSingleCopyMap(page);
 
   await chooseNation(page, 'Brazil', 'BRA');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
@@ -153,7 +153,7 @@ test('baseline selected overlays stay canonical across hover and claim controls'
   await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(14);
 });
 
-test('world-wrap review flag renders base, grid, label, and hit copies', async ({ page }) => {
+test('world-wrap default renders base, grid, label, and hit copies', async ({ page }) => {
   await waitForWrappedMap(page);
 
   await expect(page.locator('#regions .region-copy')).toHaveCount(3);
@@ -186,7 +186,7 @@ test('world-wrap review flag renders base, grid, label, and hit copies', async (
   await expect(page.locator('#labels .label[data-region="Amazonia"]')).toHaveCount(3);
 });
 
-test('world-wrap review flag resolves copied hit paths to canonical region state', async ({ page }) => {
+test('world-wrap default resolves copied hit paths to canonical region state', async ({ page }) => {
   await waitForWrappedMap(page);
 
   const copiedAmazonia = page.locator('#hitRegions .region-hit[data-region="Amazonia"][data-wrap-copy="-1"]');
@@ -202,7 +202,7 @@ test('world-wrap review flag resolves copied hit paths to canonical region state
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
 });
 
-test('world-wrap review flag applies search filtering to every copy without duplicating canonical state', async ({ page }) => {
+test('world-wrap default applies search filtering to every copy without duplicating canonical state', async ({ page }) => {
   await waitForWrappedMap(page);
 
   await page.locator('#search').fill('Amazonia');
@@ -224,7 +224,7 @@ test('world-wrap review flag applies search filtering to every copy without dupl
   expect(filterStats).toEqual({amazonia: 3, amazoniaHidden: 0, ontario: 3, ontarioHidden: 3});
 });
 
-test('world-wrap review panning updates viewBox and keeps horizontal offset bounded', async ({ page }) => {
+test('world-wrap default panning updates viewBox and keeps horizontal offset bounded', async ({ page }) => {
   await waitForWrappedMap(page);
 
   const baseViewBox = await mapViewBox(page);
@@ -258,7 +258,7 @@ test('world-wrap review panning updates viewBox and keeps horizontal offset boun
   expect(sawChangedX).toBe(true);
 });
 
-test('world-wrap review panning preserves click selection but suppresses drag selection', async ({ page }) => {
+test('world-wrap default panning preserves click selection but suppresses drag selection', async ({ page }) => {
   await waitForWrappedMap(page);
 
   const amazon = page.locator('#hitRegions .region-hit[data-region="Amazonia"][data-wrap-copy="0"]');
@@ -275,8 +275,8 @@ test('world-wrap review panning preserves click selection but suppresses drag se
   await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
 });
 
-test('world-wrap review projects claim overlays and markers without pan churn', async ({ page }) => {
-  await waitForWrappedMap(page, '/?worldWrap=1&debugRenderStats=1');
+test('world-wrap default projects claim overlays and markers without pan churn', async ({ page }) => {
+  await waitForWrappedMap(page, '/?debugRenderStats=1');
 
   await chooseNation(page, 'Brazil', 'BRA');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
@@ -303,7 +303,7 @@ test('world-wrap review projects claim overlays and markers without pan churn', 
   expect(stats.capitalMarkerRebuilds).toBe(0);
 });
 
-test('world-wrap review projects hover, selection, and foreign hover overlays', async ({ page }) => {
+test('world-wrap default projects hover, selection, and foreign hover overlays', async ({ page }) => {
   await waitForWrappedMap(page);
 
   await chooseNation(page, 'Brazil', 'BRA');
@@ -411,8 +411,8 @@ test('world-wrap seam candidates keep hit, selection, and claim overlays project
   await expectProjectedRegion(page, '#claimOverlays .claim-overlay.owned-territory', 'SakhalinKurils');
 });
 
-test('world-wrap panning is disabled without the review flag', async ({ page }) => {
-  await waitForMap(page);
+test('world-wrap panning is disabled through the fallback query flag', async ({ page }) => {
+  await waitForSingleCopyMap(page);
 
   const baseViewBox = await mapViewBox(page);
   const mapBox = await page.locator('#map').boundingBox();
@@ -422,8 +422,76 @@ test('world-wrap panning is disabled without the review flag', async ({ page }) 
   expect(await mapViewBox(page)).toEqual(baseViewBox);
 });
 
-test.skip('issue #2 acceptance: horizontal panning passes west and east map edges without a hard stop', async () => {});
+test('issue #2 acceptance: horizontal panning passes west and east map edges without a hard stop', async ({ page }) => {
+  await waitForWrappedMap(page);
 
-test.skip('issue #2 acceptance: wrapped copy hover and click resolve to the same canonical region', async () => {});
+  await expect(page.locator('#regions .region-copy')).toHaveCount(3);
+  await expect(page.locator('#hitRegions .hit-copy')).toHaveCount(3);
+  const baseViewBox = await mapViewBox(page);
+  const mapBox = await page.locator('#map').boundingBox();
+  expect(mapBox).toBeTruthy();
+  const start = {x: mapBox.x + mapBox.width * 0.50, y: mapBox.y + mapBox.height * 0.52};
+  const east = {x: start.x + mapBox.width * 0.95, y: start.y};
+  const west = {x: start.x - mapBox.width * 0.95, y: start.y};
+  const minX = baseViewBox[0] - baseViewBox[2] / 2 - 0.0001;
+  const maxX = baseViewBox[0] + baseViewBox[2] / 2 + 0.0001;
+  const samples = [];
 
-test.skip('issue #2 acceptance: selected claim overlays render on every visible world copy', async () => {});
+  for (let i = 0; i < 8; i += 1) {
+    await dragMap(page, start, east, 10);
+    samples.push(await mapViewBox(page));
+  }
+  for (let i = 0; i < 8; i += 1) {
+    await dragMap(page, start, west, 10);
+    samples.push(await mapViewBox(page));
+  }
+
+  for (const viewBox of samples) {
+    expect(viewBox[0]).toBeGreaterThanOrEqual(minX);
+    expect(viewBox[0]).toBeLessThan(maxX);
+    expect(viewBox[1]).toBeCloseTo(baseViewBox[1], 6);
+  }
+  const distinctXValues = new Set(samples.map(viewBox => viewBox[0].toFixed(3)));
+  expect(distinctXValues.size).toBeGreaterThan(3);
+  expect(samples.some(viewBox => Math.abs(viewBox[0] - baseViewBox[0]) > 0.1)).toBe(true);
+});
+
+test('issue #2 acceptance: wrapped copy hover and click resolve to the same canonical region', async ({ page }) => {
+  await waitForWrappedMap(page);
+
+  for (const copy of ['-1', '1']) {
+    const copiedAmazonia = page.locator(`#hitRegions .region-hit[data-region="Amazonia"][data-wrap-copy="${copy}"]`);
+    await copiedAmazonia.dispatchEvent('pointerover', { bubbles: true, clientX: 120, clientY: 120, pointerType: 'mouse' });
+    await copiedAmazonia.dispatchEvent('pointermove', { bubbles: true, clientX: 126, clientY: 126, pointerType: 'mouse' });
+    await expect(page.locator('#hoverPill')).toHaveText(/Hover: BRA .* Manaus/);
+    await expectProjectedCopies(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]'));
+
+    await copiedAmazonia.dispatchEvent('click', { bubbles: true });
+    await expect(page.locator('#search')).toHaveValue(/Brazil/);
+    await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+    await expectProjectedCopies(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]'));
+
+    await page.locator('#hitRegions').dispatchEvent('click', { bubbles: true });
+    await expect(page.locator('#search')).toHaveValue('');
+    await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
+  }
+});
+
+test('issue #2 acceptance: selected claim overlays render on every visible world copy', async ({ page }) => {
+  await waitForWrappedMap(page);
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(78);
+  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
+  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay[data-region="FrenchGuiana"]'));
+
+  await page.selectOption('#claimKind', 'peaceful');
+  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
+
+  await page.selectOption('#claimKind', 'all');
+  await page.selectOption('#projectSel', 'Project_GranColombia');
+  await expect(page.locator('#claimMode')).toHaveValue('project');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(42);
+  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
+});

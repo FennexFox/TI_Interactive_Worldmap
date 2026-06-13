@@ -9,7 +9,7 @@ async function chooseNation(page, query, tag) {
 }
 
 function regionTarget(page, regionName) {
-  return page.locator(`#hitRegions .region-hit[data-region="${regionName}"]`);
+  return page.locator(`#hitRegions .region-hit[data-region="${regionName}"][data-wrap-canonical="1"]`);
 }
 
 async function hoverRegion(page, regionName) {
@@ -167,7 +167,7 @@ test('debug render stats capture real pointer hover baseline', async ({ page }) 
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
   await expect.poll(() => page.evaluate(() => Boolean(window.__TI_DEBUG_RENDER_STATS__))).toBe(false);
 
-  await page.goto('/?debugRenderStats=1');
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
   await expect.poll(() => page.evaluate(() => Boolean(window.__TI_DEBUG_RENDER_STATS__))).toBe(true);
   await expect.poll(() => page.evaluate(() => typeof window.__TI_DEBUG_RENDER_STATS__.reset)).toBe('function');
@@ -198,7 +198,7 @@ test('debug render stats capture real pointer hover baseline', async ({ page }) 
 });
 
 test('simple selected-overlay claim hover movement uses bounded visual updates', async ({ page }) => {
-  await page.goto('/?debugRenderStats=1');
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
   await chooseNation(page, 'Brazil', 'BRA');
@@ -233,7 +233,7 @@ test('simple selected-overlay claim hover movement uses bounded visual updates',
 });
 
 test('settled same-nation hover preview uses bounded visual updates', async ({ page }) => {
-  await page.goto('/?debugRenderStats=1');
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
   await hoverRegionWithMouse(page, 'Amazonia');
@@ -254,7 +254,7 @@ test('settled same-nation hover preview uses bounded visual updates', async ({ p
 });
 
 test('overlay model cache reuses unchanged inputs and misses changed filters', async ({ page }) => {
-  await page.goto('/?debugRenderStats=1');
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
   await chooseNation(page, 'Brazil', 'BRA');
@@ -317,7 +317,7 @@ test('overlay model cache reuses unchanged inputs and misses changed filters', a
 });
 
 test('overlay render skip keys avoid unchanged DOM replacement', async ({ page }) => {
-  await page.goto('/?debugRenderStats=1');
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
   await chooseNation(page, 'Brazil', 'BRA');
@@ -373,7 +373,7 @@ test('overlay render skip keys avoid unchanged DOM replacement', async ({ page }
 });
 
 test('hover overlay and capital marker keys avoid unchanged churn', async ({ page }) => {
-  await page.goto('/?debugRenderStats=1');
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
   const canadaRegions = await page.locator('#hitRegions .region-hit[data-nation="CAN"]').evaluateAll(paths => (
@@ -416,7 +416,7 @@ test('hover overlay and capital marker keys avoid unchanged churn', async ({ pag
 });
 
 test('selected nation marks its capital region with a fillable star', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?worldWrap=0');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
   await hoverRegion(page, 'Amazonia');
@@ -478,7 +478,7 @@ test('selected nation marks its capital region with a fillable star', async ({ p
 });
 
 test('selected nation claim controls update overlays without losing state', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?worldWrap=0');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
   await chooseNation(page, 'Brazil', 'BRA');
@@ -509,7 +509,7 @@ test('selected nation claim controls update overlays without losing state', asyn
 });
 
 test('claim cards synchronize map overlays, panel state, and empty map clear', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?worldWrap=0');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
   await chooseNation(page, 'Brazil', 'BRA');

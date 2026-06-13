@@ -43,12 +43,13 @@ import {
 
 window.TI_DATA_PROMISE.then(({regionMap, claimMap, catalogs = {}}) => {
 const appData = createAppData({regionMap, claimMap, catalogs});
-function shouldEnableWorldWrapReview() {
+function shouldEnableWorldWrap() {
   try {
     const value = new URLSearchParams(window.location.search).get('worldWrap');
-    return value !== null && value !== '0' && value.toLowerCase() !== 'false';
+    if (value === null) return true;
+    return !['0', 'false', 'off'].includes(value.toLowerCase());
   } catch {
-    return false;
+    return true;
   }
 }
 function createWorldCopyContexts(mapView, {enabled = false} = {}) {
@@ -66,8 +67,8 @@ setActiveScenarioId(appState, appData.defaultScenario);
 const mapVisualState = createMapVisualState();
 const activeData = getActiveData(appData, appState.activeScenarioId);
 const mapView = initializeMapView(activeData);
-const worldWrapReviewEnabled = shouldEnableWorldWrapReview();
-const worldCopyContexts = createWorldCopyContexts(mapView, {enabled: worldWrapReviewEnabled});
+const worldWrapEnabled = shouldEnableWorldWrap();
+const worldCopyContexts = createWorldCopyContexts(mapView, {enabled: worldWrapEnabled});
 function copyContextRenderKey(copyContexts = worldCopyContexts) {
   return normalizeWorldCopyContexts(copyContexts)
     .map(context => `${context.copyIndex}:${context.xOffset}:${context.isCanonical ? 1 : 0}`)
@@ -94,7 +95,7 @@ const NATION_META = derivedIndices.nationMeta;
 
 const svg = document.getElementById('map');
 if (svg) svg.setAttribute('viewBox', formatViewBoxForMapView(mapView));
-svg?.classList.toggle('world-wrap-review', worldWrapReviewEnabled);
+svg?.classList.toggle('world-wrap-enabled', worldWrapEnabled);
 const gRegions = document.getElementById('regions');
 const gHitRegions = document.getElementById('hitRegions');
 const gLabels = document.getElementById('labels');
@@ -1929,7 +1930,7 @@ function finishMapPan({cancel=false} = {}) {
   if (!cancel && wasDragging) markSuppressNextMapClick();
 }
 function onMapPointerDown(e) {
-  if (!worldWrapReviewEnabled || e.button !== 0 || mapPanState) return;
+  if (!worldWrapEnabled || e.button !== 0 || mapPanState) return;
   mapPanState = {
     pointerId: e.pointerId,
     startX: e.clientX,
@@ -1944,7 +1945,7 @@ function onMapPointerDown(e) {
   } catch {}
 }
 function onMapPointerMove(e) {
-  if (!worldWrapReviewEnabled || !mapPanState || e.pointerId !== mapPanState.pointerId) return;
+  if (!worldWrapEnabled || !mapPanState || e.pointerId !== mapPanState.pointerId) return;
   const totalX = e.clientX - mapPanState.startX;
   const totalY = e.clientY - mapPanState.startY;
   if (!mapPanState.dragging && Math.hypot(totalX, totalY) < MAP_PAN_DRAG_THRESHOLD_PX) return;
@@ -2579,7 +2580,7 @@ if (gHitRegions) {
   gHitRegions.addEventListener('pointerout', onHitLayerPointerOut);
   gHitRegions.addEventListener('click', onHitLayerClick);
 }
-if (worldWrapReviewEnabled) {
+if (worldWrapEnabled) {
   svg.addEventListener('pointerdown', onMapPointerDown);
   svg.addEventListener('pointermove', onMapPointerMove);
   svg.addEventListener('pointerup', onMapPointerUp);
