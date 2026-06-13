@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "python tools/build_pages.py",
-    "verify": "python -m compileall -q tools && python -m unittest discover -s tests -p \"test_*.py\" && node --check docs/assets/data.generated.js && node --check docs/assets/app.js && node --check docs/assets/state/app-state.js && node --check docs/assets/state/map-visual-state.js && node --check docs/assets/data/active-data.js && node --check docs/assets/data/derived-indices.js && node --check docs/assets/render/map-layers.js && python tools/verify_generated_outputs.py",
+    "verify": "python -m compileall -q tools && python -m unittest discover -s tests -p \"test_*.py\" && node --check docs/assets/data.generated.js && node --check docs/assets/app.js && node --check docs/assets/state/app-state.js && node --check docs/assets/state/map-visual-state.js && node --check docs/assets/state/map-view-state.js && node --check docs/assets/data/active-data.js && node --check docs/assets/data/derived-indices.js && node --check docs/assets/render/map-layers.js && python tools/verify_generated_outputs.py",
     "test:e2e": "playwright test",
     "deploy": "python tools/rebuild_pages.py"
   },
