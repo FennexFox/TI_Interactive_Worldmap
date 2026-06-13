@@ -187,3 +187,16 @@
   .muted { color:var(--muted); }
   .hint { color:#cbd5e1; font-size:12px; margin-top:8px; }
   @media (max-width:1000px) { .app { grid-template-columns:1fr; height:auto; } aside { border-right:0; border-bottom:1px solid rgba(255,255,255,.08); } main { height:72vh; } }
+
+/* Prevent accidental SVG text selection while dragging the map. */
+svg text,
+svg .label,
+svg .claim-label,
+svg .region-label,
+svg .capital-label,
+svg .selection-label,
+svg.is-panning,
+svg.is-panning * {
+  -webkit-user-select: none;
+  user-select: none;
+}
