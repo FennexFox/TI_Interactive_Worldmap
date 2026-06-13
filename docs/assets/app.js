@@ -2925,7 +2925,7 @@ function renderNationInfoPanel(panelRoot, model) {
     [t('nationInfo.kv.capitalRegion'), capitalRegionsText(model.data)],
     [t('nationInfo.kv.baseTerritory'), regionCountText(model.ownedCount)],
     [t('nationInfo.kv.directClaims'), uniqueRegionCountText(model.data.totalClaimRegions || 0)],
-    [t('nationInfo.kv.targetedRegions'), `${regionCountText(incomingTargetRegions(model.data, model.baseSet).size)} - ${claimGroupCountText(model.incomingEntries.length)}`],
+    [t('nationInfo.kv.targetedRegions'), `${regionCountText(incomingTargetRegions(model.data, model.baseSet).size)} · ${claimGroupCountText(model.incomingEntries.length)}`],
     [t('nationInfo.kv.conditional'), regionCountText(model.gatedCount)],
     [t('nationInfo.kv.claimProjects'), claimTierCountText(nationClaimTierCount(model.nation))],
     [t('nationInfo.kv.displayMode'), claimModeLabel(claimModeSel.value)],
@@ -2991,10 +2991,10 @@ function updateNationOverlay(
   if (renderDetails) updateProjectOptions(getActiveNation());
   if (!getActiveNation()) {
     clearHoverClaimPreviewOverlay({force: true});
+    currentOverlayModel = null;
+    visibleNationRegionNames = new Set();
     clearOverlayVisualState();
     applyMapVisualState();
-    visibleNationRegionNames = new Set();
-    currentOverlayModel = null;
     setSecondaryHoverNationState();
     clearClaimOverlayDom({claimOverlayLayer: gClaimOverlays, claimLabelLayer: gClaimLabels});
     renderHoverOutlines();
@@ -3083,7 +3083,14 @@ function refreshLanguage() {
   const selectedNation = search.dataset.selectedNation || '';
   if (selectedNation) search.value = humanizeNationLabel(selectedNation);
   renderNationDropdown();
-  updateNationOverlay(getCurrentNation());
+  const committedNation = getLockedNation();
+  if (committedNation) {
+    updateNationOverlay(committedNation);
+  } else if (getHoverNation()) {
+    updateHoverNationPreview(getHoverNation());
+  } else {
+    updateNationOverlay('');
+  }
   applyFilters(true);
   updateSelectedRegions();
   const hoveredRegion = tooltipRegionId != null ? REGIONS[tooltipRegionId] : null;
