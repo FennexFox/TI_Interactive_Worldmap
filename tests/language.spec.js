@@ -22,10 +22,20 @@ async function hoverRegionWithMouse(page, regionName) {
   await regionTarget(page, regionName).hover();
 }
 
+async function waitForAnimationFrames(page, frameCount) {
+  await page.evaluate(count => new Promise(resolve => {
+    let remaining = count;
+    function step() {
+      remaining -= 1;
+      if (remaining <= 0) resolve();
+      else requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }), frameCount);
+}
+
 async function waitForHoverPreviewFrame(page) {
-  await page.evaluate(() => new Promise(resolve => {
-    requestAnimationFrame(() => requestAnimationFrame(resolve));
-  }));
+  await waitForAnimationFrames(page, 2);
 }
 
 async function blankMapPoint(page) {
@@ -289,6 +299,94 @@ test('border hover preview updates next frame and reuses cached descriptors', as
   expect(stats.claimOverlayDescriptorCacheHits).toBeGreaterThan(0);
   expect(stats.claimLabelDescriptorBuilds).toBeGreaterThan(0);
   expect(stats.claimLabelDescriptorCacheHits).toBeGreaterThan(0);
+  expect(stats.claimOverlayInactiveBufferRebuilds).toBeGreaterThan(0);
+  expect(stats.claimLabelInactiveBufferRebuilds).toBeGreaterThan(0);
+  expect(stats.claimOverlayBufferSwaps).toBeGreaterThan(0);
+  expect(stats.claimLabelBufferSwaps).toBeGreaterThan(0);
+  expect(stats.claimOverlayStaleRenderSkips).toBe(0);
+  expect(stats.claimLabelStaleRenderSkips).toBe(0);
+});
+
+test('double-buffered hover overlay keeps previous buffer visible and skips stale renders', async ({ page }) => {
+  await page.goto('/?worldWrap=0&debugRenderStats=1&debugClaimOverlayDelayFrames=6');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await hoverRegion(page, 'Amazonia');
+  await waitForAnimationFrames(page, 10);
+  await expect(page.locator('#claimPill')).toContainText('Brazil');
+  await expect(page.locator('#claimOverlays [data-overlay-buffer-active="1"] .claim-overlay.owned-territory[data-region="Amazonia"]')).toHaveCount(1);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await hoverRegion(page, 'Bolivia');
+  await waitForHoverPreviewFrame(page);
+  await expect(page.locator('#claimPill')).toContainText('Bolivia');
+  await expect(page.locator('#claimOverlays [data-overlay-buffer-active="1"] .claim-overlay.owned-territory[data-region="Amazonia"]')).toHaveCount(1);
+  let stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.claimOverlayInactiveBufferRebuilds).toBeGreaterThan(0);
+  expect(stats.claimLabelInactiveBufferRebuilds).toBeGreaterThan(0);
+  expect(stats.claimOverlayBufferSwaps).toBe(0);
+  expect(stats.claimLabelBufferSwaps).toBe(0);
+
+  await hoverRegion(page, 'Amazonia');
+  await waitForAnimationFrames(page, 10);
+  await expect(page.locator('#claimPill')).toContainText('Brazil');
+  await expect(page.locator('#claimOverlays [data-overlay-buffer-active="1"] .claim-overlay.owned-territory[data-region="Amazonia"]')).toHaveCount(1);
+  await expect(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Bolivia"]')).toHaveCount(0);
+
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelCacheHits).toBeGreaterThan(0);
+  expect(stats.claimOverlayDescriptorCacheHits).toBeGreaterThan(0);
+  expect(stats.claimLabelDescriptorCacheHits).toBeGreaterThan(0);
+  expect(stats.claimOverlayStaleRenderSkips).toBeGreaterThan(0);
+  expect(stats.claimLabelStaleRenderSkips).toBeGreaterThan(0);
+  expect(stats.claimOverlayBufferSwaps).toBe(0);
+  expect(stats.claimLabelBufferSwaps).toBe(0);
+});
+
+test('secondary capital hover previews a foreign nation inside selected expansion range', async ({ page }) => {
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await chooseNation(page, 'France', 'EUA');
+  await expect(page.locator('#claimPill')).toContainText('France');
+  await expect(page.locator('#claimOverlays .claim-overlay[data-region="Paris"]')).toHaveCount(1);
+  await expect(page.locator('#claimOverlays .claim-overlay[data-region="Moskva"]')).toHaveCount(1);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await hoverRegion(page, 'Moskva');
+  await waitForHoverPreviewFrame(page);
+  await expect(page.locator('#hoverPill')).toContainText('RUS');
+  await expect(page.locator('#claimPill')).toContainText('France');
+  await expect(page.locator('#claimOverlays .claim-overlay[data-region="Paris"]')).toHaveCount(1);
+  await expect(page.locator('#secondaryHoverOverlays .secondary-capital-preview[data-preview="secondary-capital"][data-nation="RUS"]')).not.toHaveCount(0);
+  await expect(page.locator('#secondaryHoverOverlays .secondary-capital-preview[data-region="Moskva"][data-nation="RUS"]')).toHaveCount(1);
+  let stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelBuilds).toBe(0);
+  expect(stats.foreignHoverDescriptorBuilds).toBeGreaterThan(0);
+
+  await hoverRegion(page, 'Kharkiv');
+  await waitForHoverPreviewFrame(page);
+  await expect(page.locator('#hoverPill')).toContainText('UKR');
+  await expect(page.locator('#claimPill')).toContainText('France');
+  await expect(page.locator('#secondaryHoverOverlays .secondary-capital-preview')).toHaveCount(0);
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Kharkiv"]')).toHaveCount(1);
+  await expect(page.locator('#claimOverlays .claim-overlay[data-region="Paris"]')).toHaveCount(1);
+
+  await hoverRegion(page, 'Paris');
+  await waitForHoverPreviewFrame(page);
+  await expect(page.locator('#hoverPill')).toContainText('EUA');
+  await expect(page.locator('#secondaryHoverOverlays .secondary-capital-preview')).toHaveCount(0);
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Paris"]')).toHaveCount(1);
+
+  await hoverRegion(page, 'Brasilia');
+  await waitForHoverPreviewFrame(page);
+  await expect(page.locator('#hoverPill')).toContainText('BRA');
+  await expect(page.locator('#claimPill')).toContainText('France');
+  await expect(page.locator('#secondaryHoverOverlays .secondary-capital-preview')).toHaveCount(0);
+  await expect(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="BRA"]')).not.toHaveCount(0);
+
+  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelBuilds).toBe(0);
 });
 
 test('overlay model cache reuses unchanged inputs and misses changed filters', async ({ page }) => {
@@ -376,6 +474,8 @@ test('overlay render skip keys avoid unchanged DOM replacement', async ({ page }
   stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.claimOverlayDomReplacements).toBe(0);
   expect(stats.claimLabelDomReplacements).toBeGreaterThan(0);
+  expect(stats.claimOverlayBufferSwaps).toBe(0);
+  expect(stats.claimLabelBufferSwaps).toBeGreaterThan(0);
 
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
   await page.selectOption('#languageSel', 'en');
@@ -383,6 +483,8 @@ test('overlay render skip keys avoid unchanged DOM replacement', async ({ page }
   stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.claimOverlayDomReplacements).toBe(0);
   expect(stats.claimLabelDomReplacements).toBeGreaterThan(0);
+  expect(stats.claimOverlayBufferSwaps).toBe(0);
+  expect(stats.claimLabelBufferSwaps).toBeGreaterThan(0);
 
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
   await page.selectOption('#projectSel', 'Project_GranColombia');
@@ -397,6 +499,8 @@ test('overlay render skip keys avoid unchanged DOM replacement', async ({ page }
   await expect(page.locator('#claimPill')).toHaveText('Claims: -');
   await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(0);
   await expect(page.locator('#claimLabels .claim-label')).toHaveCount(0);
+  await expect(page.locator('#claimOverlays [data-overlay-buffer-active="0"] .claim-overlay')).toHaveCount(0);
+  await expect(page.locator('#claimLabels [data-overlay-buffer-active="0"] .claim-label')).toHaveCount(0);
   stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.claimOverlayDomReplacements).toBeGreaterThan(0);
   expect(stats.claimLabelDomReplacements).toBeGreaterThan(0);
@@ -448,7 +552,8 @@ test('hover overlay and capital marker keys avoid unchanged churn', async ({ pag
   expect(stats.hoverOutlineReplacements).toBe(0);
 
   await hoverRegionWithMouse(page, 'Bolivia');
-  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Bolivia"]')).toHaveCount(1);
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Bolivia"]')).toHaveCount(0);
+  await expect(page.locator('#secondaryHoverOverlays .secondary-capital-preview[data-nation="BOL"][data-region="Bolivia"]')).toHaveCount(1);
   await hoverRegionWithMouse(page, 'Brasilia');
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]')).toHaveClass(/is-selected/);
 });
@@ -496,7 +601,8 @@ test('selected nation marks its capital region with a fillable star', async ({ p
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Ontario"]')).toHaveClass(/is-selected/);
 
   await hoverRegion(page, 'Bolivia');
-  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Bolivia"]')).toHaveCount(1);
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Bolivia"]')).toHaveCount(0);
+  await expect(page.locator('#secondaryHoverOverlays .secondary-capital-preview[data-nation="BOL"][data-region="Bolivia"]')).toHaveCount(1);
   await expect(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="BOL"][data-region="Brasilia"]')).toHaveCount(0);
 
   await hoverRegion(page, 'Brasilia');

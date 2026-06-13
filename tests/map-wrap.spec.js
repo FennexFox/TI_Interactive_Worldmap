@@ -23,10 +23,20 @@ async function waitForWrappedMap(page, path = '/') {
   await expect(page.locator('body')).not.toContainText('Failed to load generated Terra Invicta map data.');
 }
 
+async function waitForAnimationFrames(page, frameCount) {
+  await page.evaluate(count => new Promise(resolve => {
+    let remaining = count;
+    function step() {
+      remaining -= 1;
+      if (remaining <= 0) resolve();
+      else requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }), frameCount);
+}
+
 async function waitForHoverPreviewFrame(page) {
-  await page.evaluate(() => new Promise(resolve => {
-    requestAnimationFrame(() => requestAnimationFrame(resolve));
-  }));
+  await waitForAnimationFrames(page, 2);
 }
 
 function regionHit(page, regionName) {
@@ -356,22 +366,48 @@ test('world-wrap default hover claim overlays reuse cached descriptors across bo
   await waitForHoverPreviewFrame(page);
   await expect(page.locator('#claimPill')).toContainText('Brazil');
   await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
+  await expectProjectedCopies(page.locator('#claimOverlays [data-overlay-buffer-active="1"] .claim-overlay.owned-territory[data-region="Amazonia"]'));
 
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
   await hoverWrappedRegion(page, 'Bolivia');
   await waitForHoverPreviewFrame(page);
   await expect(page.locator('#claimPill')).toContainText('Bolivia');
   await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Bolivia"]'));
+  await expectProjectedCopies(page.locator('#claimOverlays [data-overlay-buffer-active="1"] .claim-overlay.owned-territory[data-region="Bolivia"]'));
 
   await hoverWrappedRegion(page, 'Amazonia');
   await waitForHoverPreviewFrame(page);
   await expect(page.locator('#claimPill')).toContainText('Brazil');
   await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
+  await expectProjectedCopies(page.locator('#claimOverlays [data-overlay-buffer-active="1"] .claim-overlay.owned-territory[data-region="Amazonia"]'));
 
   const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.overlayModelCacheHits).toBeGreaterThan(0);
   expect(stats.claimOverlayDescriptorCacheHits).toBeGreaterThan(0);
   expect(stats.claimLabelDescriptorCacheHits).toBeGreaterThan(0);
+  expect(stats.claimOverlayInactiveBufferRebuilds).toBeGreaterThan(0);
+  expect(stats.claimLabelInactiveBufferRebuilds).toBeGreaterThan(0);
+  expect(stats.claimOverlayBufferSwaps).toBeGreaterThan(0);
+  expect(stats.claimLabelBufferSwaps).toBeGreaterThan(0);
+  expect(stats.claimOverlayStaleRenderSkips).toBe(0);
+  expect(stats.claimLabelStaleRenderSkips).toBe(0);
+});
+
+test('world-wrap default secondary capital hover projects foreign preview copies', async ({ page }) => {
+  await waitForWrappedMap(page, '/?debugRenderStats=1');
+
+  await chooseNation(page, 'France', 'EUA');
+  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay[data-region="Moskva"]'));
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await hoverWrappedRegion(page, 'Moskva', '1');
+  await waitForHoverPreviewFrame(page);
+
+  await expect(page.locator('#claimPill')).toContainText('France');
+  await expectProjectedCopies(page.locator('#secondaryHoverOverlays .secondary-capital-preview[data-preview="secondary-capital"][data-nation="RUS"][data-region="Moskva"]'));
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.overlayModelBuilds).toBe(0);
+  expect(stats.secondaryHoverOverlayReplacements).toBeGreaterThan(0);
 });
 
 test('world-wrap default projects hover, selection, and foreign hover overlays', async ({ page }) => {
