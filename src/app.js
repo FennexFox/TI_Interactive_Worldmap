@@ -1751,6 +1751,7 @@ function mapPointFromClientPoint(clientX, clientY) {
 }
 function zoomMapAt(scale, anchor = null) {
   zoomMapView(mapView, {
+  normalizeX: worldWrapEnabled,
     scale,
     anchorX: anchor?.x,
     anchorY: anchor?.y,
@@ -2042,7 +2043,7 @@ function finishMapPan({cancel=false} = {}) {
   if (!cancel && wasDragging) markSuppressNextMapClick();
 }
 function onMapPointerDown(e) {
-  if (!worldWrapEnabled || e.button !== 0 || mapPanState) return;
+  if (e.button !== 0 || mapPanState) return;
   mapPanState = {
     pointerId: e.pointerId,
     startX: e.clientX,
@@ -2054,7 +2055,7 @@ function onMapPointerDown(e) {
   svg?.classList.add('is-panning-ready');
 }
 function onMapPointerMove(e) {
-  if (!worldWrapEnabled || !mapPanState || e.pointerId !== mapPanState.pointerId) return;
+  if (!mapPanState || e.pointerId !== mapPanState.pointerId) return;
   const totalX = e.clientX - mapPanState.startX;
   const totalY = e.clientY - mapPanState.startY;
   if (!mapPanState.dragging && Math.hypot(totalX, totalY) < MAP_PAN_DRAG_THRESHOLD_PX) return;
@@ -2068,7 +2069,7 @@ function onMapPointerMove(e) {
   }
   e.preventDefault();
   const {dx, dy} = viewDeltaFromPointerDelta(e.clientX - mapPanState.lastX, e.clientY - mapPanState.lastY);
-  panMapView(mapView, {dx, dy});
+  panMapView(mapView, {dx, dy, normalizeX: worldWrapEnabled});
   mapPanState.lastX = e.clientX;
   mapPanState.lastY = e.clientY;
   scheduleMapViewRender();
@@ -2693,13 +2694,12 @@ if (gHitRegions) {
   gHitRegions.addEventListener('pointerout', onHitLayerPointerOut);
   gHitRegions.addEventListener('click', onHitLayerClick);
 }
-if (worldWrapEnabled) {
   svg.addEventListener('pointerdown', onMapPointerDown);
   svg.addEventListener('pointermove', onMapPointerMove);
   svg.addEventListener('pointerup', onMapPointerUp);
   svg.addEventListener('pointercancel', onMapPointerCancel);
   svg.addEventListener('lostpointercapture', onMapLostPointerCapture);
-}
+
 svg.addEventListener('mousemove', onMapMove);
 svg.addEventListener('wheel', onMapWheel, {passive:false});
 svg.addEventListener('click', e => {

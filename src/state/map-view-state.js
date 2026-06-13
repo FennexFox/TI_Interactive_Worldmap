@@ -51,6 +51,17 @@ export function normalizeWrappedX(x, mapView = {}) {
   return baseX + offset - wholeWorlds * worldWidth;
 }
 
+export function clampMapViewX(x, mapView = {}) {
+  const value = finiteNumber(x);
+  const boundsX = finiteNumber(mapView.boundsX);
+  const boundsWidth = Math.abs(finiteNumber(mapView.boundsWidth));
+  const width = Math.abs(finiteNumber(mapView.width));
+  if (!boundsWidth || !width) return value;
+  if (width >= boundsWidth) return boundsX;
+  const maxX = boundsX + boundsWidth - width;
+  return Math.min(maxX, Math.max(boundsX, value));
+}
+
 export function clampMapViewY(y, mapView = {}) {
   const value = finiteNumber(y);
   const boundsY = finiteNumber(mapView.boundsY);
@@ -65,7 +76,7 @@ export function clampMapViewY(y, mapView = {}) {
 export function panMapView(mapView, {dx = 0, dy = 0, normalizeX = true} = {}) {
   if (!mapView) return mapView;
   const nextX = finiteNumber(mapView.x) + finiteNumber(dx);
-  mapView.x = normalizeX ? normalizeWrappedX(nextX, mapView) : nextX;
+  mapView.x = normalizeX ? normalizeWrappedX(nextX, mapView) : clampMapViewX(nextX, mapView);
   mapView.y = clampMapViewY(finiteNumber(mapView.y) + finiteNumber(dy), mapView);
   return mapView;
 }
@@ -114,7 +125,10 @@ export function zoomMapView(mapView, options = {}) {
 
   mapView.width = nextWidth;
   mapView.height = nextHeight;
-  mapView.x = normalizeWrappedX(anchorX - relativeX * nextWidth, mapView);
+  const nextX = anchorX - relativeX * nextWidth;
+  mapView.x = options.normalizeX === false
+    ? clampMapViewX(nextX, mapView)
+    : normalizeWrappedX(nextX, mapView);
   mapView.y = clampMapViewY(anchorY - relativeY * nextHeight, mapView);
   return mapView;
 }

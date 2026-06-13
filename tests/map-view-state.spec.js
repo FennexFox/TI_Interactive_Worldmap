@@ -98,6 +98,32 @@ test('clamps vertical movement to the original map extent when the viewport is f
   expect(mapView.y).toBe(-1);
 });
 
+test('panMapView clamps horizontal movement when wrapping is disabled', () => {
+  const mapView = createMapViewState({
+    x: 0,
+    y: 0,
+    width: 180,
+    height: 90,
+    worldWidth: 360,
+    boundsX: 0,
+    boundsY: 0,
+    boundsWidth: 360,
+    boundsHeight: 180,
+  });
+
+  panMapView(mapView, {dx: 90, dy: 45, normalizeX: false});
+  expect(mapView.x).toBeCloseTo(90);
+  expect(mapView.y).toBeCloseTo(45);
+
+  panMapView(mapView, {dx: 999, dy: 999, normalizeX: false});
+  expect(mapView.x).toBeCloseTo(180);
+  expect(mapView.y).toBeCloseTo(90);
+
+  panMapView(mapView, {dx: -999, dy: -999, normalizeX: false});
+  expect(mapView.x).toBeCloseTo(0);
+  expect(mapView.y).toBeCloseTo(0);
+});
+
 test('zoomMapView zooms around the provided anchor while preserving wrap and bounds', () => {
   const mapView = initializeMapView(sampleActiveData([0, 0, 360, 180]));
 
@@ -134,4 +160,34 @@ test('zoomMapView can zoom back out to the original base extent after zooming in
   expect(mapView.width).toBeCloseTo(360);
   expect(mapView.height).toBeCloseTo(180);
   expect(mapView.y).toBeCloseTo(0);
+});
+
+test('zoomMapView clamps horizontal position when wrapping is disabled', () => {
+  const mapView = initializeMapView(sampleActiveData([0, 0, 360, 180]));
+
+  zoomMapView(mapView, {
+    scale: 0.5,
+    anchorX: -90,
+    anchorY: 45,
+    normalizeX: false,
+  });
+
+  expect(mapView.width).toBeCloseTo(180);
+  expect(mapView.height).toBeCloseTo(90);
+  expect(mapView.x).toBeCloseTo(0);
+  expect(mapView.y).toBeCloseTo(22.5);
+
+  const rightMapView = initializeMapView(sampleActiveData([0, 0, 360, 180]));
+
+  zoomMapView(rightMapView, {
+    scale: 0.5,
+    anchorX: 999,
+    anchorY: 45,
+    normalizeX: false,
+  });
+
+  expect(rightMapView.width).toBeCloseTo(180);
+  expect(rightMapView.height).toBeCloseTo(90);
+  expect(rightMapView.x).toBeCloseTo(180);
+  expect(rightMapView.y).toBeCloseTo(22.5);
 });
