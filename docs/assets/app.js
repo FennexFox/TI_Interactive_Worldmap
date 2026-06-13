@@ -1762,10 +1762,10 @@ function mapPointFromClientPoint(clientX, clientY) {
 }
 function zoomMapAt(scale, anchor = null) {
   zoomMapView(mapView, {
-  normalizeX: worldWrapEnabled,
     scale,
     anchorX: anchor?.x,
     anchorY: anchor?.y,
+    normalizeX: worldWrapEnabled,
   });
   applyMapViewToSvg();
 }
