@@ -365,30 +365,27 @@ test('world-wrap default hover claim overlays reuse cached descriptors across bo
   await hoverWrappedRegion(page, 'Amazonia');
   await waitForHoverPreviewFrame(page);
   await expect(page.locator('#claimPill')).toContainText('Brazil');
-  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
-  await expectProjectedCopies(page.locator('#claimOverlays [data-overlay-buffer-active="1"] .claim-overlay.owned-territory[data-region="Amazonia"]'));
+  await expectProjectedCopies(page.locator('#hoverClaimPreviewOverlays .claim-overlay.owned-territory[data-preview="hover-claim"][data-region="Amazonia"]'));
 
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
   await hoverWrappedRegion(page, 'Bolivia');
   await waitForHoverPreviewFrame(page);
   await expect(page.locator('#claimPill')).toContainText('Bolivia');
-  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Bolivia"]'));
-  await expectProjectedCopies(page.locator('#claimOverlays [data-overlay-buffer-active="1"] .claim-overlay.owned-territory[data-region="Bolivia"]'));
+  await expectProjectedCopies(page.locator('#hoverClaimPreviewOverlays .claim-overlay.owned-territory[data-preview="hover-claim"][data-region="Bolivia"]'));
 
   await hoverWrappedRegion(page, 'Amazonia');
   await waitForHoverPreviewFrame(page);
   await expect(page.locator('#claimPill')).toContainText('Brazil');
-  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
-  await expectProjectedCopies(page.locator('#claimOverlays [data-overlay-buffer-active="1"] .claim-overlay.owned-territory[data-region="Amazonia"]'));
+  await expectProjectedCopies(page.locator('#hoverClaimPreviewOverlays .claim-overlay.owned-territory[data-preview="hover-claim"][data-region="Amazonia"]'));
 
   const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.overlayModelCacheHits).toBeGreaterThan(0);
   expect(stats.claimOverlayDescriptorCacheHits).toBeGreaterThan(0);
-  expect(stats.claimLabelDescriptorCacheHits).toBeGreaterThan(0);
-  expect(stats.claimOverlayInactiveBufferRebuilds).toBeGreaterThan(0);
-  expect(stats.claimLabelInactiveBufferRebuilds).toBeGreaterThan(0);
-  expect(stats.claimOverlayBufferSwaps).toBeGreaterThan(0);
-  expect(stats.claimLabelBufferSwaps).toBeGreaterThan(0);
+  expect(stats.claimLabelDescriptorCacheHits).toBe(0);
+  expect(stats.claimOverlayInactiveBufferRebuilds).toBe(0);
+  expect(stats.claimLabelInactiveBufferRebuilds).toBe(0);
+  expect(stats.claimOverlayBufferSwaps).toBe(0);
+  expect(stats.claimLabelBufferSwaps).toBe(0);
   expect(stats.claimOverlayStaleRenderSkips).toBe(0);
   expect(stats.claimLabelStaleRenderSkips).toBe(0);
 });

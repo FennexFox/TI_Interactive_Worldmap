@@ -269,7 +269,8 @@ test('settled same-nation hover preview uses bounded visual updates', async ({ p
   expect(stats.hitPathsTouched).toBeLessThanOrEqual(2);
 });
 
-test('border hover preview updates next frame and reuses cached descriptors', async ({ page }) => {
+
+test('border hover preview updates next frame using lightweight preview overlay', async ({ page }) => {
   await page.goto('/?worldWrap=0&debugRenderStats=1');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
@@ -277,7 +278,9 @@ test('border hover preview updates next frame and reuses cached descriptors', as
   await waitForHoverPreviewFrame(page);
   await expect(page.locator('#hoverPill')).toContainText('BOL');
   await expect(page.locator('#claimPill')).toContainText('Bolivia');
-  await expect(page.locator('#claimOverlays .claim-overlay')).not.toHaveCount(0);
+  await expect(page.locator('#hoverClaimPreviewOverlays .claim-overlay[data-preview="hover-claim"][data-nation="BOL"]')).not.toHaveCount(0);
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(0);
+  await expect(page.locator('#claimLabels .claim-label')).toHaveCount(0);
 
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
   await hoverRegion(page, 'Amazonia');
@@ -285,62 +288,61 @@ test('border hover preview updates next frame and reuses cached descriptors', as
   await expect(page.locator('#hoverPill')).toContainText('BRA');
   await expect(page.locator('#claimPill')).toContainText('Brazil');
   await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
+  await expect(page.locator('#hoverClaimPreviewOverlays .claim-overlay[data-preview="hover-claim"][data-nation="BRA"]')).not.toHaveCount(0);
 
   await hoverRegion(page, 'Bolivia');
   await waitForHoverPreviewFrame(page);
   await expect(page.locator('#hoverPill')).toContainText('BOL');
   await expect(page.locator('#claimPill')).toContainText('Bolivia');
   await expect(page.locator('#hoverOutlines .hover-fill[data-region="Bolivia"]')).toHaveCount(1);
+  await expect(page.locator('#hoverClaimPreviewOverlays .claim-overlay[data-preview="hover-claim"][data-nation="BOL"]')).not.toHaveCount(0);
 
   const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.overlayModelBuilds).toBeGreaterThan(0);
   expect(stats.overlayModelCacheHits).toBeGreaterThan(0);
+  expect(stats.foreignHoverDescriptorBuilds).toBe(0);
+  expect(stats.foreignHoverDescriptorCacheHits).toBe(0);
   expect(stats.claimOverlayDescriptorBuilds).toBeGreaterThan(0);
   expect(stats.claimOverlayDescriptorCacheHits).toBeGreaterThan(0);
-  expect(stats.claimLabelDescriptorBuilds).toBeGreaterThan(0);
-  expect(stats.claimLabelDescriptorCacheHits).toBeGreaterThan(0);
-  expect(stats.claimOverlayInactiveBufferRebuilds).toBeGreaterThan(0);
-  expect(stats.claimLabelInactiveBufferRebuilds).toBeGreaterThan(0);
-  expect(stats.claimOverlayBufferSwaps).toBeGreaterThan(0);
-  expect(stats.claimLabelBufferSwaps).toBeGreaterThan(0);
-  expect(stats.claimOverlayStaleRenderSkips).toBe(0);
-  expect(stats.claimLabelStaleRenderSkips).toBe(0);
+  expect(stats.claimLabelDescriptorBuilds).toBe(0);
+  expect(stats.claimLabelDescriptorCacheHits).toBe(0);
+  expect(stats.claimOverlayInactiveBufferRebuilds).toBe(0);
+  expect(stats.claimLabelInactiveBufferRebuilds).toBe(0);
+  expect(stats.claimOverlayBufferSwaps).toBe(0);
+  expect(stats.claimLabelBufferSwaps).toBe(0);
 });
 
-test('double-buffered hover overlay keeps previous buffer visible and skips stale renders', async ({ page }) => {
+
+test('unpinned hover preview leaves committed claim overlay empty until selection', async ({ page }) => {
   await page.goto('/?worldWrap=0&debugRenderStats=1&debugClaimOverlayDelayFrames=6');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
   await hoverRegion(page, 'Amazonia');
   await waitForAnimationFrames(page, 10);
+  await expect(page.locator('#hoverPill')).toContainText('BRA');
   await expect(page.locator('#claimPill')).toContainText('Brazil');
-  await expect(page.locator('#claimOverlays [data-overlay-buffer-active="1"] .claim-overlay.owned-territory[data-region="Amazonia"]')).toHaveCount(1);
+  await expect(page.locator('#hoverClaimPreviewOverlays .claim-overlay[data-preview="hover-claim"][data-nation="BRA"]')).not.toHaveCount(0);
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(0);
+  await expect(page.locator('#claimLabels .claim-label')).toHaveCount(0);
 
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
   await hoverRegion(page, 'Bolivia');
   await waitForHoverPreviewFrame(page);
+  await expect(page.locator('#hoverPill')).toContainText('BOL');
   await expect(page.locator('#claimPill')).toContainText('Bolivia');
-  await expect(page.locator('#claimOverlays [data-overlay-buffer-active="1"] .claim-overlay.owned-territory[data-region="Amazonia"]')).toHaveCount(1);
+  await expect(page.locator('#hoverClaimPreviewOverlays .claim-overlay[data-preview="hover-claim"][data-nation="BOL"]')).not.toHaveCount(0);
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(0);
+
   let stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
-  expect(stats.claimOverlayInactiveBufferRebuilds).toBeGreaterThan(0);
-  expect(stats.claimLabelInactiveBufferRebuilds).toBeGreaterThan(0);
+  expect(stats.claimOverlayInactiveBufferRebuilds).toBe(0);
+  expect(stats.claimLabelInactiveBufferRebuilds).toBe(0);
   expect(stats.claimOverlayBufferSwaps).toBe(0);
   expect(stats.claimLabelBufferSwaps).toBe(0);
 
-  await hoverRegion(page, 'Amazonia');
-  await waitForAnimationFrames(page, 10);
-  await expect(page.locator('#claimPill')).toContainText('Brazil');
-  await expect(page.locator('#claimOverlays [data-overlay-buffer-active="1"] .claim-overlay.owned-territory[data-region="Amazonia"]')).toHaveCount(1);
-  await expect(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Bolivia"]')).toHaveCount(0);
-
-  stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
-  expect(stats.overlayModelCacheHits).toBeGreaterThan(0);
-  expect(stats.claimOverlayDescriptorCacheHits).toBeGreaterThan(0);
-  expect(stats.claimLabelDescriptorCacheHits).toBeGreaterThan(0);
-  expect(stats.claimOverlayStaleRenderSkips).toBeGreaterThan(0);
-  expect(stats.claimLabelStaleRenderSkips).toBeGreaterThan(0);
-  expect(stats.claimOverlayBufferSwaps).toBe(0);
-  expect(stats.claimLabelBufferSwaps).toBe(0);
+  await clickRegion(page, 'Bolivia');
+  await expect(page.locator('#claimPill')).toContainText('Bolivia');
+  await expect(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Bolivia"]')).toHaveCount(1);
+  await expect(page.locator('#nationInfo')).toContainText('Bolivia');
 });
 
 test('secondary capital hover previews a foreign nation inside selected expansion range', async ({ page }) => {
@@ -387,6 +389,26 @@ test('secondary capital hover previews a foreign nation inside selected expansio
 
   stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.overlayModelBuilds).toBe(0);
+});
+
+
+
+test('unlocked hover preview uses lightweight overlay and leaves committed detail panel stable', async ({ page }) => {
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#nationInfo')).toContainText('Click a region on the map.');
+
+  await hoverRegion(page, 'Amazonia');
+  await waitForHoverPreviewFrame(page);
+  await expect(page.locator('#claimPill')).toContainText('Brazil');
+  await expect(page.locator('#hoverClaimPreviewOverlays .claim-overlay[data-preview="hover-claim"][data-nation="BRA"]')).not.toHaveCount(0);
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(0);
+  await expect(page.locator('#nationInfo')).toContainText('Click a region on the map.');
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#claimPill')).toContainText('Brazil');
+  await expect(page.locator('#claimOverlays .claim-overlay[data-region="Amazonia"]')).toHaveCount(1);
+  await expect(page.locator('#nationInfo')).toContainText('Brazil');
 });
 
 test('overlay model cache reuses unchanged inputs and misses changed filters', async ({ page }) => {

@@ -45,7 +45,7 @@
 
       <section class="sideCard" data-aside-card="selected">
         <div class="sideCardHeader">
-          <h2 data-i18n="section.selectedNation">Selected Nation</h2>
+          <h2 data-i18n="section.selectedNation">Selected Region</h2>
           <div class="sideCardActions">
             <button type="button" class="sideCardAction" data-card-move="up">↑</button>
             <button type="button" class="sideCardAction" data-card-move="down">↓</button>
@@ -53,7 +53,7 @@
           </div>
         </div>
         <div class="sideCardBody">
-          <div class="panel" id="nationInfo" data-i18n="nationInfo.empty">Hover a nation or region on the map.</div>
+          <div class="panel" id="nationInfo" data-i18n="nationInfo.empty">Click a region on the map.</div>
         </div>
       </section>
     </div>
@@ -77,7 +77,9 @@
       <svg id="map" viewBox="-3.174091 -1.543560 6.525687 2.588890" preserveAspectRatio="xMidYMid meet" data-i18n-aria-label="map.aria" aria-label="Terra Invicta claim research map">
         <g id="grid"></g>
         <g id="regions"></g>
+        <g id="normalRegionColors"></g>
         <g id="foreignHoverOverlays"></g>
+        <g id="hoverClaimPreviewOverlays"></g>
         <g id="claimOverlays"></g>
         <g id="secondaryHoverOverlays"></g>
         <g id="labels"></g>

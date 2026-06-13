@@ -99,11 +99,13 @@ const svg = document.getElementById('map');
 if (svg) svg.setAttribute('viewBox', formatViewBoxForMapView(mapView));
 svg?.classList.toggle('world-wrap-enabled', worldWrapEnabled);
 const gRegions = document.getElementById('regions');
+const gNormalRegionColors = document.getElementById('normalRegionColors');
 const gHitRegions = document.getElementById('hitRegions');
 const gLabels = document.getElementById('labels');
 const gClaimLabels = document.getElementById('claimLabels');
 const gGrid = document.getElementById('grid');
 const gForeignHoverOverlays = document.getElementById('foreignHoverOverlays');
+const gHoverClaimPreviewOverlays = document.getElementById('hoverClaimPreviewOverlays');
 const gClaimOverlays = document.getElementById('claimOverlays');
 const gSecondaryHoverOverlays = document.getElementById('secondaryHoverOverlays');
 const gCapitalMarkers = document.getElementById('capitalMarkers');
@@ -160,6 +162,7 @@ function createDebugRenderStats() {
     'claimLabelDomReplacements',
     'hoverOutlineReplacements',
     'foreignHoverOverlayReplacements',
+    'hoverClaimPreviewOverlayReplacements',
     'secondaryHoverOverlayReplacements',
     'capitalMarkerRebuilds',
   ];
@@ -225,13 +228,13 @@ const I18N = {
     'button.toggleLabels': '지역 라벨 토글',
     'button.onlyClaims': '영유권 대상만 보기',
     'button.showAllMap': '전체 지도 보기',
-    'section.selectedNation': '선택한 국가',
+    'section.selectedNation': '선택한 지역',
     'sectionCard.moveUp': '카드 위로 이동',
     'sectionCard.moveDown': '카드 아래로 이동',
     'sectionCard.collapse': '카드 접기',
     'sectionCard.expand': '카드 펼치기',
     'nationInfo.basic.title': '국가 기본정보',
-    'nationInfo.empty': '지도에서 국가나 지역 위에 마우스를 올리세요.',
+    'nationInfo.empty': '지도에서 지역을 클릭하세요.',
     'note.claimSource': '이 지도는 <code>TIBilateralTemplate.json</code>의 <code>relationType=Claim</code>, <code>projectUnlockName</code>, <code>nation1</code>, <code>region1</code> 데이터를 사용합니다. 연구가 즉시 병합을 수행한다기보다 병합/정복/통합 가능성의 전제인 영유권을 부여한다는 의미로 표시합니다. <code>projectUnlockName</code>이 없는 항목도 기본/상시 영유권으로 포함합니다.',
     'mapActions.aria': '외부 링크 및 언어',
     'language.label': '언어',
@@ -331,13 +334,13 @@ const I18N = {
     'button.toggleLabels': 'Toggle region labels',
     'button.onlyClaims': 'Show claim targets only',
     'button.showAllMap': 'Show full map',
-    'section.selectedNation': 'Selected Nation',
+    'section.selectedNation': 'Selected Region',
     'sectionCard.moveUp': 'Move card up',
     'sectionCard.moveDown': 'Move card down',
     'sectionCard.collapse': 'Collapse card',
     'sectionCard.expand': 'Expand card',
     'nationInfo.basic.title': 'Basic Nation Info',
-    'nationInfo.empty': 'Hover a nation or region on the map.',
+    'nationInfo.empty': 'Click a region on the map.',
     'note.claimSource': 'This map uses <code>relationType=Claim</code>, <code>projectUnlockName</code>, <code>nation1</code>, and <code>region1</code> from <code>TIBilateralTemplate.json</code>. Research is shown as granting claims, which are prerequisites for merger, conquest, or unification possibilities, rather than as performing those actions immediately. Claims without <code>projectUnlockName</code> are included as baseline claims.',
     'mapActions.aria': 'External links and language',
     'language.label': 'Language',
@@ -572,6 +575,7 @@ function applyStaticTranslations() {
 const regionByName = derivedIndices.regionByName;
 const pathByRegion = new Map();
 const pathInstancesByRegion = new Map();
+const normalRegionColorElements = [];
 const hitPathByRegion = new Map();
 const hitPathInstancesByRegion = new Map();
 const nationRegions = derivedIndices.nationRegions;
@@ -584,6 +588,7 @@ let currentDropdownChoices = [];
 let regionChoices = derivedIndices.regionChoices;
 let pendingHoverNation = '';
 let hoverPreviewFrame = 0;
+let hoverClaimPreviewNation = '';
 let visibleNationRegionNames = new Set();
 let currentOverlayModel = null;
 let tooltipRegionId = null;
@@ -592,6 +597,7 @@ let tooltipSizeCache = {width: 160, height: 26, valid: false};
 let tooltipFrame = 0;
 let pendingTooltipPoint = null;
 let foreignHoverVisualKey = '';
+let hoverClaimPreviewVisualKey = '';
 let secondaryHoverVisualKey = '';
 let hoverOutlineVisualKey = '';
 let capitalMarkersKey = '';
@@ -613,6 +619,7 @@ const foreignHoverDescriptorCache = new Map();
 const CLAIM_OVERLAY_EMPTY_RENDER_KEY = 'claim-overlay-paths:empty';
 const CLAIM_LABEL_EMPTY_RENDER_KEY = 'claim-labels:empty';
 const FOREIGN_HOVER_EMPTY_RENDER_KEY = 'foreign-hover:empty';
+const HOVER_CLAIM_PREVIEW_EMPTY_RENDER_KEY = 'hover-claim-preview:empty';
 const SECONDARY_HOVER_EMPTY_RENDER_KEY = 'secondary-hover:empty';
 const HOVER_OUTLINE_EMPTY_RENDER_KEY = 'hover-outline:empty';
 const claimOverlayLayerRenderKeys = new WeakMap();
@@ -707,6 +714,12 @@ function setOverlayVisualState(model) {
   setOverlayState(mapVisualState, model, REGIONS);
 }
 
+function syncClaimPresentationState() {
+  const committed = !!currentOverlayModel?.hasClaimOverlay;
+  const preview = !!hoverClaimPreviewNation;
+  svg?.classList?.toggle('claims-active', committed || preview);
+}
+
 function setHiddenVisualState(hiddenRegionIds) {
   setHiddenState(mapVisualState, hiddenRegionIds);
 }
@@ -726,6 +739,7 @@ function applyMapVisualState(renderContext = {}, state = mapVisualState) {
   recordRenderStat('visiblePathsTouched', (context.regionPathElements || []).length);
   recordRenderStat('hitPathsTouched', (context.hitPathElements || []).length || (context.hitPathByRegion || new Map()).size);
   applyVisualState(context, state);
+  syncClaimPresentationState();
 }
 
 function applyMapVisualStateForRegions(regionIds, renderContext = {}, state = mapVisualState) {
@@ -743,6 +757,7 @@ function applyMapVisualStateForRegions(regionIds, renderContext = {}, state = ma
   recordRenderStat('boundedVisualStateApplications');
   recordRenderStat('visiblePathsTouched', result.visiblePathsTouched);
   recordRenderStat('hitPathsTouched', result.hitPathsTouched);
+  syncClaimPresentationState();
   return result;
 }
 
@@ -780,6 +795,15 @@ const SECONDARY_CAPITAL_TIER_OPACITY_BOOST = 0.035;
 function injectClaimOverlayStyles() {
   const style = document.createElement('style');
   style.textContent = `
+    #normalRegionColors {
+      pointer-events:none;
+    }
+    #normalRegionColors .normal-region-color.hidden {
+      display:none;
+    }
+    svg.claims-active #normalRegionColors {
+      display:none;
+    }
     svg.claims-active .region {
       fill:${MUTED_NON_CLAIM_COLOR} !important;
       opacity:1;
@@ -1327,6 +1351,49 @@ function resetTransientClaimState() {
   projectSel.value = '';
   if (claimModeSel.value === 'project') claimModeSel.value = 'all';
 }
+function resetHoverPreviewClaimState() {
+  clearTransientClaimAppState(appState);
+  setSecondaryHoverNationState();
+  setProjectFilterState('');
+  setActiveIncomingClaimKeyState('');
+}
+function shouldRenderCommittedNationDetails() {
+  return !!getLockedNation();
+}
+function clearHoverClaimPreviewOverlay({force=false} = {}) {
+  hoverClaimPreviewNation = '';
+  replaceHoverClaimPreviewOverlayForKey(
+    HOVER_CLAIM_PREVIEW_EMPTY_RENDER_KEY,
+    () => document.createDocumentFragment(),
+    {force}
+  );
+  syncClaimPresentationState();
+}
+function updateHoverNationPreview(nation) {
+  if (getLockedNation()) return;
+  const previewNation = nation || '';
+  setActiveNationState('');
+  hoverClaimPreviewNation = previewNation;
+  if (!previewNation) {
+    visibleNationRegionNames = new Set();
+    clearHoverClaimPreviewOverlay({force: true});
+    setClaimsPillEmpty();
+    renderHoverOutlines();
+    renderCapitalMarkers();
+    return;
+  }
+  const overlayModel = getNationOverlayModel(activeData, derivedIndices, previewNation, {cacheKey: 'hover-preview'});
+  visibleNationRegionNames = new Set(overlayModel.resultSet);
+  const overlayDescriptorSet = getClaimOverlayDescriptorSet(overlayModel);
+  replaceHoverClaimPreviewOverlayForKey(
+    hoverClaimPreviewRenderKey(overlayModel, overlayDescriptorSet, worldCopyContexts),
+    () => markHoverClaimPreviewFragment(createClaimOverlayPathFragment(overlayDescriptorSet.descriptors, {copyContexts: worldCopyContexts}))
+  );
+  syncClaimPresentationState();
+  renderClaimSummaryPill(overlayModel);
+  renderHoverOutlines();
+  renderCapitalMarkers();
+}
 function cancelPendingHoverPreview() {
   if (hoverPreviewFrame) {
     window.cancelAnimationFrame(hoverPreviewFrame);
@@ -1336,16 +1403,16 @@ function cancelPendingHoverPreview() {
 }
 function setHoverPreviewNation(nation) {
   if (getLockedNation()) return;
-  if (getHoverNation() === nation && getActiveNation() === nation) return;
-  setHoverNationState(nation);
-  resetTransientClaimState();
-  setSelectedRegionIds();
-  updateNationOverlay(getHoverNation());
+  const nextNation = nation || '';
+  if (hoverClaimPreviewNation === nextNation && !getActiveNation()) return;
+  setHoverNationState(nextNation);
+  resetHoverPreviewClaimState();
+  updateHoverNationPreview(getHoverNation());
 }
 function scheduleHoverPreviewNation(nation) {
   if (getLockedNation()) return;
   const nextNation = nation || '';
-  if (getHoverNation() === nextNation && getActiveNation() === nextNation) return;
+  if (hoverClaimPreviewNation === nextNation && !getActiveNation()) return;
   pendingHoverNation = nextNation;
   if (hoverPreviewFrame) return;
   hoverPreviewFrame = window.requestAnimationFrame(() => {
@@ -1374,10 +1441,8 @@ function clearHoverPreview() {
   }
   if (!getHoverNation() && !getActiveNation()) return;
   setHoverNationState();
-  resetTransientClaimState();
-  setSelectedRegionIds();
-  updateNationOverlay('');
-  updateSelectedRegions();
+  resetHoverPreviewClaimState();
+  updateHoverNationPreview('');
 }
 function buildIncomingClaimIndex() {
   incomingClaimsByRegion.clear();
@@ -1645,6 +1710,28 @@ function replaceSecondaryHoverOverlayForKey(nextKey, buildChildren, {force=false
   recordRenderStat('secondaryHoverOverlayReplacements');
   replaceLayerChildren(gSecondaryHoverOverlays, buildChildren());
 }
+function hoverClaimPreviewRenderKey(model, descriptorSet, copyContexts = worldCopyContexts) {
+  if (!model) return HOVER_CLAIM_PREVIEW_EMPTY_RENDER_KEY;
+  return JSON.stringify({
+    kind: 'hover-claim-preview',
+    copyPlan: copyContextRenderKey(copyContexts),
+    descriptorKey: descriptorSet?.cacheKey || '',
+  });
+}
+function markHoverClaimPreviewFragment(fragment, nation = hoverClaimPreviewNation) {
+  for (const el of fragment.querySelectorAll?.('.claim-overlay') || []) {
+    el.dataset.preview = 'hover-claim';
+    if (nation) el.dataset.nation = nation;
+  }
+  return fragment;
+}
+function replaceHoverClaimPreviewOverlayForKey(nextKey, buildChildren, {force=false} = {}) {
+  if (!gHoverClaimPreviewOverlays) return;
+  if (!force && nextKey === hoverClaimPreviewVisualKey) return;
+  hoverClaimPreviewVisualKey = nextKey;
+  recordRenderStat('hoverClaimPreviewOverlayReplacements');
+  replaceLayerChildren(gHoverClaimPreviewOverlays, buildChildren());
+}
 function replaceHoverOutlinesForKey(nextKey, buildChildren, {force=false} = {}) {
   if (!gHoverOutlines) return;
   if (!force && nextKey === hoverOutlineVisualKey) return;
@@ -1791,7 +1878,7 @@ function clearSelection({clearSearch=true} = {}) {
   setOnlyClaimsState(false);
   updateOnlyClaimsButtonLabel();
   setHoverPill();
-  updateNationOverlay('');
+  updateNationOverlay('', {renderDetails: true, updateFilters: false, updateSelected: false});
   applyFilters(true);
   updateSelectedRegions();
 }
@@ -1855,6 +1942,35 @@ function renderGrid(renderContext = {}) {
     copyContexts: renderContext.copyContexts || worldCopyContexts,
   });
 }
+function renderNormalRegionColors(renderContext = {}) {
+  if (!gNormalRegionColors) return;
+  const copyContexts = normalizeWorldCopyContexts(renderContext.copyContexts || worldCopyContexts);
+  normalRegionColorElements.length = 0;
+  const frag = document.createDocumentFragment();
+  for (const copyContext of copyContexts) {
+    appendWorldCopyFragment(frag, copyContext, copyContexts.length, 'normal-region-color-copy', () => {
+      const copyFrag = document.createDocumentFragment();
+      for (const region of REGIONS) {
+        const path = createRegionPath(region, {
+          class: 'normal-region-color',
+          fill: colorFor(region),
+        }, worldCopyDataset(copyContext));
+        normalRegionColorElements.push(path);
+        copyFrag.appendChild(path);
+      }
+      return copyFrag;
+    });
+  }
+  replaceLayerChildren(gNormalRegionColors, frag);
+  syncNormalRegionColorVisibility();
+}
+function syncNormalRegionColorVisibility() {
+  if (!normalRegionColorElements.length) return;
+  for (const path of normalRegionColorElements) {
+    const regionName = path.dataset.region;
+    path.classList.toggle('hidden', !!regionName && mapVisualState.hiddenRegionIds.has(regionName));
+  }
+}
 function renderRegions(renderContext = {}) {
   renderRegionLayers({
     layer: gRegions,
@@ -1870,11 +1986,12 @@ function renderRegions(renderContext = {}) {
     hitPathElements,
     labelTextElements,
     labelsVisible,
-    colorFor,
+    colorFor: () => MUTED_NON_CLAIM_COLOR,
     labelPosition,
     localizedRegionName,
     ...renderContext,
   });
+  renderNormalRegionColors(renderContext);
   applyFilters();
   updateNationOverlay(getCurrentNation());
 }
@@ -2066,9 +2183,14 @@ function canUseSimpleHoverVisualDelta(previousRegionName, nextRegion, {force=fal
     && !hoverPreviewFrame
     && !pendingHoverNation
     && previousRegion.nationTag === nextRegion.nationTag
-    && getActiveNation() === nextRegion.nationTag
-    && getHoverNation() === nextRegion.nationTag;
-  if (!lockedNation && !stableUnlockedNation) return false;
+    && getHoverNation() === nextRegion.nationTag
+    && (getActiveNation() === nextRegion.nationTag || !getActiveNation());
+  const lightweightUnlockedPreview = !lockedNation
+    && !hoverPreviewFrame
+    && !pendingHoverNation
+    && !getActiveNation()
+    && !!getHoverNation();
+  if (!lockedNation && !stableUnlockedNation && !lightweightUnlockedPreview) return false;
   if (regionHasSimpleHoverDeltaHazard(previousRegionName)) return false;
   if (regionHasSimpleHoverDeltaHazard(nextRegion.regionName)) return false;
   return true;
@@ -2857,10 +2979,18 @@ function bindNationOverlayPanelEvents(panelRoot, model) {
     if (rn) focusRegions([rn], {selectSingle:true, preserveNation:true, refreshOverlay:true});
   }));
 }
-function updateNationOverlay(nation) {
+function updateNationOverlay(
+  nation,
+  {
+    renderDetails = shouldRenderCommittedNationDetails(),
+    updateFilters = renderDetails,
+    updateSelected = renderDetails,
+  } = {}
+) {
   setActiveNationState(nation);
-  updateProjectOptions(getActiveNation());
+  if (renderDetails) updateProjectOptions(getActiveNation());
   if (!getActiveNation()) {
+    clearHoverClaimPreviewOverlay({force: true});
     clearOverlayVisualState();
     applyMapVisualState();
     visibleNationRegionNames = new Set();
@@ -2868,12 +2998,13 @@ function updateNationOverlay(nation) {
     setSecondaryHoverNationState();
     clearClaimOverlayDom({claimOverlayLayer: gClaimOverlays, claimLabelLayer: gClaimLabels});
     renderHoverOutlines();
-    nationInfo.textContent = t('nationInfo.empty');
+    if (renderDetails) nationInfo.textContent = t('nationInfo.empty');
     setClaimsPillEmpty();
-    applyFilters(false);
-    updateSelectedRegions();
+    if (updateFilters) applyFilters(false);
+    if (updateSelected) updateSelectedRegions();
     return;
   }
+  clearHoverClaimPreviewOverlay({force: true});
   const overlayModel = getNationOverlayModel(activeData, derivedIndices, getActiveNation());
   setActiveIncomingClaimKeyState(overlayModel.activeIncomingClaimKey);
   currentOverlayModel = overlayModel;
@@ -2882,10 +3013,12 @@ function updateNationOverlay(nation) {
   refreshSecondaryCapitalPreviewForHoveredRegion();
   renderHoverOutlines();
   renderClaimSummaryPill(overlayModel);
-  renderNationInfoPanel(nationInfo, overlayModel);
-  bindNationOverlayPanelEvents(nationInfo, overlayModel);
-  applyFilters(false);
-  updateSelectedRegions();
+  if (renderDetails) {
+    renderNationInfoPanel(nationInfo, overlayModel);
+    bindNationOverlayPanelEvents(nationInfo, overlayModel);
+  }
+  if (updateFilters) applyFilters(false);
+  if (updateSelected) updateSelectedRegions();
 }
 function updateProjectOptions(nation) {
   const current = getProjectFilter() && getProjectFilter() !== '__base__' ? getProjectFilter() : '';
@@ -2921,6 +3054,7 @@ function applyFilters(rerenderResults=true) {
   });
   setHiddenVisualState(hiddenRegionIds);
   applyMapVisualState();
+  syncNormalRegionColorVisibility();
   labelTextElements.forEach(t => {
     const r = REGIONS[Number(t.dataset.id)];
     const okQ = !q || (r.name+' '+r.regionName+' '+localizedRegionName(r)+' '+(r.primaryCity || '')+' '+Object.values(r.displayName || {}).join(' ')+' '+r.nationTag).toLowerCase().includes(q);
