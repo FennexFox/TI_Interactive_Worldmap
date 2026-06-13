@@ -1878,7 +1878,7 @@ function clearSelection({clearSearch=true} = {}) {
   setOnlyClaimsState(false);
   updateOnlyClaimsButtonLabel();
   setHoverPill();
-  updateNationOverlay('', {renderDetails: true, updateFilters: true, updateSelected: true});
+  updateNationOverlay('', {renderDetails: true, updateFilters: false, updateSelected: false});
   applyFilters(true);
   updateSelectedRegions();
 }

@@ -366,19 +366,16 @@ test('world-wrap default hover claim overlays reuse cached descriptors across bo
   await waitForHoverPreviewFrame(page);
   await expect(page.locator('#claimPill')).toContainText('Brazil');
   await expectProjectedCopies(page.locator('#hoverClaimPreviewOverlays .claim-overlay.owned-territory[data-preview="hover-claim"][data-region="Amazonia"]'));
-  await expectProjectedCopies(page.locator('#hoverClaimPreviewOverlays .claim-overlay.owned-territory[data-preview="hover-claim"][data-region="Amazonia"]'));
 
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
   await hoverWrappedRegion(page, 'Bolivia');
   await waitForHoverPreviewFrame(page);
   await expect(page.locator('#claimPill')).toContainText('Bolivia');
   await expectProjectedCopies(page.locator('#hoverClaimPreviewOverlays .claim-overlay.owned-territory[data-preview="hover-claim"][data-region="Bolivia"]'));
-  await expectProjectedCopies(page.locator('#hoverClaimPreviewOverlays .claim-overlay.owned-territory[data-preview="hover-claim"][data-region="Bolivia"]'));
 
   await hoverWrappedRegion(page, 'Amazonia');
   await waitForHoverPreviewFrame(page);
   await expect(page.locator('#claimPill')).toContainText('Brazil');
-  await expectProjectedCopies(page.locator('#hoverClaimPreviewOverlays .claim-overlay.owned-territory[data-preview="hover-claim"][data-region="Amazonia"]'));
   await expectProjectedCopies(page.locator('#hoverClaimPreviewOverlays .claim-overlay.owned-territory[data-preview="hover-claim"][data-region="Amazonia"]'));
 
   const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
