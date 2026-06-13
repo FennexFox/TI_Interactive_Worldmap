@@ -1,5 +1,16 @@
 import { expect, test } from '@playwright/test';
 
+const SEAM_CANDIDATES = [
+  'Alaska',
+  'AmericanPacific',
+  'FrenchPacific',
+  'Micronesia',
+  'Polynesia',
+  'Kamchatka',
+  'RussianFarEast',
+  'SakhalinKurils',
+];
+
 async function waitForMap(page) {
   await page.goto('/');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
@@ -19,6 +30,10 @@ function regionHit(page, regionName) {
 async function expectProjectedCopies(locator, copies = ['-1', '0', '1']) {
   await expect(locator).toHaveCount(copies.length);
   await expect.poll(async () => locator.evaluateAll(nodes => nodes.map(node => node.dataset.wrapCopy))).toEqual(copies);
+}
+
+async function expectProjectedRegion(page, layerSelector, regionName, copies = ['-1', '0', '1']) {
+  await expectProjectedCopies(page.locator(`${layerSelector}[data-region="${regionName}"]`), copies);
 }
 
 async function mapViewBox(page) {
@@ -304,6 +319,96 @@ test('world-wrap review projects hover, selection, and foreign hover overlays', 
   await copiedOntario.dispatchEvent('pointerover', { bubbles: true, clientX: 140, clientY: 140, pointerType: 'mouse' });
   await copiedOntario.dispatchEvent('pointermove', { bubbles: true, clientX: 146, clientY: 146, pointerType: 'mouse' });
   await expectProjectedCopies(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="CAN"][data-region="Ontario"]'));
+});
+
+test('world-wrap seam candidate geometry stays split into local subpaths', async ({ page }) => {
+  await waitForWrappedMap(page);
+
+  const geometry = await page.evaluate((candidateNames) => {
+    function pointsForSubpath(subpath) {
+      const numbers = [...subpath.matchAll(/-?\d+(?:\.\d+)?/g)].map(match => Number(match[0]));
+      const points = [];
+      for (let i = 0; i < numbers.length - 1; i += 2) points.push({x: numbers[i], y: numbers[i + 1]});
+      return points;
+    }
+    function pathSummary(region) {
+      const subpaths = String(region.path || '')
+        .split(/(?=M\s)/)
+        .map(part => pointsForSubpath(part))
+        .filter(points => points.length);
+      const allX = subpaths.flatMap(points => points.map(point => point.x));
+      const subpathSpans = subpaths.map(points => {
+        const xs = points.map(point => point.x);
+        return Math.max(...xs) - Math.min(...xs);
+      });
+      return {
+        regionName: region.regionName,
+        overallSpan: Math.max(...allX) - Math.min(...allX),
+        maxSubpathSpan: Math.max(...subpathSpans),
+        subpaths: subpaths.length,
+      };
+    }
+    const regionPaths = [...document.querySelectorAll('#regions .region[data-wrap-copy="0"]')];
+    const worldWidth = Number(document.querySelector('#regions .region-copy[data-wrap-copy="1"]')?.dataset.wrapOffset)
+      || document.querySelector('#map').viewBox.baseVal.width;
+    const byName = new Map(regionPaths.map(path => [path.dataset.region, {
+      regionName: path.dataset.region,
+      path: path.getAttribute('d') || '',
+    }]));
+    return {
+      worldWidth,
+      candidates: candidateNames.map(name => pathSummary(byName.get(name))),
+      wideRegions: [...byName.values()]
+        .map(pathSummary)
+        .filter(summary => summary.overallSpan > worldWidth * 0.75)
+        .sort((a, b) => b.overallSpan - a.overallSpan),
+    };
+  }, SEAM_CANDIDATES);
+
+  expect(geometry.candidates.map(summary => summary.regionName)).toEqual(SEAM_CANDIDATES);
+  for (const summary of geometry.candidates) {
+    expect(summary.subpaths).toBeGreaterThan(0);
+    expect(summary.maxSubpathSpan).toBeLessThan(geometry.worldWidth / 2);
+  }
+  expect(geometry.wideRegions.map(summary => summary.regionName)).toEqual([
+    'Melanesia',
+    'Alaska',
+    'NewZealand',
+    'FrenchPacific',
+    'AmericanPacific',
+    'Micronesia',
+  ]);
+  for (const summary of geometry.wideRegions) {
+    expect(summary.maxSubpathSpan).toBeLessThan(geometry.worldWidth / 2);
+  }
+});
+
+test('world-wrap seam candidates keep hit, selection, and claim overlays projected', async ({ page }) => {
+  await waitForWrappedMap(page);
+
+  for (const regionName of SEAM_CANDIDATES) {
+    await expectProjectedRegion(page, '#regions .region', regionName);
+    await expectProjectedRegion(page, '#hitRegions .region-hit', regionName);
+
+    const copiedHit = page.locator(`#hitRegions .region-hit[data-region="${regionName}"][data-wrap-copy="-1"]`);
+    await copiedHit.dispatchEvent('pointerover', { bubbles: true, clientX: 120, clientY: 120, pointerType: 'mouse' });
+    await copiedHit.dispatchEvent('pointermove', { bubbles: true, clientX: 126, clientY: 126, pointerType: 'mouse' });
+    await expectProjectedRegion(page, '#hoverOutlines .hover-fill', regionName);
+
+    await copiedHit.dispatchEvent('click', { bubbles: true });
+    await expectProjectedRegion(page, '#selectionOutlines .selection-label', regionName);
+    await page.locator('#hitRegions').dispatchEvent('click', { bubbles: true });
+    await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
+  }
+
+  await chooseNation(page, 'United States', 'USA');
+  await expectProjectedRegion(page, '#claimOverlays .claim-overlay.owned-territory', 'Alaska');
+  await expectProjectedRegion(page, '#claimOverlays .claim-overlay.owned-territory', 'AmericanPacific');
+
+  await chooseNation(page, 'Russia', 'RUS');
+  await expectProjectedRegion(page, '#claimOverlays .claim-overlay.owned-territory', 'Kamchatka');
+  await expectProjectedRegion(page, '#claimOverlays .claim-overlay.owned-territory', 'RussianFarEast');
+  await expectProjectedRegion(page, '#claimOverlays .claim-overlay.owned-territory', 'SakhalinKurils');
 });
 
 test('world-wrap panning is disabled without the review flag', async ({ page }) => {

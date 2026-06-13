@@ -87,18 +87,27 @@ npm run test:e2e
 
 ## Progress
 
-- [ ] Seam candidate list confirmed.
-- [ ] Path-span detection added or run manually.
-- [ ] Visual seam checks performed.
-- [ ] Fix approach chosen.
-- [ ] Tests and documentation added.
+- [x] Seam candidate list confirmed.
+- [x] Path-span detection added or run manually.
+- [x] Visual seam checks performed.
+- [x] Fix approach chosen.
+- [x] Tests and documentation added.
 
 ## Decision Log
 
 - Decision: Start with targeted Terra Invicta seam validation before adding any general geospatial dependency.
 - Decision: Keep canonical region IDs unchanged even if visual geometry needs splitting.
+- Decision: Treat the current generated seam geometry as valid for MVP because the wide x-range regions are already split into local SVG subpaths rather than single paths crossing most of the world width.
+- Decision: Add DOM-level rendered path span tests instead of introducing preprocessing or a new geospatial dependency for this phase.
+- Decision: Include `Melanesia` and `NewZealand` in the wide-span regression list even though they are not original seam candidates, because generated data currently flags them as wide multi-subpath island groups.
 
 ## Outcomes
 
-Pending implementation.
-
+- Confirmed the targeted seam candidate list: `Alaska`, `AmericanPacific`, `FrenchPacific`, `Micronesia`, `Polynesia`, `Kamchatka`, `RussianFarEast`, and `SakhalinKurils`.
+- Measured rendered canonical path spans and confirmed each candidate's maximum subpath span stays below half of the wrapped world width.
+- Added regression coverage in `tests/map-wrap.spec.js` for wide rendered paths, seam candidate visible/hit copies, hover projection, click selection projection, and owned-territory claim overlay projection.
+- No geometry preprocessing or app source change was required for this phase; generated data stayed unchanged aside from the normal build verification path.
+- Focused validation passed: `npx playwright test tests/map-wrap.spec.js -g "seam"`.
+- Full validation passed: `npm run build`, `npm run verify`, and `npm run test:e2e` with 29 active tests passing and 3 skipped issue-acceptance placeholders.
+- Manual static-site smoke passed against `http://127.0.0.1:4179/?worldWrap=1`: seam copies rendered, panning crossed both directions, hover/click worked on left/center/right copies, and United States/Russia owned overlays projected across copies.
+- Retrospective: seam correctness is now locked for the current checked-in Terra Invicta geometry. Future generated data that introduces a single overly wide subpath should fail the tests and require either preprocessing or render-time path correction.
