@@ -85,6 +85,55 @@ function formatViewBoxNumber(value) {
   return fixed === '-0' ? '0' : fixed;
 }
 
+function clampNumber(value, min, max) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return min;
+  return Math.min(max, Math.max(min, numeric));
+}
+
+export function zoomMapView(mapView, options = {}) {
+  if (!mapView) return mapView;
+
+  const currentWidth = Math.abs(finiteNumber(mapView.width, 1)) || 1;
+  const currentHeight = Math.abs(finiteNumber(mapView.height, 1)) || 1;
+  const baseWidth = Math.abs(finiteNumber(mapView.boundsWidth, finiteNumber(mapView.worldWidth, currentWidth))) || currentWidth;
+  const baseHeight = Math.abs(finiteNumber(mapView.boundsHeight, currentHeight)) || currentHeight;
+  const minWidth = Math.max(baseWidth / 24, 0.000001);
+  const minHeight = Math.max(baseHeight / 24, 0.000001);
+
+  const requestedScale = Number(options.scale);
+  const scale = Number.isFinite(requestedScale) && requestedScale > 0 ? requestedScale : 1;
+
+  let nextWidth = currentWidth * scale;
+  let nextHeight = currentHeight * scale;
+
+  if (nextWidth > baseWidth || nextHeight > baseHeight) {
+    const fitScale = Math.min(baseWidth / nextWidth, baseHeight / nextHeight);
+    nextWidth *= fitScale;
+    nextHeight *= fitScale;
+  }
+
+  if (nextWidth < minWidth || nextHeight < minHeight) {
+    const fitScale = Math.max(minWidth / nextWidth, minHeight / nextHeight);
+    nextWidth *= fitScale;
+    nextHeight *= fitScale;
+  }
+
+  nextWidth = clampNumber(nextWidth, minWidth, baseWidth);
+  nextHeight = clampNumber(nextHeight, minHeight, baseHeight);
+
+  const anchorX = Number.isFinite(Number(options.anchorX)) ? Number(options.anchorX) : mapView.x + currentWidth / 2;
+  const anchorY = Number.isFinite(Number(options.anchorY)) ? Number(options.anchorY) : mapView.y + currentHeight / 2;
+  const relativeX = currentWidth ? (anchorX - mapView.x) / currentWidth : 0.5;
+  const relativeY = currentHeight ? (anchorY - mapView.y) / currentHeight : 0.5;
+
+  mapView.width = nextWidth;
+  mapView.height = nextHeight;
+  mapView.x = normalizeWrappedX(anchorX - relativeX * nextWidth, mapView);
+  mapView.y = clampMapViewY(anchorY - relativeY * nextHeight, mapView);
+  return mapView;
+}
+
 export function formatViewBoxForMapView(mapView = {}) {
   return viewBoxForMapView(mapView).map(formatViewBoxNumber).join(' ');
 }

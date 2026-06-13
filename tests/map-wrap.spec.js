@@ -87,6 +87,21 @@ async function chooseNation(page, query, tag) {
     .click();
 }
 
+test('world-wrap default real mouse click selects a region without being captured as map pan', async ({ page }) => {
+  await waitForWrappedMap(page);
+
+  const hit = page.locator('#hitRegions .region-hit[data-region="Amazonia"][data-wrap-copy="0"]');
+  await expect(hit).toBeVisible();
+  const box = await hit.boundingBox();
+  expect(box).toBeTruthy();
+
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+
+  await expect(page.locator('#search')).toHaveValue(/Brazil/);
+  await expect(page.locator('#hoverPill')).toHaveText('Hover: BRA · Manaus');
+  await expectProjectedCopies(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]'));
+});
+
 test('baseline hit layer resolves one canonical region for hover and click', async ({ page }) => {
   await waitForSingleCopyMap(page);
 

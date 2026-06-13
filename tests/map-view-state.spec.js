@@ -6,6 +6,7 @@ import {
   initializeMapView,
   normalizeWrappedX,
   panMapView,
+  zoomMapView,
   viewBoxForMapView,
 } from '../src/state/map-view-state.js';
 
@@ -97,3 +98,47 @@ test('clamps vertical movement to the original map extent when the viewport is f
   expect(mapView.y).toBe(-1);
 });
 
+
+test('zoomMapView zooms around the provided anchor while preserving wrap and bounds', () => {
+  const mapView = initializeMapView({
+    viewBox: '0 0 360 180',
+  });
+
+  zoomMapView(mapView, {
+    scale: 0.5,
+    anchorX: 90,
+    anchorY: 45,
+  });
+
+  assert.equal(mapView.width, 180);
+  assert.equal(mapView.height, 90);
+  assert.equal(mapView.x, 45);
+  assert.equal(mapView.y, 22.5);
+});
+
+test('zoomMapView clamps zoom-out to the base world extent', () => {
+  const mapView = initializeMapView({
+    viewBox: '0 0 360 180',
+  });
+
+  zoomMapView(mapView, {scale: 0.25});
+  zoomMapView(mapView, {scale: 100});
+
+  assert.equal(mapView.width, 360);
+  assert.equal(mapView.height, 180);
+  assert.equal(mapView.y, 0);
+});
+
+test('zoomMapView can zoom back out to the original base extent after zooming in', () => {
+  const mapView = initializeMapView({
+    viewBox: '0 0 360 180',
+  });
+
+  zoomMapView(mapView, {scale: 0.5});
+  zoomMapView(mapView, {scale: 2});
+  zoomMapView(mapView, {scale: 2});
+
+  assert.equal(mapView.width, 360);
+  assert.equal(mapView.height, 180);
+  assert.equal(mapView.y, 0);
+});

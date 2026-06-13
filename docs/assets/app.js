@@ -25,6 +25,7 @@ import {
   formatViewBoxForMapView,
   initializeMapView,
   panMapView,
+  zoomMapView,
 } from './state/map-view-state.js';
 import {createAppData, getActiveData} from './data/active-data.js';
 import {buildDerivedIndices} from './data/derived-indices.js';
@@ -490,6 +491,7 @@ function initAsideCards() {
     updateAsideCardControls();
   });
   updateAsideCardControls();
+  updateMapViewControlsLabels();
 }
 let currentLanguage = normalizeLanguage(readSavedLanguage() || languageSel?.value || document.documentElement.lang || 'en');
 
@@ -579,6 +581,8 @@ const HOVER_OUTLINE_EMPTY_RENDER_KEY = 'hover-outline:empty';
 const claimOverlayLayerRenderKeys = new WeakMap();
 const claimLabelLayerRenderKeys = new WeakMap();
 const MAP_PAN_DRAG_THRESHOLD_PX = 4;
+const MAP_ZOOM_BUTTON_FACTOR = 1.25;
+const MAP_WHEEL_ZOOM_FACTOR = 1.18;
 
 function setActiveNationState(nation = '') {
   setSelectedNation(appState, nation);
@@ -1730,6 +1734,79 @@ function renderLabels(renderContext = {}) {
     ...renderContext,
   });
 }
+function mapPointFromClientPoint(clientX, clientY) {
+  const rect = svg.getBoundingClientRect();
+  if (!rect.width || !rect.height) {
+    return {
+      x: mapView.x + mapView.width / 2,
+      y: mapView.y + mapView.height / 2,
+    };
+  }
+  return {
+    x: mapView.x + ((clientX - rect.left) / rect.width) * mapView.width,
+    y: mapView.y + ((clientY - rect.top) / rect.height) * mapView.height,
+  };
+}
+function zoomMapAt(scale, anchor = null) {
+  zoomMapView(mapView, {
+    scale,
+    anchorX: anchor?.x,
+    anchorY: anchor?.y,
+  });
+  applyMapViewToSvg();
+}
+function resetMapView() {
+  initializeMapView(activeData, mapView);
+  applyMapViewToSvg();
+}
+function mapViewControlLabel(action) {
+  const labels = {
+    zoomIn: currentLanguage === 'ko' ? '확대' : 'Zoom in',
+    zoomOut: currentLanguage === 'ko' ? '축소' : 'Zoom out',
+    reset: currentLanguage === 'ko' ? '보기 초기화' : 'Reset view',
+  };
+  return labels[action] || action;
+}
+function updateMapViewControlsLabels() {
+  const controls = document.getElementById('mapViewControls');
+  if (!controls) return;
+  controls.querySelectorAll('[data-map-view-action]').forEach(button => {
+    const action = button.dataset.mapViewAction;
+    const label = mapViewControlLabel(action);
+    button.title = label;
+    button.setAttribute('aria-label', label);
+    if (action === 'reset') button.textContent = currentLanguage === 'ko' ? '초기화' : 'Reset';
+  });
+}
+function initMapViewControls() {
+  if (!svgWrap || document.getElementById('mapViewControls')) return;
+  const controls = document.createElement('div');
+  controls.id = 'mapViewControls';
+  controls.className = 'mapViewControls';
+  controls.innerHTML = `
+    <button type="button" class="mapViewControl" data-map-view-action="zoomIn">+</button>
+    <button type="button" class="mapViewControl" data-map-view-action="zoomOut">−</button>
+    <button type="button" class="mapViewControl mapViewControlReset" data-map-view-action="reset">Reset</button>
+  `;
+  controls.addEventListener('click', event => {
+    const button = event.target.closest('[data-map-view-action]');
+    if (!button) return;
+    event.preventDefault();
+    const action = button.dataset.mapViewAction;
+    if (action === 'zoomIn') zoomMapAt(1 / MAP_ZOOM_BUTTON_FACTOR);
+    else if (action === 'zoomOut') zoomMapAt(MAP_ZOOM_BUTTON_FACTOR);
+    else if (action === 'reset') resetMapView();
+  });
+  svgWrap.appendChild(controls);
+  updateMapViewControlsLabels();
+}
+function onMapWheel(e) {
+  if (!mapView) return;
+  e.preventDefault();
+  const anchor = mapPointFromClientPoint(e.clientX, e.clientY);
+  const scale = e.deltaY < 0 ? 1 / MAP_WHEEL_ZOOM_FACTOR : MAP_WHEEL_ZOOM_FACTOR;
+  zoomMapAt(scale, anchor);
+}
 function applyMapViewToSvg() {
   if (svg) svg.setAttribute('viewBox', formatViewBoxForMapView(mapView));
   renderGrid({mapView});
@@ -1940,9 +2017,6 @@ function onMapPointerDown(e) {
     dragging: false,
   };
   svg?.classList.add('is-panning-ready');
-  try {
-    svg?.setPointerCapture?.(e.pointerId);
-  } catch {}
 }
 function onMapPointerMove(e) {
   if (!worldWrapEnabled || !mapPanState || e.pointerId !== mapPanState.pointerId) return;
@@ -1952,6 +2026,9 @@ function onMapPointerMove(e) {
   if (!mapPanState.dragging) {
     mapPanState.dragging = true;
     svg?.classList.add('is-panning');
+    try {
+      svg?.setPointerCapture?.(e.pointerId);
+    } catch {}
     clearHoverPreview();
   }
   e.preventDefault();
@@ -2588,6 +2665,7 @@ if (worldWrapEnabled) {
   svg.addEventListener('lostpointercapture', onMapLostPointerCapture);
 }
 svg.addEventListener('mousemove', onMapMove);
+svg.addEventListener('wheel', onMapWheel, {passive:false});
 svg.addEventListener('click', e => {
   if (consumeSuppressedMapClick(e)) return;
   const target = e.target;
@@ -2600,6 +2678,7 @@ if ('ResizeObserver' in window) new ResizeObserver(invalidateTooltipLayout).obse
 
 setHoverPill();
 setClaimsPillEmpty();
+initMapViewControls();
 populate(); renderGrid({mapView}); renderRegions({mapView});
 }).catch((error) => {
   console.error(error);
