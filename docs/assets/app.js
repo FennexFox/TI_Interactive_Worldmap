@@ -148,6 +148,12 @@ function createDebugRenderStats() {
     'claimLabelDescriptorCacheHits',
     'foreignHoverDescriptorBuilds',
     'foreignHoverDescriptorCacheHits',
+    'claimOverlayInactiveBufferRebuilds',
+    'claimLabelInactiveBufferRebuilds',
+    'claimOverlayBufferSwaps',
+    'claimLabelBufferSwaps',
+    'claimOverlayStaleRenderSkips',
+    'claimLabelStaleRenderSkips',
     'claimOverlayDomReplacements',
     'claimLabelDomReplacements',
     'hoverOutlineReplacements',
@@ -171,6 +177,18 @@ function recordRenderStat(key, amount = 1) {
   if (!debugRenderStats) return;
   debugRenderStats[key] = (debugRenderStats[key] || 0) + amount;
 }
+
+const DEBUG_CLAIM_OVERLAY_DELAY_QUERY = 'debugClaimOverlayDelayFrames';
+function debugClaimOverlayDelayFrames() {
+  try {
+    const value = new URLSearchParams(window.location.search).get(DEBUG_CLAIM_OVERLAY_DELAY_QUERY);
+    const frames = Number.parseInt(value || '0', 10);
+    return Number.isFinite(frames) && frames > 0 ? Math.min(frames, 30) : 0;
+  } catch {
+    return 0;
+  }
+}
+const claimOverlayCommitDelayFrames = debugRenderStats ? debugClaimOverlayDelayFrames() : 0;
 
 const LANGUAGE_STORAGE_KEY = 'ti-map-language';
 const ASIDE_CARD_ORDER_STORAGE_KEY = 'ti-map-aside-card-order';
@@ -593,6 +611,8 @@ const FOREIGN_HOVER_EMPTY_RENDER_KEY = 'foreign-hover:empty';
 const HOVER_OUTLINE_EMPTY_RENDER_KEY = 'hover-outline:empty';
 const claimOverlayLayerRenderKeys = new WeakMap();
 const claimLabelLayerRenderKeys = new WeakMap();
+const claimOverlayBufferStates = new WeakMap();
+const claimLabelBufferStates = new WeakMap();
 const MAP_PAN_DRAG_THRESHOLD_PX = 4;
 const MAP_ZOOM_BUTTON_FACTOR = 1.25;
 const MAP_WHEEL_ZOOM_FACTOR = 1.18;
@@ -2503,6 +2523,137 @@ function createClaimLabelFragment(descriptors, {copyContexts=worldCopyContexts} 
     return frag;
   });
 }
+
+function runAfterAnimationFrames(frameCount, callback) {
+  if (frameCount <= 0) {
+    callback();
+    return;
+  }
+  let remaining = frameCount;
+  const step = () => {
+    remaining -= 1;
+    if (remaining <= 0) callback();
+    else window.requestAnimationFrame(step);
+  };
+  window.requestAnimationFrame(step);
+}
+
+function setOverlayBufferActive(buffer, active) {
+  if (!buffer) return;
+  buffer.style.display = active ? '' : 'none';
+  buffer.dataset.overlayBufferActive = active ? '1' : '0';
+  buffer.setAttribute('aria-hidden', active ? 'false' : 'true');
+}
+
+function createOverlayBufferGroup(className, index, active = false) {
+  const buffer = createSvgElement('g', {class: className}, {overlayBuffer: index});
+  setOverlayBufferActive(buffer, active);
+  return buffer;
+}
+
+function getBufferedLayerState(layer, stateStore, bufferClassName) {
+  if (!layer) return null;
+  let state = stateStore.get(layer);
+  if (state) return state;
+  const buffers = [
+    createOverlayBufferGroup(bufferClassName, 0, true),
+    createOverlayBufferGroup(bufferClassName, 1, false),
+  ];
+  replaceLayerChildren(layer, buffers);
+  state = {
+    buffers,
+    visibleIndex: 0,
+    generation: 0,
+    pendingKey: '',
+    pendingGeneration: 0,
+  };
+  stateStore.set(layer, state);
+  return state;
+}
+
+function clearBufferedLayerChildrenForRenderKey(layer, keyStore, stateStore, bufferClassName, emptyKey, statKey) {
+  if (!layer) return false;
+  const state = getBufferedLayerState(layer, stateStore, bufferClassName);
+  const alreadyEmpty = keyStore.get(layer) === emptyKey
+    && state.buffers.every(buffer => !buffer.childNodes.length)
+    && !state.pendingKey;
+  if (alreadyEmpty) return false;
+  state.generation += 1;
+  state.pendingKey = '';
+  state.pendingGeneration = 0;
+  state.visibleIndex = 0;
+  state.buffers.forEach((buffer, index) => {
+    replaceLayerChildren(buffer);
+    delete buffer.dataset.renderGeneration;
+    setOverlayBufferActive(buffer, index === state.visibleIndex);
+  });
+  keyStore.set(layer, emptyKey);
+  recordRenderStat(statKey);
+  return true;
+}
+
+function replaceBufferedLayerChildrenForRenderKey(
+  layer,
+  keyStore,
+  stateStore,
+  bufferClassName,
+  nextKey,
+  buildChildren,
+  statKey,
+  inactiveBufferStatKey,
+  swapStatKey,
+  staleStatKey
+) {
+  if (!layer) return false;
+  const state = getBufferedLayerState(layer, stateStore, bufferClassName);
+  if (keyStore.get(layer) === nextKey) {
+    if (state.pendingKey && state.pendingKey !== nextKey) {
+      state.generation += 1;
+      state.pendingKey = '';
+      state.pendingGeneration = 0;
+    }
+    return false;
+  }
+
+  const generation = state.generation + 1;
+  state.generation = generation;
+  state.pendingKey = nextKey;
+  state.pendingGeneration = generation;
+  const inactiveIndex = state.visibleIndex === 0 ? 1 : 0;
+  const inactiveBuffer = state.buffers[inactiveIndex];
+  replaceLayerChildren(inactiveBuffer, buildChildren());
+  inactiveBuffer.dataset.renderGeneration = String(generation);
+  recordRenderStat(inactiveBufferStatKey);
+
+  runAfterAnimationFrames(claimOverlayCommitDelayFrames, () => {
+    const stillCurrent = state.generation === generation
+      && state.pendingGeneration === generation
+      && state.pendingKey === nextKey;
+    if (!stillCurrent) {
+      recordRenderStat(staleStatKey);
+      if (inactiveBuffer.dataset.renderGeneration === String(generation)) {
+        replaceLayerChildren(inactiveBuffer);
+        delete inactiveBuffer.dataset.renderGeneration;
+      }
+      return;
+    }
+
+    const previousBuffer = state.buffers[state.visibleIndex];
+    state.visibleIndex = inactiveIndex;
+    state.pendingKey = '';
+    state.pendingGeneration = 0;
+    delete inactiveBuffer.dataset.renderGeneration;
+    setOverlayBufferActive(inactiveBuffer, true);
+    setOverlayBufferActive(previousBuffer, false);
+    replaceLayerChildren(previousBuffer);
+    delete previousBuffer.dataset.renderGeneration;
+    keyStore.set(layer, nextKey);
+    recordRenderStat(statKey);
+    recordRenderStat(swapStatKey);
+  });
+  return true;
+}
+
 function replaceLayerChildrenForRenderKey(layer, keyStore, nextKey, buildChildren, statKey) {
   if (!layer) return false;
   if (keyStore.get(layer) === nextKey) return false;
@@ -2512,18 +2663,20 @@ function replaceLayerChildrenForRenderKey(layer, keyStore, nextKey, buildChildre
   return true;
 }
 function clearClaimOverlayDom(renderContext = {}) {
-  replaceLayerChildrenForRenderKey(
+  clearBufferedLayerChildrenForRenderKey(
     renderContext.claimOverlayLayer || gClaimOverlays,
     claimOverlayLayerRenderKeys,
+    claimOverlayBufferStates,
+    'claim-overlay-buffer',
     CLAIM_OVERLAY_EMPTY_RENDER_KEY,
-    () => [],
     'claimOverlayDomReplacements'
   );
-  replaceLayerChildrenForRenderKey(
+  clearBufferedLayerChildrenForRenderKey(
     renderContext.claimLabelLayer || gClaimLabels,
     claimLabelLayerRenderKeys,
+    claimLabelBufferStates,
+    'claim-label-buffer',
     CLAIM_LABEL_EMPTY_RENDER_KEY,
-    () => [],
     'claimLabelDomReplacements'
   );
 }
@@ -2533,19 +2686,29 @@ function renderMapOverlay(model, renderContext = {}) {
   applyMapVisualState(renderContext);
   const overlayDescriptorSet = getClaimOverlayDescriptorSet(model);
   const labelDescriptorSet = getClaimLabelDescriptorSet(model);
-  replaceLayerChildrenForRenderKey(
+  replaceBufferedLayerChildrenForRenderKey(
     renderContext.claimOverlayLayer || gClaimOverlays,
     claimOverlayLayerRenderKeys,
+    claimOverlayBufferStates,
+    'claim-overlay-buffer',
     claimOverlayPathRenderKey(model, overlayDescriptorSet, copyContexts),
     () => createClaimOverlayPathFragment(overlayDescriptorSet.descriptors, {copyContexts}),
-    'claimOverlayDomReplacements'
+    'claimOverlayDomReplacements',
+    'claimOverlayInactiveBufferRebuilds',
+    'claimOverlayBufferSwaps',
+    'claimOverlayStaleRenderSkips'
   );
-  replaceLayerChildrenForRenderKey(
+  replaceBufferedLayerChildrenForRenderKey(
     renderContext.claimLabelLayer || gClaimLabels,
     claimLabelLayerRenderKeys,
+    claimLabelBufferStates,
+    'claim-label-buffer',
     claimLabelRenderKey(model, labelDescriptorSet, copyContexts),
     () => createClaimLabelFragment(labelDescriptorSet.descriptors, {copyContexts}),
-    'claimLabelDomReplacements'
+    'claimLabelDomReplacements',
+    'claimLabelInactiveBufferRebuilds',
+    'claimLabelBufferSwaps',
+    'claimLabelStaleRenderSkips'
   );
   renderCapitalMarkers({copyContexts});
 }
