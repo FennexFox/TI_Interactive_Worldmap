@@ -1718,9 +1718,10 @@ function hoverClaimPreviewRenderKey(model, descriptorSet, copyContexts = worldCo
     descriptorKey: descriptorSet?.cacheKey || '',
   });
 }
-function markHoverClaimPreviewFragment(fragment) {
+function markHoverClaimPreviewFragment(fragment, nation = hoverClaimPreviewNation) {
   for (const el of fragment.querySelectorAll?.('.claim-overlay') || []) {
     el.dataset.preview = 'hover-claim';
+    if (nation) el.dataset.nation = nation;
   }
   return fragment;
 }
