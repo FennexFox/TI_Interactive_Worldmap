@@ -70,21 +70,6 @@ export function panMapView(mapView, {dx = 0, dy = 0, normalizeX = true} = {}) {
   return mapView;
 }
 
-export function viewBoxForMapView(mapView = {}) {
-  return [
-    finiteNumber(mapView.x),
-    finiteNumber(mapView.y),
-    finiteNumber(mapView.width),
-    finiteNumber(mapView.height),
-  ];
-}
-
-function formatViewBoxNumber(value) {
-  const number = finiteNumber(value);
-  const fixed = number.toFixed(9).replace(/\.?0+$/, '');
-  return fixed === '-0' ? '0' : fixed;
-}
-
 function clampNumber(value, min, max) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return min;
@@ -134,7 +119,21 @@ export function zoomMapView(mapView, options = {}) {
   return mapView;
 }
 
+export function viewBoxForMapView(mapView = {}) {
+  return [
+    finiteNumber(mapView.x),
+    finiteNumber(mapView.y),
+    finiteNumber(mapView.width),
+    finiteNumber(mapView.height),
+  ];
+}
+
+function formatViewBoxNumber(value) {
+  const number = finiteNumber(value);
+  const fixed = number.toFixed(9).replace(/\.?0+$/, '');
+  return fixed === '-0' ? '0' : fixed;
+}
+
 export function formatViewBoxForMapView(mapView = {}) {
   return viewBoxForMapView(mapView).map(formatViewBoxNumber).join(' ');
 }
-

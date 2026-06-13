@@ -6,8 +6,8 @@ import {
   initializeMapView,
   normalizeWrappedX,
   panMapView,
-  zoomMapView,
   viewBoxForMapView,
+  zoomMapView,
 } from '../src/state/map-view-state.js';
 
 const SUMMARY_VIEW_BOX = [-3.17409138, -1.543560305, 6.52568676, 2.58888961];
@@ -98,11 +98,8 @@ test('clamps vertical movement to the original map extent when the viewport is f
   expect(mapView.y).toBe(-1);
 });
 
-
 test('zoomMapView zooms around the provided anchor while preserving wrap and bounds', () => {
-  const mapView = initializeMapView({
-    viewBox: '0 0 360 180',
-  });
+  const mapView = initializeMapView(sampleActiveData([0, 0, 360, 180]));
 
   zoomMapView(mapView, {
     scale: 0.5,
@@ -110,35 +107,31 @@ test('zoomMapView zooms around the provided anchor while preserving wrap and bou
     anchorY: 45,
   });
 
-  assert.equal(mapView.width, 180);
-  assert.equal(mapView.height, 90);
-  assert.equal(mapView.x, 45);
-  assert.equal(mapView.y, 22.5);
+  expect(mapView.width).toBeCloseTo(180);
+  expect(mapView.height).toBeCloseTo(90);
+  expect(mapView.x).toBeCloseTo(45);
+  expect(mapView.y).toBeCloseTo(22.5);
 });
 
 test('zoomMapView clamps zoom-out to the base world extent', () => {
-  const mapView = initializeMapView({
-    viewBox: '0 0 360 180',
-  });
+  const mapView = initializeMapView(sampleActiveData([0, 0, 360, 180]));
 
   zoomMapView(mapView, {scale: 0.25});
   zoomMapView(mapView, {scale: 100});
 
-  assert.equal(mapView.width, 360);
-  assert.equal(mapView.height, 180);
-  assert.equal(mapView.y, 0);
+  expect(mapView.width).toBeCloseTo(360);
+  expect(mapView.height).toBeCloseTo(180);
+  expect(mapView.y).toBeCloseTo(0);
 });
 
 test('zoomMapView can zoom back out to the original base extent after zooming in', () => {
-  const mapView = initializeMapView({
-    viewBox: '0 0 360 180',
-  });
+  const mapView = initializeMapView(sampleActiveData([0, 0, 360, 180]));
 
   zoomMapView(mapView, {scale: 0.5});
   zoomMapView(mapView, {scale: 2});
   zoomMapView(mapView, {scale: 2});
 
-  assert.equal(mapView.width, 360);
-  assert.equal(mapView.height, 180);
-  assert.equal(mapView.y, 0);
+  expect(mapView.width).toBeCloseTo(360);
+  expect(mapView.height).toBeCloseTo(180);
+  expect(mapView.y).toBeCloseTo(0);
 });
