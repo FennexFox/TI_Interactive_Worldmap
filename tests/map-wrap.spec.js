@@ -87,6 +87,25 @@ async function chooseNation(page, query, tag) {
     .click();
 }
 
+test('world-wrap pan keeps hover feedback active while dragging', async ({ page }) => {
+  await waitForWrappedMap(page);
+
+  const hit = page.locator('#hitRegions .region-hit[data-region="Amazonia"][data-wrap-copy="0"]');
+  await expect(hit).toBeVisible();
+  const box = await hit.boundingBox();
+  expect(box).toBeTruthy();
+
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await expect(page.locator('#hoverPill')).not.toHaveText('Hover: -');
+
+  await page.mouse.down();
+  await page.mouse.move(x + 16, y + 8, {steps: 4});
+  await expect(page.locator('#hoverPill')).not.toHaveText('Hover: -');
+  await page.mouse.up();
+});
+
 test('world-wrap default real mouse click selects a region without being captured as map pan', async ({ page }) => {
   await waitForWrappedMap(page);
 

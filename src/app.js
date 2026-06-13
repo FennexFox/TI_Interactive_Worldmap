@@ -567,6 +567,8 @@ let foreignHoverVisualKey = '';
 let hoverOutlineVisualKey = '';
 let capitalMarkersKey = '';
 let mapViewFrame = 0;
+let panHoverRefreshFrame = 0;
+let pendingPanHoverPoint = null;
 let mapPanState = null;
 let suppressMapClick = false;
 const nationChoiceByValue = new Map();
@@ -1974,6 +1976,39 @@ function onHitLayerClick(e) {
   e.stopPropagation();
   selectRegion(region);
 }
+function hitRegionElementFromClientPoint(clientX, clientY) {
+  const elements = document.elementsFromPoint?.(clientX, clientY)
+    || [document.elementFromPoint?.(clientX, clientY)].filter(Boolean);
+  for (const element of elements) {
+    const hit = element?.closest?.('.region-hit[data-region-id], .region-hit[data-region]');
+    if (hit && gHitRegions?.contains(hit)) return hit;
+  }
+  return null;
+}
+function refreshPanHoverFromClientPoint(clientX, clientY) {
+  const hit = hitRegionElementFromClientPoint(clientX, clientY);
+  if (!hit) {
+    if (getHoveredRegionName() || getHoverNation() || tooltipRegionId != null || pendingTooltipPoint) {
+      clearHoverPreview();
+    }
+    return;
+  }
+  const regionName = hit.dataset.regionId || hit.dataset.region;
+  const region = regionByName[regionName];
+  if (!region) return;
+  onRegionMove({clientX, clientY, target: hit}, region);
+}
+function schedulePanHoverRefresh(clientX, clientY) {
+  pendingPanHoverPoint = {clientX, clientY};
+  if (panHoverRefreshFrame) return;
+  panHoverRefreshFrame = window.requestAnimationFrame(() => {
+    panHoverRefreshFrame = 0;
+    const point = pendingPanHoverPoint;
+    pendingPanHoverPoint = null;
+    if (!point) return;
+    refreshPanHoverFromClientPoint(point.clientX, point.clientY);
+  });
+}
 function viewDeltaFromPointerDelta(deltaX, deltaY) {
   const rect = svg?.getBoundingClientRect();
   if (!rect?.width || !rect?.height) return {dx: 0, dy: 0};
@@ -2037,6 +2072,7 @@ function onMapPointerMove(e) {
   mapPanState.lastX = e.clientX;
   mapPanState.lastY = e.clientY;
   scheduleMapViewRender();
+  schedulePanHoverRefresh(e.clientX, e.clientY);
 }
 function onMapPointerUp(e) {
   if (!mapPanState || e.pointerId !== mapPanState.pointerId) return;
