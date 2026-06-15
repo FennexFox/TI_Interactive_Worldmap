@@ -192,6 +192,13 @@ def parse_path_points(path: str) -> list[tuple[float, float]]:
 
 
 def compact_region_geometry(region: dict[str, Any]) -> tuple[list[str], list[tuple[float, float]], int, list[dict[str, Any]]]:
+    def anchor_xy(anchor: Any) -> tuple[float, float] | None:
+        if isinstance(anchor, dict) and "x" in anchor and "y" in anchor:
+            return float(anchor["x"]), float(anchor["y"])
+        if isinstance(anchor, (list, tuple)) and len(anchor) >= 2:
+            return float(anchor[0]), float(anchor[1])
+        return None
+
     if isinstance(region.get("path"), str):
         points = parse_path_points(region["path"])
         labels = [
@@ -205,12 +212,20 @@ def compact_region_geometry(region: dict[str, Any]) -> tuple[list[str], list[tup
     points_for_bounds: list[tuple[float, float]] = []
     total_points = 0
     for poly in region.get("poly2DList", []):
-        if len(poly) < 3:
+        if isinstance(poly, dict):
+            raw_points = poly.get("data")
+        else:
+            raw_points = poly
+        if not isinstance(raw_points, list) or len(raw_points) < 3:
             continue
+
         points = []
-        for point in poly:
-            x, y = point["anchor"]
-            points.append((x, y))
+        for point in raw_points:
+            if not isinstance(point, dict):
+                continue
+            xy = anchor_xy(point.get("anchor"))
+            if xy is not None:
+                points.append(xy)
         deduped = []
         last_key = None
         for x, y in points:
@@ -224,11 +239,18 @@ def compact_region_geometry(region: dict[str, Any]) -> tuple[list[str], list[tup
             points_for_bounds.extend(deduped)
     labels = []
     for label in region.get("labelPositions", []):
-        try:
-            x, y = label["pos"]["anchor"]
-        except Exception:
+        if not isinstance(label, dict):
             continue
-        labels.append({"name": clean_data_string(str(label.get("name") or region["regionName"])), "x": x, "y": y})
+        pos = label.get("pos") or label.get("labelPosition") or label.get("position")
+        xy = anchor_xy(pos.get("anchor")) if isinstance(pos, dict) else None
+        if xy is None:
+            continue
+        x, y = xy
+        labels.append({
+            "name": clean_data_string(str(label.get("name") or label.get("labelName") or region["regionName"])),
+            "x": x,
+            "y": y,
+        })
     return paths, points_for_bounds, total_points, labels
 
 

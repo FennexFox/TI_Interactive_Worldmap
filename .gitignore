@@ -6,3 +6,5 @@ node_modules/
 playwright-report/
 test-results/
 data/generated/region_outlines.raw.json
+.venv-wsl
+.wsl-build-bin/
