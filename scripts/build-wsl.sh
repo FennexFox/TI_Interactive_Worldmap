@@ -15,6 +15,7 @@ SHIM_DIR="${SHIM_DIR:-.wsl-build-bin}"
 TEMPLATES_DIR="${TI_TEMPLATES_DIR:-}"
 REGION_OUTLINES="${TI_REGION_OUTLINES:-}"
 REGION_MAP_JSON="${TI_REGION_MAP_JSON:-}"
+REFRESH_REGION_OUTLINES=0
 
 usage() {
   cat <<'USAGE'
@@ -23,8 +24,11 @@ Build Terra Invicta Interactive Worldmap from WSL.
 Default mode rebuilds docs/ from checked-in generated data:
   ./scripts/build-wsl.sh
 
-Rebuild catalogs and pages from a local Terra Invicta install:
+Rebuild catalogs and pages from a local Terra Invicta install while reusing the checked-in region geometry:
   ./scripts/build-wsl.sh --from-game
+
+Refresh Unity region geometry explicitly when the game's regionoutlines asset changes:
+  ./scripts/build-wsl.sh --from-game --refresh-region-outlines
 
 Common examples:
   ./scripts/build-wsl.sh --e2e
@@ -51,6 +55,9 @@ Options:
                        Override regionoutlines asset bundle path.
   --region-map-json PATH
                        Use a pre-extracted raw region outline JSON fixture.
+  --refresh-region-outlines
+                       Re-extract region geometry from --region-outlines instead of
+                       reusing data/generated/region_map.generated.json.
   --scenario-year YEAR 2022, 2026, or 2070.
   --languages LIST     Comma-separated catalog languages.
   --e2e                Run Playwright end-to-end tests after verify.
@@ -183,6 +190,10 @@ parse_args() {
         REGION_MAP_JSON="$2"
         shift 2
         ;;
+      --refresh-region-outlines)
+        REFRESH_REGION_OUTLINES=1
+        shift
+        ;;
       --scenario-year)
         [[ $# -ge 2 ]] || die "--scenario-year requires 2022, 2026, or 2070"
         SCENARIO_YEAR="$2"
@@ -285,6 +296,11 @@ run_from_game_build() {
     outlines="$(discover_region_outlines "$templates" || true)"
     if [[ -n "$outlines" ]]; then
       args+=(--region-outlines "$outlines")
+      if [[ "$REFRESH_REGION_OUTLINES" -eq 1 ]]; then
+        args+=(--refresh-region-outlines)
+      fi
+    elif [[ "$REFRESH_REGION_OUTLINES" -eq 1 ]]; then
+      die "--refresh-region-outlines requires regionoutlines. Pass --region-outlines or set TI_REGION_OUTLINES."
     elif [[ ! -f data/generated/region_map.generated.json ]]; then
       die "could not find regionoutlines and no existing data/generated/region_map.generated.json is present. Pass --region-outlines or --region-map-json."
     else

@@ -56,7 +56,8 @@ Do not make render modules import `appState` directly. Pass state-derived values
 
 - Do not fix behavior by hand-editing generated or deployment artifacts. Edit `src/**`, `tools/**`, or manual source data, then rebuild.
 - Use `npm run build` to regenerate the checked-in Pages output from current source and generated data.
-- Use `python tools/rebuild_pages.py ... --no-commit` when rebuilding from local Terra Invicta templates or region outline assets unless the user asks to commit or push.
+- Use `python tools/rebuild_pages.py ... --no-commit` when rebuilding from local Terra Invicta templates on Windows. By default this reuses `data/generated/region_map.generated.json`; add `--refresh-region-outlines` only when intentionally re-extracting the Unity `regionoutlines` asset.
+- Use `./scripts/build-wsl.sh` for WSL checked-in builds and `./scripts/build-wsl.sh --from-game` for WSL local-game catalog rebuilds. Add `--refresh-region-outlines` only when intentionally refreshing region geometry.
 - If external Terra Invicta templates or assets are required, use `TI_TEMPLATES_DIR` or ask the user for paths. Do not invent replacement data.
 - Inspect large JSON with targeted commands such as `rg`, focused scripts, or small parsed slices. Do not paste or summarize full multi-megabyte artifacts.
 - When generated files change intentionally, summarize what changed and why instead of reviewing full generated diffs.
