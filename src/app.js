@@ -225,7 +225,7 @@ const I18N = {
     'section.explore': '탐색 및 선택',
     'search.label': '국가/지역 검색 및 선택',
     'search.placeholder': '국가 태그, 지역명, 프로젝트명 입력: CHN, Korea, Greater India...',
-    'search.help': '입력창을 클릭하면 국가 목록이 열립니다. 입력하면 국가, 지역, 영유권 프로젝트 목록이 필터링되고, 항목을 클릭하면 선택됩니다. 빈 지도 공간을 클릭하면 고정된 지역이 먼저 해제되고, 고정된 지역이 없으면 선택이 해제됩니다.',
+    'search.help': '입력창을 클릭하면 국가 목록이 열립니다. 입력하면 국가, 지역, 영유권 프로젝트 목록이 필터링되고, 항목을 클릭하면 선택됩니다. 빈 지도 공간을 클릭하면 고정된 확장 노드와 선택이 함께 해제됩니다.',
     'search.noResults': '검색 결과 없음',
     'search.regionTag': '지역',
     'claimMode.label': '영유권 표시',
@@ -358,7 +358,7 @@ const I18N = {
     'section.explore': 'Explore and Select',
     'search.label': 'Search and select nation/region',
     'search.placeholder': 'Enter a nation tag, region, or project: CHN, Korea, Greater India...',
-    'search.help': 'Click the field to open the nation list. Typing filters nations, regions, and claim projects; click an item to select it. Click empty map space to clear pinned regions first, then clear selection when none are pinned.',
+    'search.help': 'Click the field to open the nation list. Typing filters nations, regions, and claim projects; click an item to select it. Click empty map space to clear the selection and pinned expansion nodes together.',
     'search.noResults': 'No results',
     'search.regionTag': 'REGION',
     'claimMode.label': 'Claim display',
@@ -767,9 +767,17 @@ function setPinnedRegionIds(regionIds = []) {
   refreshPinnedRegionOutputs([...previous, ...getPinnedRegionIds()]);
 }
 
-function pinRegionState(regionName = '') {
-  if (!regionName || getPinnedRegionIds().has(regionName)) return;
-  pinRegion(appState, regionName);
+function getPinnedCapitalClaimant(regionName = '') {
+  return appState.pinnedCapitalClaimants?.get?.(regionName) || '';
+}
+
+function pinRegionState(regionName = '', options = {}) {
+  if (!regionName) return;
+  const wasPinned = getPinnedRegionIds().has(regionName);
+  const previousClaimant = getPinnedCapitalClaimant(regionName);
+  pinRegion(appState, regionName, options);
+  const nextClaimant = getPinnedCapitalClaimant(regionName);
+  if (wasPinned && previousClaimant === nextClaimant) return;
   refreshPinnedRegionOutputs([regionName]);
 }
 
@@ -1194,13 +1202,20 @@ function addCapitalMarkerNation(markers, nation, {selected=false} = {}) {
     });
   }
 }
+function isPinnedCapitalRegionForNation(nation) {
+  if (!nation) return false;
+  return [...getPinnedRegionIds()].some(rn => isCapitalRegionForNation(nation, rn));
+}
+function isActiveCapitalMarkerSelected(nation) {
+  return [...selectedRegionIds].some(rn => isCapitalRegionForNation(nation, rn))
+    || isCapitalRegionForNation(nation, getHoveredRegionName())
+    || isPinnedCapitalRegionForNation(nation);
+}
 function collectCapitalMarkers() {
   const markers = new Map();
   const pinnedNation = getLockedNation() || getActiveNation();
   if (pinnedNation) {
-    const selected = [...selectedRegionIds].some(rn => isCapitalRegionForNation(pinnedNation, rn))
-      || isCapitalRegionForNation(pinnedNation, getHoveredRegionName());
-    addCapitalMarkerNation(markers, pinnedNation, {selected});
+    addCapitalMarkerNation(markers, pinnedNation, {selected:isActiveCapitalMarkerSelected(pinnedNation)});
   }
 
   for (const rn of selectedRegionIds) {
@@ -1211,7 +1226,7 @@ function collectCapitalMarkers() {
   const hovered = getHoveredRegionName() ? regionByName[getHoveredRegionName()] : null;
   if (hovered) {
     if (getActiveNation() && visibleNationRegionNames.has(hovered.regionName)) {
-      addCapitalMarkerNation(markers, getActiveNation(), {selected:isCapitalRegionForNation(getActiveNation(), hovered.regionName)});
+      addCapitalMarkerNation(markers, getActiveNation(), {selected:isActiveCapitalMarkerSelected(getActiveNation())});
     }
     addCapitalMarkerNation(markers, hovered.nationTag, {selected:isCapitalRegionForNation(hovered.nationTag, hovered.regionName)});
   }
@@ -1686,8 +1701,14 @@ function selectedRegionSummary() {
 function pinnedCapitalClaimants(regionName) {
   return [...new Set(derivedIndices.capitalNationsByRegion?.get?.(regionName) || [])].filter(Boolean);
 }
-function pinnedRegionCapitalSummary(regionName) {
+function pinnedExpansionClaimants(regionName) {
   const claimants = pinnedCapitalClaimants(regionName);
+  const preferredClaimant = getPinnedCapitalClaimant(regionName);
+  if (preferredClaimant && claimants.includes(preferredClaimant)) return [preferredClaimant];
+  return claimants;
+}
+function pinnedRegionCapitalSummary(regionName) {
+  const claimants = pinnedExpansionClaimants(regionName);
   if (!claimants.length) return t('expansionNodes.noCapitalClaimant');
   const names = claimants.map(nation => nationDisplayName(nation));
   if (claimants.length === 1) return t('expansionNodes.capitalClaimant', {nation: names[0]});
@@ -1812,18 +1833,32 @@ function pinnedRegionMarkerRenderKey(pinned, {copyContexts = worldCopyContexts, 
   });
 }
 function appendPinnedRegionMarker(frag, region, index, {copyContext = defaultWorldCopyContext()} = {}) {
-  if (!labelPosition(region)) return;
+  const lab = labelPosition(region);
+  if (!lab) return;
   const label = localizedRegionName(region);
+  const isCapital = pinnedExpansionClaimants(region.regionName).length > 0;
   const group = createSvgElement('g', {
-    class: 'pinned-node-marker-group',
+    class: `pinned-node-marker-group${isCapital ? ' capital-marker is-selected' : ''}`,
     'aria-label': t('expansionNodes.marker', {index: formatNumber(index), region: label}),
   }, {
     region: region.regionName,
     pinIndex: index,
     ...worldCopyDataset(copyContext),
   });
+  if (isCapital) {
+    const points = starPoints(lab.x, lab.y);
+    group.appendChild(createSvgElement('polygon', {
+      class: 'capital-star-shadow',
+      points,
+      'aria-hidden': 'true',
+    }));
+    group.appendChild(createSvgElement('polygon', {
+      class: 'capital-star',
+      points,
+    }));
+  }
   appendSelectedRegionMarker(group, region, {
-    showDot: !selectedRegionIsCapital(region.regionName),
+    showDot: !isCapital,
     copyContext,
   });
   frag.appendChild(group);
@@ -2165,10 +2200,6 @@ function clearSelection({clearSearch=true} = {}) {
   refreshPinnedRegionOutputs(clearedPins);
 }
 function clearPinsOrSelection() {
-  if (getPinnedRegionIds().size) {
-    clearPinnedRegionState();
-    return;
-  }
   clearSelection();
 }
 function focusNation(nation, {fillSearch=true} = {}) {
@@ -2555,7 +2586,8 @@ function onHitLayerClick(e) {
   const region = resolveHitRegion(e);
   if (!region) return;
   e.stopPropagation();
-  selectRegion(region, {togglePin: true});
+  if (selectReachableCapitalCandidateRegion(region.regionName)) return;
+  selectRegion(region);
 }
 function hitRegionElementFromClientPoint(clientX, clientY) {
   const elements = document.elementsFromPoint?.(clientX, clientY)
@@ -2968,7 +3000,7 @@ function manualEnvelopeSourceSpecs(anchorNation) {
   }];
   const seenClaimants = new Set([anchorNation]);
   [...getPinnedRegionIds()].forEach((regionName, pinIndex) => {
-    for (const claimant of pinnedCapitalClaimants(regionName)) {
+    for (const claimant of pinnedExpansionClaimants(regionName)) {
       if (!claimant || seenClaimants.has(claimant)) continue;
       seenClaimants.add(claimant);
       specs.push({
@@ -3303,12 +3335,28 @@ function reachableCandidateRow(candidate) {
     </div>
   `;
 }
+function selectReachableCapitalCandidate(candidate) {
+  const region = regionByName[candidate?.region];
+  if (!region) return false;
+  focusRegions([region.regionName], {selectSingle: true, preserveNation: true, refreshOverlay: true});
+  pinRegionState(region.regionName, {capitalClaimant: candidate.primaryNation});
+  return true;
+}
+function reachableCapitalCandidateForRegion(regionName, anchorModel = currentOverlayModel) {
+  if (!getShowReachableCapitalCandidates() || !regionName) return null;
+  return reachableCapitalCandidateDescriptors(anchorModel)
+    .find(candidate => candidate.region === regionName) || null;
+}
+function selectReachableCapitalCandidateRegion(regionName, anchorModel = currentOverlayModel) {
+  const candidate = reachableCapitalCandidateForRegion(regionName, anchorModel);
+  return candidate ? selectReachableCapitalCandidate(candidate) : false;
+}
 function bindReachableCapitalCandidatePanelEvents() {
   if (!reachableCandidatesPanel) return;
   reachableCandidatesPanel.querySelectorAll('[data-candidate-focus]').forEach(button => {
     button.addEventListener('click', event => {
       event.stopPropagation();
-      focusPinnedRegion(button.dataset.candidateFocus);
+      selectReachableCapitalCandidateRegion(button.dataset.candidateFocus);
     });
   });
 }
@@ -3819,14 +3867,12 @@ function updateProjectOptions(nation) {
   if ([...projectSel.options].some(o => o.value === current)) projectSel.value = current;
   else projectSel.value = '';
 }
-function selectRegion(r, {togglePin = false} = {}) {
-  const wasPinned = togglePin && getPinnedRegionIds().has(r.regionName);
+function selectRegion(r) {
   setHoveredRegionState(r.regionName, r.nationTag);
   setFocusedRegionState(r.regionName);
   setSelectedRegionIds([r.regionName]);
   focusNation(r.nationTag);
-  if (wasPinned) unpinPinnedRegionState(r.regionName);
-  else pinRegionState(r.regionName);
+  pinRegionState(r.regionName);
 }
 function applyFilters(rerenderResults=true) {
   const q = searchFilterText();
