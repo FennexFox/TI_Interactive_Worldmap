@@ -36,7 +36,7 @@ import {
   zoomMapView,
 } from './state/map-view-state.js';
 import {createAppData, getActiveData} from './data/active-data.js';
-import {buildDerivedIndices, resolveSecondaryCapitalPreview} from './data/derived-indices.js';
+import {buildDerivedIndices} from './data/derived-indices.js';
 import {
   appendWorldCopyFragment,
   buildVisualFillGroups,
@@ -665,6 +665,8 @@ let hoverPreviewFrame = 0;
 let hoverClaimPreviewNation = '';
 let visibleNationRegionNames = new Set();
 let currentOverlayModel = null;
+let activeClaimPreviewRegionScopeKey = '';
+let activeClaimPreviewRegionScope = null;
 let tooltipRegionId = null;
 let svgWrapRectCache = null;
 let tooltipSizeCache = {width: 160, height: 26, valid: false};
@@ -1894,19 +1896,15 @@ function shouldShowForeignHoverNationOverlay(region) {
   if (!region?.nationTag) return false;
   const pinnedNation = getLockedNation() || getActiveNation();
   if (!pinnedNation) return false;
-  if (visibleNationRegionNames.has(region.regionName)) return false;
+  if (activeClaimPreviewContainsRegion(region.regionName)) return false;
   return region.nationTag !== pinnedNation;
 }
 function resolveSecondaryCapitalPreviewNation(region) {
   const selectedNation = getLockedNation();
-  if (!selectedNation || !region?.regionName) return '';
-  return resolveSecondaryCapitalPreview({
-    activeData,
-    indices: derivedIndices,
-    selectedNationId: selectedNation,
-    hoveredRegionId: region.regionName,
-    selectedOverlayModel: currentOverlayModel,
-  }) || '';
+  if (!selectedNation || !region?.regionName || !currentOverlayModel?.hasClaimOverlay) return '';
+  const resultSet = activeClaimPreviewRegionSet(currentOverlayModel);
+  if (!resultSet.has(region.regionName)) return '';
+  return reachableCapitalCandidateNations(region.regionName, selectedNation, resultSet)[0] || '';
 }
 function updateSecondaryCapitalPreview(region) {
   const nextNation = resolveSecondaryCapitalPreviewNation(region);
@@ -2491,6 +2489,7 @@ function regionHasSimpleHoverDeltaHazard(regionName) {
   if (selectedRegionIds.has(regionName)) return true;
   if (getPinnedRegionIds().has(regionName)) return true;
   if (mapVisualState.hiddenRegionIds.has(regionName)) return true;
+  if (resolveSecondaryCapitalPreviewNation(region)) return true;
   if (shouldShowForeignHoverNationOverlay(region)) return true;
   if (hoverRegionAffectsCapitalSelection(region)) return true;
   return false;
@@ -3280,6 +3279,54 @@ function manualEnvelopeVisibleRegionSet(model) {
   return new Set((model?.regionItems || [])
     .map(item => item.region)
     .filter(regionName => regionByName[regionName]));
+}
+function addRegionNamesToSet(target, regionNames) {
+  if (!regionNames) return target;
+  if (regionNames instanceof Set || Array.isArray(regionNames)) {
+    for (const regionName of regionNames) {
+      if (regionByName[regionName]) target.add(regionName);
+    }
+    return target;
+  }
+  if (typeof regionNames === 'object') {
+    Object.entries(regionNames).forEach(([regionName, included]) => {
+      if (included && regionByName[regionName]) target.add(regionName);
+    });
+  }
+  return target;
+}
+function activeClaimPreviewScopeCacheKey(anchorModel = currentOverlayModel) {
+  const pinnedKey = [...getPinnedRegionIds()]
+    .map(regionName => `${regionName}:${getPinnedCapitalClaimant(regionName)}`)
+    .join('|');
+  return JSON.stringify({
+    scenario: appState.activeScenarioId || appData.defaultScenario || '',
+    data: overlayModelDataVersionKey(activeData, derivedIndices),
+    anchor: manualEnvelopeAnchorNation(anchorModel),
+    overlayNation: anchorModel?.nation || '',
+    incoming: getActiveIncomingClaimKey(),
+    pins: pinnedKey,
+    claimMode: claimModeSel.value || '',
+    claimKind: claimKindSel.value || '',
+    project: getProjectFilter(),
+  });
+}
+function activeClaimPreviewRegionSet(anchorModel = currentOverlayModel) {
+  if (!anchorModel) return new Set();
+  const key = activeClaimPreviewScopeCacheKey(anchorModel);
+  if (key === activeClaimPreviewRegionScopeKey && activeClaimPreviewRegionScope) return activeClaimPreviewRegionScope;
+  const resultSet = new Set();
+  addRegionNamesToSet(resultSet, anchorModel.resultSet);
+  addRegionNamesToSet(
+    resultSet,
+    manualEnvelopeVisibleRegionSet(buildManualEnvelopeModel(anchorModel, {includeAnchorOnly: true}))
+  );
+  activeClaimPreviewRegionScopeKey = key;
+  activeClaimPreviewRegionScope = resultSet;
+  return resultSet;
+}
+function activeClaimPreviewContainsRegion(regionName, anchorModel = currentOverlayModel) {
+  return !!regionName && activeClaimPreviewRegionSet(anchorModel).has(regionName);
 }
 function reachableCapitalCandidateDescriptors(anchorModel = currentOverlayModel) {
   const model = buildManualEnvelopeModel(anchorModel, {includeAnchorOnly: true});
