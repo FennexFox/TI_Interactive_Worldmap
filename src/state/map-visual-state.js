@@ -1,6 +1,7 @@
 export function createMapVisualState() {
   return {
     selectedRegionIds: new Set(),
+    pinnedRegionIds: new Set(),
     ownedRegionIds: new Set(),
     claimTargetRegionIds: new Set(),
     hoverRegionIds: new Set(),
@@ -19,6 +20,10 @@ export function replaceSetContents(targetSet, values = []) {
 
 export function syncSelectedVisualState(mapVisualState, selectedRegionIds) {
   replaceSetContents(mapVisualState.selectedRegionIds, selectedRegionIds);
+}
+
+export function syncPinnedVisualState(mapVisualState, pinnedRegionIds) {
+  replaceSetContents(mapVisualState.pinnedRegionIds, pinnedRegionIds);
 }
 
 export function setHoverVisualState(mapVisualState, regionName = '') {
@@ -54,6 +59,7 @@ export function setHiddenVisualState(mapVisualState, hiddenRegionIds) {
 function applyRegionPathVisualState(path, mapVisualState, regionId = path?.dataset?.region) {
   if (!path || !regionId) return false;
   path.classList.toggle('selected', mapVisualState.selectedRegionIds.has(regionId));
+  path.classList.toggle('pinned-node', mapVisualState.pinnedRegionIds.has(regionId));
   path.classList.toggle('owned-highlight', mapVisualState.ownedRegionIds.has(regionId));
   path.classList.toggle('claim-target', mapVisualState.claimTargetRegionIds.has(regionId));
   path.classList.toggle('hovered', mapVisualState.hoverRegionIds.has(regionId));

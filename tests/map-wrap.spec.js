@@ -344,6 +344,34 @@ test('world-wrap default projects grouped base and claim fill copies', async ({ 
   await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
 });
 
+test('world-wrap default projects pinned node markers without claim overlay churn', async ({ page }) => {
+  await waitForWrappedMap(page, '/?debugRenderStats=1');
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await page.locator('.claimListItem[data-claim-kind="outgoing"]').first().click();
+  await expect(page.locator('.legendRegionItem[data-region-name="FrenchGuiana"]').first()).toBeVisible();
+  const frenchGuianaRow = page.locator('.legendRegionRow')
+    .filter({ has: page.locator('.legendRegionItem[data-region-name="FrenchGuiana"]') });
+  const frenchGuianaPin = frenchGuianaRow.locator('.legendRegionPin');
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await frenchGuianaPin.click();
+
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="FrenchGuiana"]')).toHaveCount(1);
+  await expectProjectedCopies(page.locator('#pinnedRegionMarkers .pinned-node-marker-group[data-region="FrenchGuiana"]'));
+  await expectProjectedCopies(page.locator('#pinnedRegionMarkers .pinned-outline[data-region="FrenchGuiana"]'));
+  await expectProjectedCopies(page.locator('#regions .region[data-region="FrenchGuiana"]'));
+  await expect(page.locator('#regions .region[data-region="FrenchGuiana"]')).toHaveClass([/pinned-node/, /pinned-node/, /pinned-node/]);
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.pinnedRegionMarkerRebuilds).toBeGreaterThan(0);
+  expect(stats.overlayModelBuilds).toBe(0);
+  expect(stats.claimOverlayDescriptorBuilds).toBe(0);
+  expect(stats.claimLabelDescriptorBuilds).toBe(0);
+  expect(stats.claimOverlayDomReplacements).toBe(0);
+  expect(stats.claimLabelDomReplacements).toBe(0);
+});
+
 test('world-wrap default resolves copied hit paths to canonical region state', async ({ page }) => {
   await waitForWrappedMap(page);
 

@@ -62,12 +62,17 @@
 
 ## Progress
 
-- Not started.
+- Completed.
 
 ## Decision log
 
 - Issue #24 E3 favors a stable pinned marker/highlight layer rather than piggybacking on hover or selected overlay classes.
+- Pinned visuals use their own `#pinnedRegionMarkers` SVG layer with copy-aware render keys so pin order, language, and world-wrap projection drive marker replacement directly.
+- Focused-region and claim-detail pin buttons share the same pin-state helpers as the compact expansion-node card, while the full detail panel remains focused on one region.
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- Added focused-region and claim-detail pin/unpin controls.
+- Added stable pinned-node map state, base-region classes, highlighted outlines, numbered node markers, and localized marker labels.
+- Covered single-copy pin/unpin behavior and wrapped-copy marker projection with debug render-stat assertions that claim overlay descriptors and DOM layers do not churn.
+- Validation passed with `npm run build`, `npm run verify`, and `npm run test:e2e`.

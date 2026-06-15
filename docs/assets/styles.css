@@ -88,12 +88,14 @@
   .region.dimmed { opacity:.18; }
   .region.owned-highlight { stroke:white; stroke-width:.016; filter:brightness(1.55); opacity:1; }
   .region.selected { stroke:#fff; stroke-width:.02; filter:brightness(1.75); }
+  .region.pinned-node { stroke:#5eead4; stroke-width:.018; }
   .region.hidden, .region-hit.hidden { display:none; }
   .region-hit { fill:transparent; stroke:none; pointer-events:fill; cursor:pointer; }
   svg.claims-active .region { opacity:1; filter:saturate(.42) brightness(.62); }
   svg.claims-active .region.dimmed { opacity:1; filter:saturate(.18) brightness(.38); }
   svg.claims-active .region.claim-target, svg.claims-active .region.owned-highlight { fill:transparent; opacity:.82; filter:none; }
   svg.claims-active .region.selected { opacity:1; filter:saturate(.55) brightness(.78); }
+  svg.claims-active .region.pinned-node { stroke:#5eead4; stroke-width:.021; opacity:1; }
   svg.claims-active .region:hover, svg.claims-active .region.hovered { filter:saturate(.6) brightness(.82); }
   .claim-overlay { pointer-events:none; stroke:rgba(255,255,255,.55); stroke-width:.012; vector-effect:non-scaling-stroke; mix-blend-mode:screen; }
   svg.claims-active .claim-overlay { mix-blend-mode:normal; filter: none; opacity: 1;}
@@ -140,6 +142,13 @@
   .selection-outline { pointer-events:none; fill:none; stroke:white; stroke-width:.034; vector-effect:non-scaling-stroke; }
   .selection-dot { pointer-events:none; fill:oklch(0.91 0.17 92 / .96); stroke:rgba(0,0,0,.8); stroke-width:.01; vector-effect:non-scaling-stroke; }
   .selection-label { pointer-events:none; font-size:.055px; font-weight:800; fill:#fff7b8; text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.82); stroke-width:.015; }
+  #pinnedRegionMarkers { pointer-events:none; opacity:1; mix-blend-mode:normal; }
+  .pinned-fill { pointer-events:none; fill:oklch(0.78 0.13 185 / .20); stroke:none; mix-blend-mode:screen; }
+  .pinned-outline-glow { pointer-events:none; fill:none; stroke:oklch(0.82 0.17 185 / .86); stroke-width:.072; vector-effect:non-scaling-stroke; }
+  .pinned-outline { pointer-events:none; fill:none; stroke:#5eead4; stroke-width:.028; vector-effect:non-scaling-stroke; stroke-dasharray:.045 .022; }
+  .pinned-node-marker-group { pointer-events:none; }
+  .pinned-node-marker { fill:#22d3ee; fill-opacity:.92; stroke:rgba(2,6,23,.92); stroke-width:.012; vector-effect:non-scaling-stroke; paint-order:stroke fill; }
+  .pinned-node-label { pointer-events:none; font-size:.042px; font-weight:900; fill:#03131a; text-anchor:middle; paint-order:stroke; stroke:rgba(255,255,255,.72); stroke-width:.006; }
   .claim-label { pointer-events:none; font-size:.033px; fill:rgba(255,255,255,.88); text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.7); stroke-width:.008; }
   .label { pointer-events:none; font-size:.035px; fill:rgba(255,255,255,.78); text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.65); stroke-width:.008; }
   .tooltip { position:absolute; pointer-events:none; z-index:5; display:block; visibility:hidden; opacity:0; left:0; top:0; transform:translate3d(-9999px,-9999px,0); will-change:transform; contain:layout style paint; width:max-content; max-width:min(260px, calc(100% - 16px)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:rgba(8,13,24,.9); border:1px solid rgba(255,255,255,.12); border-radius:7px; padding:3px 7px; box-shadow:0 6px 18px rgba(0,0,0,.28); color:rgba(245,248,255,.92); font-size:12px; line-height:1.25; transition:opacity .06s ease; }
@@ -169,11 +178,19 @@
   .pinnedRegionFocusText { color:#dbeafe; font-size:11px; font-weight:800; }
   .pinnedRegionUnpin { width:30px; min-width:30px; min-height:44px; padding:0; border-radius:8px; color:#ffd6d2; background:rgba(255,87,87,.12); border-color:rgba(255,126,116,.30); font-size:18px; font-weight:800; line-height:1; }
   .pinnedRegionUnpin:hover { background:rgba(255,87,87,.24); border-color:rgba(255,126,116,.58); }
+  .focusedRegionPinControl { margin-top:10px; }
+  .focusedRegionPinButton { min-height:30px; padding:6px 9px; border-radius:8px; font-size:12px; font-weight:800; border-color:rgba(94,234,212,.28); background:rgba(20,184,166,.12); color:#ccfbf1; }
+  .focusedRegionPinButton:hover { background:rgba(20,184,166,.22); border-color:rgba(94,234,212,.48); }
+  .focusedRegionPinButton.is-pinned,
+  .legendRegionPin.is-pinned { border-color:rgba(255,126,116,.46); background:rgba(255,87,87,.15); color:#ffd6d2; }
   .legendRegionList { display:flex; flex-direction:column; gap:4px; margin-left:26px; padding-left:8px; border-left:1px solid rgba(255,255,255,.12); }
+  .legendRegionRow { display:grid; grid-template-columns:minmax(0,1fr) 58px; gap:5px; align-items:stretch; }
   .legendRegionItem { display:flex; flex-direction:column; align-items:flex-start; gap:1px; width:100%; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07); color:var(--text); font:inherit; text-align:left; cursor:pointer; }
   .legendRegionItem:hover { background:rgba(255,255,255,.075); border-color:rgba(255,255,255,.18); }
   .legendRegionItem.active { background:rgba(255,247,184,.12); border-color:rgba(255,247,184,.42); }
   .legendRegionItem span { color:var(--muted); font-size:12px; }
+  .legendRegionPin { min-width:58px; min-height:100%; padding:5px 6px; border-radius:8px; font-size:11px; font-weight:800; color:#ccfbf1; border-color:rgba(94,234,212,.24); background:rgba(20,184,166,.10); }
+  .legendRegionPin:hover { background:rgba(20,184,166,.20); border-color:rgba(94,234,212,.42); }
   .tag { font-size:11px; color:#cbd5e1; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); border-radius:999px; padding:2px 7px; }
   .status { display:inline-block; margin-left:6px; border:1px solid rgba(255,255,255,.14); border-radius:999px; padding:2px 7px; color:#cbd5e1; font-size:11px; font-weight:500; vertical-align:middle; }
   .status.formable { border-color:rgba(255,240,166,.35); color:#fff0a6; }

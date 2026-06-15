@@ -28,6 +28,7 @@ import {
   setHiddenVisualState as setHiddenState,
   setHoverVisualState as setHoverState,
   setOverlayVisualState as setOverlayState,
+  syncPinnedVisualState as syncPinnedState,
   syncSelectedVisualState as syncSelectedState,
 } from './state/map-visual-state.js';
 import {
@@ -121,6 +122,7 @@ const gSecondaryHoverOverlays = document.getElementById('secondaryHoverOverlays'
 const gCapitalMarkers = document.getElementById('capitalMarkers');
 const gHoverOutlines = document.getElementById('hoverOutlines');
 const gSelectionOutlines = document.getElementById('selectionOutlines');
+const gPinnedRegionMarkers = document.getElementById('pinnedRegionMarkers');
 const tip = document.getElementById('tip');
 const search = document.getElementById('search');
 const nationDropdown = document.getElementById('nationDropdown');
@@ -176,6 +178,7 @@ function createDebugRenderStats() {
     'hoverClaimPreviewOverlayReplacements',
     'secondaryHoverOverlayReplacements',
     'capitalMarkerRebuilds',
+    'pinnedRegionMarkerRebuilds',
   ];
   const stats = {};
   for (const key of keys) stats[key] = 0;
@@ -245,8 +248,11 @@ const I18N = {
     'expansionNodes.clear': '모두 해제',
     'expansionNodes.focus': '초점',
     'expansionNodes.focusRegion': '{region}에 초점',
+    'expansionNodes.pin': '고정',
+    'expansionNodes.pinRegion': '{region} 고정',
     'expansionNodes.unpin': '고정 해제',
     'expansionNodes.unpinRegion': '{region} 고정 해제',
+    'expansionNodes.marker': '고정 노드 {index}: {region}',
     'expansionNodes.owner': '소유국 {nation}',
     'expansionNodes.capitalClaimant': '수도 국가 {nation}',
     'expansionNodes.capitalClaimants': '수도 국가 {count}개: {nations}',
@@ -363,8 +369,11 @@ const I18N = {
     'expansionNodes.clear': 'Clear all',
     'expansionNodes.focus': 'Focus',
     'expansionNodes.focusRegion': 'Focus {region}',
+    'expansionNodes.pin': 'Pin',
+    'expansionNodes.pinRegion': 'Pin {region}',
     'expansionNodes.unpin': 'Unpin',
     'expansionNodes.unpinRegion': 'Unpin {region}',
+    'expansionNodes.marker': 'Pinned node {index}: {region}',
     'expansionNodes.owner': 'Owner {nation}',
     'expansionNodes.capitalClaimant': 'Capital claimant {nation}',
     'expansionNodes.capitalClaimants': '{count} capital claimants: {nations}',
@@ -657,8 +666,10 @@ const FOREIGN_HOVER_EMPTY_RENDER_KEY = 'foreign-hover:empty';
 const HOVER_CLAIM_PREVIEW_EMPTY_RENDER_KEY = 'hover-claim-preview:empty';
 const SECONDARY_HOVER_EMPTY_RENDER_KEY = 'secondary-hover:empty';
 const HOVER_OUTLINE_EMPTY_RENDER_KEY = 'hover-outline:empty';
+const PINNED_REGION_MARKERS_EMPTY_RENDER_KEY = 'pinned-region-markers:empty';
 const claimOverlayLayerRenderKeys = new WeakMap();
 const claimLabelLayerRenderKeys = new WeakMap();
+const pinnedRegionMarkerLayerRenderKeys = new WeakMap();
 const claimOverlayBufferStates = new WeakMap();
 const claimLabelBufferStates = new WeakMap();
 const MAP_PAN_DRAG_THRESHOLD_PX = 4;
@@ -717,28 +728,30 @@ function setSelectedRegionIds(regionIds = []) {
 }
 
 function setPinnedRegionIds(regionIds = []) {
+  const previous = [...getPinnedRegionIds()];
   setPinnedRegions(appState, regionIds);
-  renderPinnedRegionsPanel();
+  refreshPinnedRegionOutputs([...previous, ...getPinnedRegionIds()]);
 }
 
 function pinRegionState(regionName = '') {
   pinRegion(appState, regionName);
-  renderPinnedRegionsPanel();
+  refreshPinnedRegionOutputs([regionName]);
 }
 
 function unpinPinnedRegionState(regionName = '') {
   unpinPinnedRegion(appState, regionName);
-  renderPinnedRegionsPanel();
+  refreshPinnedRegionOutputs([regionName]);
 }
 
 function togglePinnedRegionState(regionName = '') {
   togglePinnedRegion(appState, regionName);
-  renderPinnedRegionsPanel();
+  refreshPinnedRegionOutputs([regionName]);
 }
 
 function clearPinnedRegionState() {
+  const previous = [...getPinnedRegionIds()];
   clearPinnedRegions(appState);
-  renderPinnedRegionsPanel();
+  refreshPinnedRegionOutputs(previous);
 }
 
 function setReachableCapitalCandidatesState(visible = false) {
@@ -763,6 +776,10 @@ function setActiveIncomingClaimKeyState(claimKey = '') {
 
 function syncSelectedVisualState() {
   syncSelectedState(mapVisualState, selectedRegionIds);
+}
+
+function syncPinnedVisualState() {
+  syncPinnedState(mapVisualState, getPinnedRegionIds());
 }
 
 function getActiveNation() { return appState.selectedNationId || ''; }
@@ -901,6 +918,11 @@ function injectClaimOverlayStyles() {
       filter:none;
       stroke:#fff;
       stroke-width:.02;
+    }
+    svg.claims-active .region.pinned-node {
+      stroke:#5eead4;
+      stroke-width:.021;
+      opacity:1;
     }
     svg.claims-active .region:hover,
     svg.claims-active .region.hovered {
@@ -1648,6 +1670,42 @@ function pinnedRegionCapitalSummary(regionName) {
 function pinnedRegionOwnerSummary(region) {
   return region?.nationTag ? t('expansionNodes.owner', {nation: nationDisplayName(region.nationTag)}) : '';
 }
+function pinActionKey(regionName) {
+  return getPinnedRegionIds().has(regionName) ? 'unpin' : 'pin';
+}
+function pinActionLabel(regionName) {
+  return t(`expansionNodes.${pinActionKey(regionName)}`);
+}
+function pinActionTitle(regionName) {
+  const region = regionByName[regionName];
+  const label = localizedRegionName(region || regionName);
+  return t(`expansionNodes.${pinActionKey(regionName)}Region`, {region: label});
+}
+function setPinButtonState(button, regionName) {
+  if (!button || !regionName) return;
+  const pinned = getPinnedRegionIds().has(regionName);
+  button.classList.toggle('is-pinned', pinned);
+  button.textContent = pinActionLabel(regionName);
+  const title = pinActionTitle(regionName);
+  button.title = title;
+  button.setAttribute('aria-label', title);
+}
+function updatePinnedControlStates(root = document) {
+  root.querySelectorAll?.('[data-pin-focused-region], [data-region-pin]').forEach(button => {
+    setPinButtonState(button, button.dataset.pinFocusedRegion || button.dataset.regionPin || '');
+  });
+}
+function renderFocusedRegionPinControl() {
+  const regionName = getFocusedRegionName();
+  const region = regionName ? regionByName[regionName] : null;
+  if (!region) return '';
+  const title = pinActionTitle(regionName);
+  return `
+    <div class="focusedRegionPinControl">
+      <button type="button" class="focusedRegionPinButton${getPinnedRegionIds().has(regionName) ? ' is-pinned' : ''}" data-pin-focused-region="${escapeHtml(regionName)}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">${escapeHtml(pinActionLabel(regionName))}</button>
+    </div>
+  `;
+}
 function pinnedRegionRow(regionName) {
   const region = regionByName[regionName];
   const label = localizedRegionName(region || regionName);
@@ -1709,6 +1767,15 @@ function renderPinnedRegionsPanel() {
   `;
   bindPinnedRegionsPanelEvents();
 }
+function refreshPinnedRegionOutputs(changedRegionIds = []) {
+  const changed = [...new Set((changedRegionIds || []).filter(Boolean))];
+  syncPinnedVisualState();
+  if (changed.length) applyMapVisualStateForRegions(changed);
+  else applyMapVisualState();
+  renderPinnedRegionsPanel();
+  renderPinnedRegionMarkers();
+  updatePinnedControlStates();
+}
 function appendRegionHighlight(frag, r, classPrefix, copyContext = defaultWorldCopyContext()) {
   for (const suffix of ['fill', 'outline-glow', 'outline']) {
     const p = createRegionPath(r, {class: `${classPrefix}-${suffix}`}, {
@@ -1739,6 +1806,67 @@ function appendSelectedRegionMarker(frag, r, {showDot=true, copyContext=defaultW
     textContent: localizedRegionName(r),
   }, {region: r.regionName, ...copyData});
   frag.appendChild(text);
+}
+function pinnedRegionMarkerRenderKey(pinned, copyContexts = worldCopyContexts) {
+  if (!pinned.length) return PINNED_REGION_MARKERS_EMPTY_RENDER_KEY;
+  return JSON.stringify({
+    kind: 'pinned-region-markers',
+    copyPlan: copyContextRenderKey(copyContexts),
+    language: currentLanguage,
+    pinned,
+  });
+}
+function appendPinnedRegionMarker(frag, region, index, copyContext = defaultWorldCopyContext()) {
+  const lab = labelPosition(region);
+  if (!lab) return;
+  const copyData = worldCopyDataset(copyContext);
+  const label = localizedRegionName(region);
+  const group = createSvgElement('g', {
+    class: 'pinned-node-marker-group',
+    'aria-label': t('expansionNodes.marker', {index: formatNumber(index), region: label}),
+  }, {
+    region: region.regionName,
+    pinIndex: index,
+    ...copyData,
+  });
+  group.appendChild(createSvgElement('rect', {
+    class: 'pinned-node-marker',
+    x: lab.x - 0.025,
+    y: lab.y - 0.025,
+    width: 0.05,
+    height: 0.05,
+    transform: `rotate(45 ${lab.x} ${lab.y})`,
+  }));
+  group.appendChild(createSvgElement('text', {
+    class: 'pinned-node-label',
+    x: lab.x,
+    y: lab.y + 0.013,
+    textContent: String(index),
+  }));
+  frag.appendChild(group);
+}
+function createPinnedRegionMarkerFragment(pinned, {copyContexts=worldCopyContexts} = {}) {
+  return createProjectedCopyFragment(copyContexts, 'pinned-region-marker-copy', copyContext => {
+    const frag = document.createDocumentFragment();
+    pinned.forEach((regionName, index) => {
+      const region = regionByName[regionName];
+      if (!region) return;
+      appendRegionHighlight(frag, region, 'pinned', copyContext);
+      appendPinnedRegionMarker(frag, region, index + 1, copyContext);
+    });
+    return frag;
+  });
+}
+function renderPinnedRegionMarkers({copyContexts=worldCopyContexts} = {}) {
+  if (!gPinnedRegionMarkers) return;
+  const pinned = [...getPinnedRegionIds()].filter(regionName => regionByName[regionName]);
+  replaceLayerChildrenForRenderKey(
+    gPinnedRegionMarkers,
+    pinnedRegionMarkerLayerRenderKeys,
+    pinnedRegionMarkerRenderKey(pinned, copyContexts),
+    () => createPinnedRegionMarkerFragment(pinned, {copyContexts}),
+    'pinnedRegionMarkerRebuilds'
+  );
 }
 function shouldShowForeignHoverNationOverlay(region) {
   if (!region?.nationTag) return false;
@@ -1965,6 +2093,7 @@ function updateSelectedRegions() {
   renderHoverOutlines();
   renderSelectionOutlines();
   renderCapitalMarkers();
+  updatePinnedControlStates();
   const label = selectedRegionSummary();
   if (selectedPill) {
     selectedPill.textContent = label;
@@ -1993,7 +2122,8 @@ function renderRegionList(regionNames, claims={}, prefix='targets', regionSource
       meta: meta ? ` · ${meta}` : '',
       source: source ? ` · ${source}` : '',
     });
-    return `<button type="button" class="legendRegionItem${active ? ' active' : ''}" data-region-name="${escapeHtml(rn)}"><b>${escapeHtml(localizedRegionName(region || rn))}</b><span>${escapeHtml(detail)}</span></button>`;
+    const pinTitle = pinActionTitle(rn);
+    return `<div class="legendRegionRow"><button type="button" class="legendRegionItem${active ? ' active' : ''}" data-region-name="${escapeHtml(rn)}"><b>${escapeHtml(localizedRegionName(region || rn))}</b><span>${escapeHtml(detail)}</span></button><button type="button" class="legendRegionPin${getPinnedRegionIds().has(rn) ? ' is-pinned' : ''}" data-region-pin="${escapeHtml(rn)}" title="${escapeHtml(pinTitle)}" aria-label="${escapeHtml(pinTitle)}">${escapeHtml(pinActionLabel(rn))}</button></div>`;
   }).join('');
   return `<div class="legendRegionList">${rows}</div>`;
 }
@@ -2021,6 +2151,7 @@ function focusRegions(regionNames, {selectSingle=false, preserveNation=false, re
   if (refreshOverlay && getActiveNation()) updateNationOverlay(getActiveNation());
 }
 function clearSelection({clearSearch=true} = {}) {
+  const clearedPins = [...getPinnedRegionIds()];
   clearSelectionState(appState);
   setActiveNationState();
   setHoverNationState();
@@ -2046,7 +2177,7 @@ function clearSelection({clearSearch=true} = {}) {
   updateNationOverlay('', {renderDetails: true, updateFilters: false, updateSelected: false});
   applyFilters(true);
   updateSelectedRegions();
-  renderPinnedRegionsPanel();
+  refreshPinnedRegionOutputs(clearedPins);
 }
 function focusNation(nation, {fillSearch=true} = {}) {
   if (!nation) { clearSelection({clearSearch:fillSearch}); return; }
@@ -2335,6 +2466,7 @@ function regionHasSimpleHoverDeltaHazard(regionName) {
   const region = regionName ? regionByName[regionName] : null;
   if (!region) return true;
   if (selectedRegionIds.has(regionName)) return true;
+  if (getPinnedRegionIds().has(regionName)) return true;
   if (mapVisualState.hiddenRegionIds.has(regionName)) return true;
   if (shouldShowForeignHoverNationOverlay(region)) return true;
   if (hoverRegionAffectsCapitalSelection(region)) return true;
@@ -3116,6 +3248,7 @@ function renderClaimSummaryPill(model) {
 function renderNationInfoPanel(panelRoot, model) {
   const activeNationName = nationDisplayName(model.nation);
   const activeNationTierText = claimTierCountShortText(nationClaimTierCount(model.nation));
+  const focusedPinControl = renderFocusedRegionPinControl();
   const summaryLines = [
     t('nationInfo.summary.baseTerritory', {owned: regionCountText(model.ownedCount)}),
     t('nationInfo.summary.visibleClaims', {claims: regionCountText(model.claimCount)}),
@@ -3132,11 +3265,19 @@ function renderNationInfoPanel(panelRoot, model) {
     [t('nationInfo.kv.claimProjects'), claimTierCountText(nationClaimTierCount(model.nation))],
     [t('nationInfo.kv.displayMode'), claimModeLabel(claimModeSel.value)],
   ].map(([label, value]) => `<div>${escapeHtml(label)}</div><div>${escapeHtml(value)}</div>`).join('');
-  const basicInfo = `<details class="infoSubsection nationBasicSection" data-info-section="basic"${infoSectionOpenAttribute('basic')}><summary><span>${escapeHtml(t('nationInfo.basic.title'))}</span></summary><div class="infoSubsectionBody"><div class="nationTitle"><b>${escapeHtml(activeNationName)}</b> <span class="status tierBadge">${escapeHtml(activeNationTierText)}</span> ${statusBadge(model.data.status)}</div><div class="nationSummary">${summaryHtml}</div><div class="kv">${kvRows}</div><div class="hint">${escapeHtml(t('nationInfo.hint'))}</div></div></details>`;
+  const basicInfo = `<details class="infoSubsection nationBasicSection" data-info-section="basic"${infoSectionOpenAttribute('basic')}><summary><span>${escapeHtml(t('nationInfo.basic.title'))}</span></summary><div class="infoSubsectionBody"><div class="nationTitle"><b>${escapeHtml(activeNationName)}</b> <span class="status tierBadge">${escapeHtml(activeNationTierText)}</span> ${statusBadge(model.data.status)}</div><div class="nationSummary">${summaryHtml}</div><div class="kv">${kvRows}</div>${focusedPinControl}<div class="hint">${escapeHtml(t('nationInfo.hint'))}</div></div></details>`;
   panelRoot.innerHTML = `${basicInfo}<div class="claimSections">${renderClaimSection(t('claimSection.outgoing.title'), model.outgoingEntries, t('claimSection.outgoing.empty'), 'outgoing')}${renderClaimSection(t('claimSection.incoming.title'), model.incomingEntries, t('claimSection.incoming.empty'), 'incoming')}</div>`;
 }
 function bindNationOverlayPanelEvents(panelRoot, model) {
   bindNationInfoSectionToggles();
+  panelRoot.querySelectorAll('[data-pin-focused-region]').forEach(el => el.addEventListener('click', e => {
+    e.stopPropagation();
+    togglePinnedRegionState(el.dataset.pinFocusedRegion);
+  }));
+  panelRoot.querySelectorAll('[data-region-pin]').forEach(el => el.addEventListener('click', e => {
+    e.stopPropagation();
+    togglePinnedRegionState(el.dataset.regionPin);
+  }));
   panelRoot.querySelectorAll('.claimListItem').forEach(el => el.addEventListener('click', () => {
     const kind = el.dataset.claimKind;
     const index = Number(el.dataset.claimIndex);
@@ -3297,6 +3438,8 @@ function refreshLanguage() {
   applyFilters(true);
   updateSelectedRegions();
   renderPinnedRegionsPanel();
+  renderPinnedRegionMarkers();
+  updatePinnedControlStates();
   const hoveredRegion = tooltipRegionId != null ? REGIONS[tooltipRegionId] : null;
   setHoverPill(hoveredRegion);
 }
@@ -3409,7 +3552,7 @@ setHoverPill();
 setClaimsPillEmpty();
 initMapViewControls();
 renderPinnedRegionsPanel();
-populate(); renderGrid({mapView}); renderRegions({mapView});
+populate(); renderGrid({mapView}); renderRegions({mapView}); renderPinnedRegionMarkers();
 }).catch((error) => {
   console.error(error);
   let language = 'ko';

@@ -680,6 +680,54 @@ test('selected nation claim controls update overlays without losing state', asyn
   await expect(page.locator('#nationInfo')).toContainText('Off');
 });
 
+test('pinned expansion nodes update compact rows and map markers without overlay churn', async ({ page }) => {
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await clickRegion(page, 'Amazonia');
+  const focusedPin = page.locator('[data-pin-focused-region="Amazonia"]');
+  await expect(focusedPin).toHaveText('Pin');
+  await focusedPin.click();
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="Amazonia"]')).toHaveCount(1);
+  await expect(page.locator('#pinnedRegionMarkers .pinned-node-marker-group[data-region="Amazonia"]')).toHaveCount(1);
+  await expect(page.locator('#regions .region[data-region="Amazonia"]')).toHaveClass(/pinned-node/);
+  await expect(focusedPin).toHaveText('Unpin');
+
+  await page.locator('.claimListItem[data-claim-kind="outgoing"]').first().click();
+  await expect(page.locator('.legendRegionItem[data-region-name="FrenchGuiana"]').first()).toBeVisible();
+  const frenchGuianaRow = page.locator('.legendRegionRow')
+    .filter({ has: page.locator('.legendRegionItem[data-region-name="FrenchGuiana"]') });
+  const frenchGuianaPin = frenchGuianaRow.locator('.legendRegionPin');
+  await expect(frenchGuianaPin).toHaveText('Pin');
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await frenchGuianaPin.click();
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region]')).toHaveCount(2);
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="FrenchGuiana"]')).toHaveCount(1);
+  await expect(page.locator('#pinnedRegionMarkers .pinned-node-marker-group[data-region="FrenchGuiana"]')).toHaveCount(1);
+  await expect(page.locator('#regions .region[data-region="FrenchGuiana"]')).toHaveClass(/pinned-node/);
+  await expect(frenchGuianaPin).toHaveText('Unpin');
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.pinnedRegionMarkerRebuilds).toBeGreaterThan(0);
+  expect(stats.overlayModelBuilds).toBe(0);
+  expect(stats.claimOverlayDescriptorBuilds).toBe(0);
+  expect(stats.claimLabelDescriptorBuilds).toBe(0);
+  expect(stats.claimOverlayDomReplacements).toBe(0);
+  expect(stats.claimLabelDomReplacements).toBe(0);
+
+  await page.locator('#pinnedRegionsPanel [data-pinned-unpin="FrenchGuiana"]').click();
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region]')).toHaveCount(1);
+  await expect(page.locator('#pinnedRegionMarkers .pinned-node-marker-group[data-region="FrenchGuiana"]')).toHaveCount(0);
+  await expect(page.locator('#regions .region[data-region="FrenchGuiana"]')).not.toHaveClass(/pinned-node/);
+
+  await page.locator('[data-pinned-clear]').click();
+  await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
+  await expect(page.locator('#pinnedRegionMarkers .pinned-node-marker-group')).toHaveCount(0);
+  await expect(page.locator('#regions .region[data-region="Amazonia"]')).not.toHaveClass(/pinned-node/);
+});
+
 test('claim cards synchronize map overlays, panel state, and empty map clear', async ({ page }) => {
   await page.goto('/?worldWrap=0');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
