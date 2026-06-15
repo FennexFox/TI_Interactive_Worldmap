@@ -2696,31 +2696,32 @@ function claimLabelRenderKey(model, descriptorSet, copyContexts = worldCopyConte
   });
 }
 function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyContexts} = {}) {
+  const fillDescriptors = [];
+  for (const descriptor of descriptors) {
+    const r = regionByName[descriptor.region];
+    if (!r) continue;
+    fillDescriptors.push({
+      path: r.path,
+      className: descriptor.fillClassName || 'claim-fill-group',
+      fill: descriptor.fill,
+      fillOpacity: descriptor.fillOpacity,
+      groupKey: descriptor.fillKey || `${descriptor.project || ''}:${descriptor.fill || ''}`,
+      dataset: {
+        fillKey: descriptor.fillKey || descriptor.project || descriptor.fill || '',
+        project: descriptor.project,
+      },
+    });
+  }
+  const fillGroups = buildVisualFillGroups(fillDescriptors);
   return createProjectedCopyFragment(copyContexts, 'claim-overlay-copy', copyContext => {
     const frag = document.createDocumentFragment();
     const copyData = worldCopyDataset(copyContext);
-    const fillDescriptors = [];
-    for (const descriptor of descriptors) {
-      const r = regionByName[descriptor.region];
-      if (!r) continue;
-      fillDescriptors.push({
-        path: r.path,
-        className: descriptor.fillClassName || 'claim-fill-group',
-        fill: descriptor.fill,
-        fillOpacity: descriptor.fillOpacity,
-        groupKey: descriptor.fillKey || `${descriptor.project || ''}:${descriptor.fill || ''}`,
-        dataset: {
-          fillKey: descriptor.fillKey || descriptor.project || descriptor.fill || '',
-          project: descriptor.project,
-        },
-      });
-    }
-    for (const group of buildVisualFillGroups(fillDescriptors)) {
+    for (const group of fillGroups) {
       frag.appendChild(createSvgElement('path', {
         d: group.paths.join(' '),
         class: group.className,
         fill: group.fill,
-        'fill-opacity': group.fillOpacity || null,
+        'fill-opacity': group.fillOpacity === '' ? null : group.fillOpacity,
       }, {
         ...group.dataset,
         visualGroupSize: group.paths.length,

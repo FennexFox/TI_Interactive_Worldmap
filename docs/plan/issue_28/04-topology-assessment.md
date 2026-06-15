@@ -37,7 +37,7 @@
 
 ## Validation commands
 
-- python3 /home/affx/.codex/skills/phased-issue-implementation/scripts/phase_plan_helper.py validate --strict --plan-dir docs/plan/issue_28
+- python3 <path-to-phased-issue-implementation>/scripts/phase_plan_helper.py validate --strict --plan-dir docs/plan/issue_28
 
 ## Manual smoke tests
 

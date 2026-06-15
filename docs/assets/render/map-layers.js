@@ -138,7 +138,7 @@ export function createGroupedVisualFillFragment({
           d: group.paths.join(' '),
           class: group.className,
           fill: group.fill,
-          'fill-opacity': group.fillOpacity || null,
+          'fill-opacity': group.fillOpacity === '' ? null : group.fillOpacity,
         }, {
           ...group.dataset,
           visualGroupSize: group.paths.length,
