@@ -91,7 +91,7 @@ def build_pages(args: argparse.Namespace) -> None:
     if not templates_dir:
         templates_dir = infer_templates_dir(bilateral_template)
 
-    existing_region_map = Path("data/generated/region_map.generated.json")
+    existing_region_map = ROOT / "data/generated/region_map.generated.json"
     if args.region_map_json:
         run([
             python,
@@ -255,7 +255,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--remote", default="origin", help="Git remote to push when changes are committed.")
     parser.add_argument("--branch", help="Branch to push. Defaults to the current branch.")
     parser.add_argument("--commit-message", help="Commit message for generated page updates.")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.refresh_region_outlines and not args.region_outlines:
+        parser.error("--refresh-region-outlines requires --region-outlines.")
+    return args
 
 
 def main() -> int:

@@ -155,6 +155,59 @@ class CatalogBuilderTests(unittest.TestCase):
             self.assertEqual(row["labels"][0]["name"], "Dire Dawa")
             self.assertNotIn("//", json.dumps(row, ensure_ascii=False))
 
+    def test_region_geometry_accepts_unitypy_poly_data_wrappers(self):
+        region = {
+            "regionName": "FixtureRegion",
+            "poly2DList": [
+                {
+                    "data": [
+                        {"anchor": {"x": 0, "y": 0}},
+                        {"anchor": {"x": 1, "y": 0}},
+                        {"anchor": {"x": 0, "y": 1}},
+                    ]
+                }
+            ],
+        }
+
+        paths, points_for_bounds, total_points, labels = ro.compact_region_geometry(region)
+
+        self.assertEqual(
+            paths,
+            ["M 0.000000 0.000000 L 1.000000 0.000000 L 0.000000 1.000000 Z"],
+        )
+        self.assertEqual(points_for_bounds, [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)])
+        self.assertEqual(total_points, 3)
+        self.assertEqual(labels, [])
+
+    def test_region_geometry_accepts_label_position_fallback_keys(self):
+        region = {
+            "regionName": "FixtureRegion",
+            "poly2DList": [
+                [
+                    {"anchor": [0, 0]},
+                    {"anchor": [1, 0]},
+                    {"anchor": [0, 1]},
+                ]
+            ],
+            "labelPositions": [
+                {"name": "Legacy", "pos": {"anchor": [0.1, 0.2]}},
+                {"labelName": "Council", "labelPosition": {"anchor": {"x": 0.3, "y": 0.4}}},
+                {"labelName": "Facility", "position": {"anchor": {"x": 0.5, "y": 0.6}}},
+                {"labelName": "Ignored", "labelPosition": {}},
+            ],
+        }
+
+        _paths, _points_for_bounds, _total_points, labels = ro.compact_region_geometry(region)
+
+        self.assertEqual(
+            labels,
+            [
+                {"name": "Legacy", "x": 0.1, "y": 0.2},
+                {"name": "Council", "x": 0.3, "y": 0.4},
+                {"name": "Facility", "x": 0.5, "y": 0.6},
+            ],
+        )
+
     def test_nation_catalog_uses_template_names_not_region_names(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
