@@ -63,12 +63,19 @@
 
 ## Progress
 
-- Not started.
+- Completed.
 
 ## Decision log
 
 - The manual envelope is additive and explicit; #35 will own automatic maximum closure.
+- The envelope renders only when an anchor has at least one pinned capital claimant, avoiding a redundant anchor-only layer when the normal claim overlay already covers that case.
+- Source precedence is depth, anchor/focused claimant, pin order, then stable claimant tag. Region fill uses the earliest source; overlap paths and badges separately mark multi-source regions.
+- The envelope layer has its own render key and debug counter so pin-only changes can update it without rebuilding claim overlay descriptors or DOM buffers.
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- Added a dedicated `#manualEnvelopeOverlays` SVG layer with depth fills, per-region outlines, and overlap markers.
+- Built manual envelope sources from the selected anchor plus unique pinned capital claimants, carrying claimant, depth, parent claimant, via-capital region, project, claim tier, and source-count datasets.
+- Preserved active claim mode, project, and claim-kind filters when deriving each source's visible claims.
+- Covered single-copy depth/overlap behavior, pin-only no-churn behavior, and wrapped-copy projection for envelope fills/outlines.
+- Validation passed with `npm run build`, `npm run verify`, and `npm run test:e2e`.

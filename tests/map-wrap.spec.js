@@ -372,6 +372,24 @@ test('world-wrap default projects pinned node markers without claim overlay chur
   expect(stats.claimLabelDomReplacements).toBe(0);
 });
 
+test('world-wrap default projects manual recursive envelope copies', async ({ page }) => {
+  await waitForWrappedMap(page);
+
+  await chooseNation(page, 'China', 'CHN');
+  await page.selectOption('#projectSel', 'Project_GreaterPanAsia');
+  await expect(page.locator('.legendRegionItem[data-region-name="NorthHonshu"]').first()).toBeVisible();
+  const northHonshuRow = page.locator('.legendRegionRow')
+    .filter({ has: page.locator('.legendRegionItem[data-region-name="NorthHonshu"]') });
+  await northHonshuRow.locator('.legendRegionPin').click();
+  await page.selectOption('#claimMode', 'all');
+
+  await expectProjectedCopies(page.locator('#manualEnvelopeOverlays .manual-envelope-region-outline[data-region="NorthHonshu"][data-envelope-depth="0"][data-envelope-source-count="2"]'));
+  await expectProjectedCopies(page.locator('#manualEnvelopeOverlays .manual-envelope-overlap[data-region="NorthHonshu"]'));
+  await expectProjectedCopies(page.locator('#manualEnvelopeOverlays .manual-envelope-region-outline[data-region="Luzon"][data-envelope-depth="1"][data-envelope-claimant="JPN"]'));
+  await expectProjectedCopies(page.locator('#manualEnvelopeOverlays .manual-envelope-fill[data-envelope-depth="0"]'));
+  await expectProjectedCopies(page.locator('#manualEnvelopeOverlays .manual-envelope-fill[data-envelope-depth="1"]'));
+});
+
 test('world-wrap default resolves copied hit paths to canonical region state', async ({ page }) => {
   await waitForWrappedMap(page);
 

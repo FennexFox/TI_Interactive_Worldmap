@@ -728,6 +728,43 @@ test('pinned expansion nodes update compact rows and map markers without overlay
   await expect(page.locator('#regions .region[data-region="Amazonia"]')).not.toHaveClass(/pinned-node/);
 });
 
+test('manual recursive envelope renders pinned capital claimant depths and overlaps', async ({ page }) => {
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await chooseNation(page, 'China', 'CHN');
+  await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-region-outline')).toHaveCount(0);
+
+  await page.selectOption('#projectSel', 'Project_GreaterPanAsia');
+  await expect(page.locator('.legendRegionItem[data-region-name="NorthHonshu"]').first()).toBeVisible();
+  const northHonshuRow = page.locator('.legendRegionRow')
+    .filter({ has: page.locator('.legendRegionItem[data-region-name="NorthHonshu"]') });
+  const northHonshuPin = northHonshuRow.locator('.legendRegionPin');
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await northHonshuPin.click();
+
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="NorthHonshu"]')).toHaveCount(1);
+  await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-region-outline[data-region="Beijing"][data-envelope-depth="0"][data-envelope-claimant="CHN"]')).toHaveCount(1);
+  await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-region-outline[data-region="NorthHonshu"][data-envelope-depth="0"][data-envelope-claimant="CHN"][data-envelope-source-count="2"]')).toHaveCount(1);
+  await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-overlap[data-region="NorthHonshu"]')).toHaveCount(1);
+  await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-overlap-marker[data-region="NorthHonshu"]')).toHaveCount(1);
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.manualEnvelopeRebuilds).toBeGreaterThan(0);
+  expect(stats.overlayModelBuilds).toBe(0);
+  expect(stats.claimOverlayDescriptorBuilds).toBe(0);
+  expect(stats.claimLabelDescriptorBuilds).toBe(0);
+  expect(stats.claimOverlayDomReplacements).toBe(0);
+  expect(stats.claimLabelDomReplacements).toBe(0);
+
+  await page.selectOption('#claimMode', 'all');
+  await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-region-outline[data-region="Luzon"][data-envelope-depth="1"][data-envelope-claimant="JPN"]')).toHaveCount(1);
+
+  await page.locator('#pinnedRegionsPanel [data-pinned-unpin="NorthHonshu"]').click();
+  await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-region-outline')).toHaveCount(0);
+});
+
 test('claim cards synchronize map overlays, panel state, and empty map clear', async ({ page }) => {
   await page.goto('/?worldWrap=0');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });

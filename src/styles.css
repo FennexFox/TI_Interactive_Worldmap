@@ -142,6 +142,16 @@
   .selection-outline { pointer-events:none; fill:none; stroke:white; stroke-width:.034; vector-effect:non-scaling-stroke; }
   .selection-dot { pointer-events:none; fill:oklch(0.91 0.17 92 / .96); stroke:rgba(0,0,0,.8); stroke-width:.01; vector-effect:non-scaling-stroke; }
   .selection-label { pointer-events:none; font-size:.055px; font-weight:800; fill:#fff7b8; text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.82); stroke-width:.015; }
+  #manualEnvelopeOverlays { pointer-events:none; mix-blend-mode:normal; }
+  .manual-envelope-fill { pointer-events:none; stroke:none; mix-blend-mode:screen; }
+  .manual-envelope-region-outline { pointer-events:none; stroke:rgba(255,255,255,.50); stroke-width:.014; vector-effect:non-scaling-stroke; stroke-dasharray:.036 .026; }
+  .manual-envelope-region-outline.manual-envelope-depth-0 { stroke:oklch(0.90 0.10 170 / .80); }
+  .manual-envelope-region-outline.manual-envelope-depth-1 { stroke:oklch(0.84 0.13 220 / .82); }
+  .manual-envelope-region-outline.has-overlap { stroke-width:.019; }
+  .manual-envelope-overlap { pointer-events:none; stroke:#fbbf24; stroke-width:.033; vector-effect:non-scaling-stroke; stroke-dasharray:.018 .014; }
+  .manual-envelope-overlap-marker { pointer-events:none; }
+  .manual-envelope-overlap-dot { fill:#fbbf24; stroke:rgba(15,23,42,.92); stroke-width:.010; vector-effect:non-scaling-stroke; }
+  .manual-envelope-overlap-count { font-size:.033px; font-weight:900; fill:#111827; text-anchor:middle; paint-order:stroke; stroke:rgba(255,255,255,.74); stroke-width:.006; }
   #pinnedRegionMarkers { pointer-events:none; opacity:1; mix-blend-mode:normal; }
   .pinned-fill { pointer-events:none; fill:oklch(0.78 0.13 185 / .20); stroke:none; mix-blend-mode:screen; }
   .pinned-outline-glow { pointer-events:none; fill:none; stroke:oklch(0.82 0.17 185 / .86); stroke-width:.072; vector-effect:non-scaling-stroke; }

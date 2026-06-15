@@ -118,6 +118,7 @@ const gGrid = document.getElementById('grid');
 const gForeignHoverOverlays = document.getElementById('foreignHoverOverlays');
 const gHoverClaimPreviewOverlays = document.getElementById('hoverClaimPreviewOverlays');
 const gClaimOverlays = document.getElementById('claimOverlays');
+const gManualEnvelopeOverlays = document.getElementById('manualEnvelopeOverlays');
 const gSecondaryHoverOverlays = document.getElementById('secondaryHoverOverlays');
 const gCapitalMarkers = document.getElementById('capitalMarkers');
 const gHoverOutlines = document.getElementById('hoverOutlines');
@@ -177,6 +178,7 @@ function createDebugRenderStats() {
     'foreignHoverOverlayReplacements',
     'hoverClaimPreviewOverlayReplacements',
     'secondaryHoverOverlayReplacements',
+    'manualEnvelopeRebuilds',
     'capitalMarkerRebuilds',
     'pinnedRegionMarkerRebuilds',
   ];
@@ -257,6 +259,12 @@ const I18N = {
     'expansionNodes.capitalClaimant': '수도 국가 {nation}',
     'expansionNodes.capitalClaimants': '수도 국가 {count}개: {nations}',
     'expansionNodes.noCapitalClaimant': '수도 국가 없음',
+    'manualEnvelope.depth': '수동 확장 깊이 {depth}',
+    'manualEnvelope.region': '{region}: 깊이 {depth}, {source}',
+    'manualEnvelope.source': '{nation} · {kind}',
+    'manualEnvelope.kindBase': '기본 영토',
+    'manualEnvelope.kindClaim': '{project}',
+    'manualEnvelope.overlap': '{region}: {count}개 수동 확장 출처 중첩',
     'section.selectedNation': '선택한 지역',
     'sectionCard.moveUp': '카드 위로 이동',
     'sectionCard.moveDown': '카드 아래로 이동',
@@ -378,6 +386,12 @@ const I18N = {
     'expansionNodes.capitalClaimant': 'Capital claimant {nation}',
     'expansionNodes.capitalClaimants': '{count} capital claimants: {nations}',
     'expansionNodes.noCapitalClaimant': 'No capital claimant',
+    'manualEnvelope.depth': 'Manual expansion depth {depth}',
+    'manualEnvelope.region': '{region}: depth {depth}, {source}',
+    'manualEnvelope.source': '{nation} · {kind}',
+    'manualEnvelope.kindBase': 'base territory',
+    'manualEnvelope.kindClaim': '{project}',
+    'manualEnvelope.overlap': '{region}: {count} overlapping manual expansion sources',
     'section.selectedNation': 'Selected Region',
     'sectionCard.moveUp': 'Move card up',
     'sectionCard.moveDown': 'Move card down',
@@ -666,9 +680,11 @@ const FOREIGN_HOVER_EMPTY_RENDER_KEY = 'foreign-hover:empty';
 const HOVER_CLAIM_PREVIEW_EMPTY_RENDER_KEY = 'hover-claim-preview:empty';
 const SECONDARY_HOVER_EMPTY_RENDER_KEY = 'secondary-hover:empty';
 const HOVER_OUTLINE_EMPTY_RENDER_KEY = 'hover-outline:empty';
+const MANUAL_ENVELOPE_EMPTY_RENDER_KEY = 'manual-envelope:empty';
 const PINNED_REGION_MARKERS_EMPTY_RENDER_KEY = 'pinned-region-markers:empty';
 const claimOverlayLayerRenderKeys = new WeakMap();
 const claimLabelLayerRenderKeys = new WeakMap();
+const manualEnvelopeLayerRenderKeys = new WeakMap();
 const pinnedRegionMarkerLayerRenderKeys = new WeakMap();
 const claimOverlayBufferStates = new WeakMap();
 const claimLabelBufferStates = new WeakMap();
@@ -867,6 +883,12 @@ const CLAIM_TIER_COLORS = [
   claimGradientColor(4, 0.58, 0.20), // research tier 3
   claimGradientColor(5, 0.53, 0.21), // research tier 4
   claimGradientColor(6, 0.49, 0.22), // research tier 5+
+];
+const MANUAL_ENVELOPE_DEPTH_COLORS = [
+  'oklch(0.80 0.13 168 / .30)',
+  'oklch(0.76 0.15 214 / .28)',
+  'oklch(0.75 0.16 285 / .26)',
+  'oklch(0.78 0.14 35 / .24)',
 ];
 // Reuse the same hue as the single-region hover fill, then fade it by tier.
 // The final hidden step is no overlay at all, which returns to the muted non-hover map.
@@ -1774,6 +1796,7 @@ function refreshPinnedRegionOutputs(changedRegionIds = []) {
   else applyMapVisualState();
   renderPinnedRegionsPanel();
   renderPinnedRegionMarkers();
+  renderManualEnvelopeOverlay(currentOverlayModel);
   updatePinnedControlStates();
 }
 function appendRegionHighlight(frag, r, classPrefix, copyContext = defaultWorldCopyContext()) {
@@ -2941,6 +2964,308 @@ function claimLabelDescriptors(model) {
   });
   return descriptors;
 }
+function manualEnvelopeDepthColor(depth = 0) {
+  const index = Math.min(Math.max(Number(depth) || 0, 0), MANUAL_ENVELOPE_DEPTH_COLORS.length - 1);
+  return MANUAL_ENVELOPE_DEPTH_COLORS[index];
+}
+function manualEnvelopeAnchorNation(anchorModel = currentOverlayModel) {
+  return anchorModel?.nation || getLockedNation() || getActiveNation() || regionByName[getFocusedRegionName()]?.nationTag || '';
+}
+function compareManualEnvelopeSourceSpecs(anchorNation) {
+  return (a, b) => {
+    if (a.depth !== b.depth) return a.depth - b.depth;
+    const aFocused = a.claimant === anchorNation ? 0 : 1;
+    const bFocused = b.claimant === anchorNation ? 0 : 1;
+    if (aFocused !== bFocused) return aFocused - bFocused;
+    if (a.pinIndex !== b.pinIndex) return a.pinIndex - b.pinIndex;
+    return a.claimant.localeCompare(b.claimant);
+  };
+}
+function manualEnvelopeSourceSpecs(anchorNation) {
+  if (!anchorNation || claimModeSel.value === 'off') return [];
+  const specs = [{
+    claimant: anchorNation,
+    depth: 0,
+    parentClaimant: '',
+    viaCapitalRegion: '',
+    pinIndex: -1,
+  }];
+  const seenClaimants = new Set([anchorNation]);
+  [...getPinnedRegionIds()].forEach((regionName, pinIndex) => {
+    for (const claimant of pinnedCapitalClaimants(regionName)) {
+      if (!claimant || seenClaimants.has(claimant)) continue;
+      seenClaimants.add(claimant);
+      specs.push({
+        claimant,
+        depth: 1,
+        parentClaimant: anchorNation,
+        viaCapitalRegion: regionName,
+        pinIndex,
+      });
+    }
+  });
+  return specs.sort(compareManualEnvelopeSourceSpecs(anchorNation));
+}
+function buildManualEnvelopeSource(spec, sourceOrder) {
+  const data = CLAIMS_BY_NATION[spec.claimant] || {nation: spec.claimant, baseRegions: nationRegions.get(spec.claimant) || [], projects: []};
+  const baseSet = new Set(data.baseRegions || nationRegions.get(spec.claimant) || []);
+  const tierByProject = countryProjectTierMap(spec.claimant, baseSet);
+  const entries = getVisibleProjectEntries(spec.claimant);
+  return {
+    ...spec,
+    sourceOrder,
+    data,
+    baseSet,
+    tierByProject,
+    entries,
+  };
+}
+function compareManualEnvelopeContributions(a, b) {
+  if (a.depth !== b.depth) return a.depth - b.depth;
+  if (a.sourceOrder !== b.sourceOrder) return a.sourceOrder - b.sourceOrder;
+  if (a.kind !== b.kind) return a.kind === 'base' ? -1 : 1;
+  if (a.tier !== b.tier) return a.tier - b.tier;
+  const byProject = projectSortLabel(a.project).localeCompare(projectSortLabel(b.project));
+  if (byProject) return byProject;
+  return a.claimant.localeCompare(b.claimant);
+}
+function manualEnvelopeSourceKey(contribution) {
+  return `${contribution.depth}:${contribution.claimant}:${contribution.parentClaimant || ''}:${contribution.viaCapitalRegion || ''}`;
+}
+function manualEnvelopeKindLabel(contribution) {
+  if (contribution.kind === 'base') return t('manualEnvelope.kindBase');
+  return t('manualEnvelope.kindClaim', {
+    project: contribution.project ? projectDisplay(contribution.project) : t('claimCard.projectBaseline'),
+  });
+}
+function manualEnvelopeSourceLabel(contribution) {
+  return t('manualEnvelope.source', {
+    nation: nationDisplayName(contribution.claimant),
+    kind: manualEnvelopeKindLabel(contribution),
+  });
+}
+function manualEnvelopeRegionLabel(item) {
+  const source = manualEnvelopeSourceLabel(item.primary);
+  return t('manualEnvelope.region', {
+    region: localizedRegionName(regionByName[item.region] || item.region),
+    depth: formatNumber(item.primary.depth),
+    source,
+  });
+}
+function manualEnvelopeOverlapLabel(item) {
+  return t('manualEnvelope.overlap', {
+    region: localizedRegionName(regionByName[item.region] || item.region),
+    count: formatNumber(item.overlapSources.length),
+  });
+}
+function addManualEnvelopeContribution(regionContributions, source, regionName, contribution) {
+  if (!regionName || !regionByName[regionName]) return;
+  if (!regionContributions.has(regionName)) regionContributions.set(regionName, []);
+  regionContributions.get(regionName).push({
+    ...contribution,
+    region: regionName,
+    claimant: source.claimant,
+    depth: source.depth,
+    parentClaimant: source.parentClaimant,
+    viaCapitalRegion: source.viaCapitalRegion,
+    pinIndex: source.pinIndex,
+    sourceOrder: source.sourceOrder,
+  });
+}
+function buildManualEnvelopeModel(anchorModel = currentOverlayModel) {
+  const anchorNation = manualEnvelopeAnchorNation(anchorModel);
+  const specs = manualEnvelopeSourceSpecs(anchorNation);
+  if (specs.length <= 1) return null;
+  const sources = specs
+    .map((spec, sourceOrder) => buildManualEnvelopeSource(spec, sourceOrder))
+    .filter(source => source.baseSet.size || source.entries.length);
+  if (sources.length <= 1) return null;
+
+  const regionContributions = new Map();
+  for (const source of sources) {
+    for (const regionName of source.baseSet) {
+      addManualEnvelopeContribution(regionContributions, source, regionName, {
+        kind: 'base',
+        project: '',
+        tier: -1,
+        claim: {},
+      });
+    }
+    for (const entry of source.entries) {
+      const tier = countryProjectTier(entry, source.tierByProject);
+      for (const regionName of entry.regions || []) {
+        if (source.baseSet.has(regionName)) continue;
+        addManualEnvelopeContribution(regionContributions, source, regionName, {
+          kind: 'claim',
+          project: entry.project || '',
+          tier,
+          claim: entry.claims?.[regionName] || {},
+        });
+      }
+    }
+  }
+
+  const regionItems = [];
+  for (const [region, contributions] of regionContributions) {
+    const sorted = [...contributions].sort(compareManualEnvelopeContributions);
+    const primary = sorted[0];
+    const overlapSourceKeys = new Set();
+    const overlapSources = [];
+    for (const contribution of sorted) {
+      const key = manualEnvelopeSourceKey(contribution);
+      if (overlapSourceKeys.has(key)) continue;
+      overlapSourceKeys.add(key);
+      overlapSources.push(contribution);
+    }
+    regionItems.push({
+      region,
+      primary,
+      contributions: sorted,
+      overlapSources,
+    });
+  }
+  regionItems.sort((a, b) => (
+    a.primary.depth - b.primary.depth
+    || a.primary.sourceOrder - b.primary.sourceOrder
+    || a.region.localeCompare(b.region)
+  ));
+  return {
+    anchorNation,
+    sources,
+    regionItems,
+    sourceKey: sources.map(source => `${source.depth}:${source.claimant}:${source.parentClaimant || ''}:${source.viaCapitalRegion || ''}:${source.pinIndex}`).join('|'),
+    regionKey: regionItems.map(item => `${item.region}:${item.primary.depth}:${item.primary.claimant}:${item.primary.project || ''}:${item.overlapSources.length}`).join('|'),
+  };
+}
+function manualEnvelopeRenderKey(model, copyContexts = worldCopyContexts) {
+  if (!model?.regionItems?.length) return MANUAL_ENVELOPE_EMPTY_RENDER_KEY;
+  return JSON.stringify({
+    kind: 'manual-envelope',
+    copyPlan: copyContextRenderKey(copyContexts),
+    data: overlayModelDataVersionKey(activeData, derivedIndices),
+    language: currentLanguage,
+    anchor: model.anchorNation,
+    sourceKey: model.sourceKey,
+    regionKey: model.regionKey,
+    claimMode: claimModeSel.value || '',
+    claimKind: claimKindSel.value || '',
+    project: getProjectFilter(),
+  });
+}
+function createManualEnvelopeFragment(model, {copyContexts=worldCopyContexts} = {}) {
+  const fillDescriptors = model.regionItems.map(item => {
+    const region = regionByName[item.region];
+    const depth = item.primary.depth;
+    const fill = manualEnvelopeDepthColor(depth);
+    return {
+      path: region.path,
+      className: `manual-envelope-fill manual-envelope-depth-${depth}`,
+      fill,
+      groupKey: `manual-envelope-depth:${depth}:${fill}`,
+      dataset: {
+        envelopeDepth: depth,
+        fillKey: `depth:${depth}`,
+      },
+    };
+  });
+  const fillGroups = buildVisualFillGroups(fillDescriptors);
+  return createProjectedCopyFragment(copyContexts, 'manual-envelope-copy', copyContext => {
+    const frag = document.createDocumentFragment();
+    const copyData = worldCopyDataset(copyContext);
+    for (const group of fillGroups) {
+      frag.appendChild(createSvgElement('path', {
+        d: group.paths.join(' '),
+        class: group.className,
+        fill: group.fill,
+        'aria-label': t('manualEnvelope.depth', {depth: group.dataset.envelopeDepth || '0'}),
+      }, {
+        ...group.dataset,
+        visualGroupSize: group.paths.length,
+        ...copyData,
+      }));
+    }
+    for (const item of model.regionItems) {
+      const region = regionByName[item.region];
+      const primary = item.primary;
+      const hasOverlap = item.overlapSources.length > 1;
+      frag.appendChild(createSvgElement('path', {
+        d: region.path,
+        class: `manual-envelope-region-outline manual-envelope-depth-${primary.depth}${hasOverlap ? ' has-overlap' : ''}`,
+        fill: 'none',
+        'aria-label': manualEnvelopeRegionLabel(item),
+      }, {
+        region: item.region,
+        envelopeDepth: primary.depth,
+        envelopeClaimant: primary.claimant,
+        envelopeParent: primary.parentClaimant,
+        envelopeViaCapital: primary.viaCapitalRegion,
+        envelopeProject: primary.project,
+        envelopeTier: primary.tier,
+        envelopeKind: primary.kind,
+        envelopeSourceCount: item.overlapSources.length,
+        ...copyData,
+      }));
+      if (!hasOverlap) continue;
+      frag.appendChild(createSvgElement('path', {
+        d: region.path,
+        class: 'manual-envelope-overlap',
+        fill: 'none',
+        'aria-label': manualEnvelopeOverlapLabel(item),
+      }, {
+        region: item.region,
+        envelopeOverlap: '1',
+        envelopeSourceCount: item.overlapSources.length,
+        ...copyData,
+      }));
+      const lab = labelPosition(region);
+      if (!lab) continue;
+      const marker = createSvgElement('g', {
+        class: 'manual-envelope-overlap-marker',
+        'aria-label': manualEnvelopeOverlapLabel(item),
+      }, {
+        region: item.region,
+        envelopeOverlap: '1',
+        envelopeSourceCount: item.overlapSources.length,
+        ...copyData,
+      });
+      marker.appendChild(createSvgElement('circle', {
+        class: 'manual-envelope-overlap-dot',
+        cx: lab.x,
+        cy: lab.y,
+        r: 0.026,
+      }));
+      marker.appendChild(createSvgElement('text', {
+        class: 'manual-envelope-overlap-count',
+        x: lab.x,
+        y: lab.y + 0.012,
+        textContent: String(item.overlapSources.length),
+      }));
+      frag.appendChild(marker);
+    }
+    return frag;
+  });
+}
+function renderManualEnvelopeOverlay(anchorModel = currentOverlayModel, {copyContexts=worldCopyContexts} = {}) {
+  if (!gManualEnvelopeOverlays) return;
+  const model = buildManualEnvelopeModel(anchorModel);
+  replaceLayerChildrenForRenderKey(
+    gManualEnvelopeOverlays,
+    manualEnvelopeLayerRenderKeys,
+    manualEnvelopeRenderKey(model, copyContexts),
+    () => (model ? createManualEnvelopeFragment(model, {copyContexts}) : document.createDocumentFragment()),
+    'manualEnvelopeRebuilds'
+  );
+}
+function clearManualEnvelopeOverlay() {
+  if (!gManualEnvelopeOverlays) return;
+  replaceLayerChildrenForRenderKey(
+    gManualEnvelopeOverlays,
+    manualEnvelopeLayerRenderKeys,
+    MANUAL_ENVELOPE_EMPTY_RENDER_KEY,
+    () => document.createDocumentFragment(),
+    'manualEnvelopeRebuilds'
+  );
+}
 function getClaimOverlayDescriptorSet(model) {
   const cacheKey = claimOverlayDescriptorCacheKey(model);
   const cached = getCachedLruValue(claimOverlayDescriptorCache, cacheKey, 'claimOverlayDescriptorCacheHits');
@@ -3340,6 +3665,7 @@ function updateNationOverlay(
     applyMapVisualState();
     setSecondaryHoverNationState();
     clearClaimOverlayDom({claimOverlayLayer: gClaimOverlays, claimLabelLayer: gClaimLabels});
+    clearManualEnvelopeOverlay();
     renderHoverOutlines();
     if (renderDetails) nationInfo.textContent = t('nationInfo.empty');
     setClaimsPillEmpty();
@@ -3353,6 +3679,7 @@ function updateNationOverlay(
   currentOverlayModel = overlayModel;
   visibleNationRegionNames = new Set(overlayModel.resultSet);
   renderMapOverlay(overlayModel, {claimOverlayLayer: gClaimOverlays, claimLabelLayer: gClaimLabels, mapView});
+  renderManualEnvelopeOverlay(overlayModel);
   refreshSecondaryCapitalPreviewForHoveredRegion();
   renderHoverOutlines();
   renderClaimSummaryPill(overlayModel);
@@ -3439,6 +3766,7 @@ function refreshLanguage() {
   updateSelectedRegions();
   renderPinnedRegionsPanel();
   renderPinnedRegionMarkers();
+  renderManualEnvelopeOverlay(currentOverlayModel);
   updatePinnedControlStates();
   const hoveredRegion = tooltipRegionId != null ? REGIONS[tooltipRegionId] : null;
   setHoverPill(hoveredRegion);
