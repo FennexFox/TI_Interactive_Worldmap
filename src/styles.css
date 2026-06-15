@@ -148,26 +148,13 @@
   .manual-envelope-region-outline.manual-envelope-depth-0 { stroke:oklch(0.90 0.10 170 / .80); }
   .manual-envelope-region-outline.manual-envelope-depth-1 { stroke:oklch(0.84 0.13 220 / .82); }
   .manual-envelope-region-outline.has-overlap { stroke-width:.019; }
-  .manual-envelope-overlap { pointer-events:none; stroke:#fbbf24; stroke-width:.033; vector-effect:non-scaling-stroke; stroke-dasharray:.018 .014; }
-  .manual-envelope-overlap-marker { pointer-events:none; }
-  .manual-envelope-overlap-dot { fill:#fbbf24; stroke:rgba(15,23,42,.92); stroke-width:.010; vector-effect:non-scaling-stroke; }
-  .manual-envelope-overlap-count { font-size:.033px; font-weight:900; fill:#111827; text-anchor:middle; paint-order:stroke; stroke:rgba(255,255,255,.74); stroke-width:.006; }
+  .manual-envelope-overlap { pointer-events:none; stroke-width:.033; vector-effect:non-scaling-stroke; stroke-dasharray:.018 .014; }
   #pinnedRegionMarkers { pointer-events:none; opacity:1; mix-blend-mode:normal; }
   .pinned-fill { pointer-events:none; fill:oklch(0.78 0.13 185 / .20); stroke:none; mix-blend-mode:screen; }
   .pinned-outline-glow { pointer-events:none; fill:none; stroke:oklch(0.82 0.17 185 / .86); stroke-width:.072; vector-effect:non-scaling-stroke; }
   .pinned-outline { pointer-events:none; fill:none; stroke:#5eead4; stroke-width:.028; vector-effect:non-scaling-stroke; stroke-dasharray:.045 .022; }
   .pinned-node-marker-group { pointer-events:none; }
-  .pinned-node-marker { fill:#22d3ee; fill-opacity:.92; stroke:rgba(2,6,23,.92); stroke-width:.012; vector-effect:non-scaling-stroke; paint-order:stroke fill; }
-  .pinned-node-label { pointer-events:none; font-size:.042px; font-weight:900; fill:#03131a; text-anchor:middle; paint-order:stroke; stroke:rgba(255,255,255,.72); stroke-width:.006; }
   #reachableCapitalCandidates { pointer-events:none; opacity:1; mix-blend-mode:normal; }
-  .reachable-capital-candidate { pointer-events:none; }
-  .reachable-capital-candidate-focus { pointer-events:all; cursor:pointer; fill:oklch(0.89 0.16 126 / .88); stroke:rgba(6,35,25,.94); stroke-width:.012; vector-effect:non-scaling-stroke; paint-order:stroke fill; }
-  .reachable-capital-candidate-focus:hover { fill:oklch(0.94 0.17 126 / .96); }
-  .reachable-capital-candidate-pin { pointer-events:none; }
-  .reachable-capital-candidate-pin-dot,
-  .reachable-capital-candidate-pin-label { pointer-events:all; cursor:pointer; }
-  .reachable-capital-candidate-pin-dot { fill:#facc15; stroke:rgba(38,30,4,.95); stroke-width:.009; vector-effect:non-scaling-stroke; }
-  .reachable-capital-candidate-pin-label { font-size:.034px; font-weight:900; fill:#1f2937; text-anchor:middle; paint-order:stroke; stroke:rgba(255,255,255,.72); stroke-width:.005; }
   .claim-label { pointer-events:none; font-size:.033px; fill:rgba(255,255,255,.88); text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.7); stroke-width:.008; }
   .label { pointer-events:none; font-size:.035px; fill:rgba(255,255,255,.78); text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.65); stroke-width:.008; }
   .tooltip { position:absolute; pointer-events:none; z-index:5; display:block; visibility:hidden; opacity:0; left:0; top:0; transform:translate3d(-9999px,-9999px,0); will-change:transform; contain:layout style paint; width:max-content; max-width:min(260px, calc(100% - 16px)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:rgba(8,13,24,.9); border:1px solid rgba(255,255,255,.12); border-radius:7px; padding:3px 7px; box-shadow:0 6px 18px rgba(0,0,0,.28); color:rgba(245,248,255,.92); font-size:12px; line-height:1.25; transition:opacity .06s ease; }
@@ -184,12 +171,10 @@
   .small { color:var(--muted); font-size:12px; }
   .reachableCandidatesPanel { display:flex; flex-direction:column; gap:7px; padding-top:10px; }
   .reachableCandidateToolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-  .reachableCandidateToggle { min-width:0; display:flex; align-items:center; gap:7px; color:#d9f99d; font-size:12px; font-weight:800; }
-  .reachableCandidateToggle input { width:14px; height:14px; margin:0; accent-color:#84cc16; }
   .reachableCandidateCount { flex:0 0 auto; color:#d9f99d; font-size:11.5px; font-weight:800; }
   .reachableCandidateEmpty { padding:5px 2px; }
   .reachableCandidateList { display:flex; flex-direction:column; gap:5px; }
-  .reachableCandidateRow { display:grid; grid-template-columns:minmax(0,1fr) 50px; gap:5px; align-items:stretch; }
+  .reachableCandidateRow { display:grid; grid-template-columns:minmax(0,1fr); gap:5px; align-items:stretch; }
   .reachableCandidateFocus { min-width:0; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:7px; align-items:center; min-height:38px; padding:6px 7px; border-radius:8px; background:rgba(132,204,22,.07); border-color:rgba(190,242,100,.16); text-align:left; }
   .reachableCandidateFocus:hover { background:rgba(132,204,22,.13); border-color:rgba(190,242,100,.34); }
   .reachableCandidateMain { min-width:0; display:flex; flex-direction:column; gap:1px; }
@@ -198,8 +183,6 @@
   .reachableCandidateMain b { color:#ecfccb; font-size:12px; line-height:1.2; }
   .reachableCandidateMain span { color:var(--muted); font-size:11px; line-height:1.25; }
   .reachableCandidateFocusText { color:#d9f99d; font-size:10.5px; font-weight:800; }
-  .reachableCandidatePin { min-width:50px; min-height:38px; padding:5px 6px; border-radius:8px; font-size:11px; font-weight:800; color:#fef9c3; border-color:rgba(250,204,21,.26); background:rgba(250,204,21,.10); }
-  .reachableCandidatePin:hover { background:rgba(250,204,21,.20); border-color:rgba(250,204,21,.46); }
   .pinnedRegionsPanel { display:flex; flex-direction:column; gap:8px; padding-top:10px; }
   .pinnedRegionEmpty { padding:8px 2px; }
   .pinnedRegionToolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; }
@@ -215,19 +198,12 @@
   .pinnedRegionFocusText { color:#dbeafe; font-size:11px; font-weight:800; }
   .pinnedRegionUnpin { width:30px; min-width:30px; min-height:44px; padding:0; border-radius:8px; color:#ffd6d2; background:rgba(255,87,87,.12); border-color:rgba(255,126,116,.30); font-size:18px; font-weight:800; line-height:1; }
   .pinnedRegionUnpin:hover { background:rgba(255,87,87,.24); border-color:rgba(255,126,116,.58); }
-  .focusedRegionPinControl { margin-top:10px; }
-  .focusedRegionPinButton { min-height:30px; padding:6px 9px; border-radius:8px; font-size:12px; font-weight:800; border-color:rgba(94,234,212,.28); background:rgba(20,184,166,.12); color:#ccfbf1; }
-  .focusedRegionPinButton:hover { background:rgba(20,184,166,.22); border-color:rgba(94,234,212,.48); }
-  .focusedRegionPinButton.is-pinned,
-  .legendRegionPin.is-pinned { border-color:rgba(255,126,116,.46); background:rgba(255,87,87,.15); color:#ffd6d2; }
   .legendRegionList { display:flex; flex-direction:column; gap:4px; margin-left:26px; padding-left:8px; border-left:1px solid rgba(255,255,255,.12); }
-  .legendRegionRow { display:grid; grid-template-columns:minmax(0,1fr) 58px; gap:5px; align-items:stretch; }
+  .legendRegionRow { display:grid; grid-template-columns:minmax(0,1fr); gap:5px; align-items:stretch; }
   .legendRegionItem { display:flex; flex-direction:column; align-items:flex-start; gap:1px; width:100%; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07); color:var(--text); font:inherit; text-align:left; cursor:pointer; }
   .legendRegionItem:hover { background:rgba(255,255,255,.075); border-color:rgba(255,255,255,.18); }
   .legendRegionItem.active { background:rgba(255,247,184,.12); border-color:rgba(255,247,184,.42); }
   .legendRegionItem span { color:var(--muted); font-size:12px; }
-  .legendRegionPin { min-width:58px; min-height:100%; padding:5px 6px; border-radius:8px; font-size:11px; font-weight:800; color:#ccfbf1; border-color:rgba(94,234,212,.24); background:rgba(20,184,166,.10); }
-  .legendRegionPin:hover { background:rgba(20,184,166,.20); border-color:rgba(94,234,212,.42); }
   .tag { font-size:11px; color:#cbd5e1; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); border-radius:999px; padding:2px 7px; }
   .status { display:inline-block; margin-left:6px; border:1px solid rgba(255,255,255,.14); border-radius:999px; padding:2px 7px; color:#cbd5e1; font-size:11px; font-weight:500; vertical-align:middle; }
   .status.formable { border-color:rgba(255,240,166,.35); color:#fff0a6; }

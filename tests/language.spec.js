@@ -680,42 +680,38 @@ test('selected nation claim controls update overlays without losing state', asyn
   await expect(page.locator('#nationInfo')).toContainText('Off');
 });
 
-test('pinned expansion nodes update compact rows and map markers without overlay churn', async ({ page }) => {
+test('pinned expansion nodes update compact rows and map markers through clicks', async ({ page }) => {
   await page.goto('/?worldWrap=0&debugRenderStats=1');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
   await chooseNation(page, 'Brazil', 'BRA');
   await clickRegion(page, 'Amazonia');
-  const focusedPin = page.locator('[data-pin-focused-region="Amazonia"]');
-  await expect(focusedPin).toHaveText('Pin');
-  await focusedPin.click();
+  await expect(page.locator('[data-pin-focused-region]')).toHaveCount(0);
   await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="Amazonia"]')).toHaveCount(1);
   await expect(page.locator('#pinnedRegionMarkers .pinned-node-marker-group[data-region="Amazonia"]')).toHaveCount(1);
+  await expect(page.locator('#pinnedRegionMarkers .pinned-node-label[data-region="Amazonia"]')).toHaveCount(0);
+  await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveText('Manaus');
   await expect(page.locator('#regions .region[data-region="Amazonia"]')).toHaveClass(/pinned-node/);
-  await expect(focusedPin).toHaveText('Unpin');
 
   await page.locator('.claimListItem[data-claim-kind="outgoing"]').first().click();
   await expect(page.locator('.legendRegionItem[data-region-name="FrenchGuiana"]').first()).toBeVisible();
   const frenchGuianaRow = page.locator('.legendRegionRow')
     .filter({ has: page.locator('.legendRegionItem[data-region-name="FrenchGuiana"]') });
-  const frenchGuianaPin = frenchGuianaRow.locator('.legendRegionPin');
-  await expect(frenchGuianaPin).toHaveText('Pin');
+  const frenchGuianaItem = frenchGuianaRow.locator('.legendRegionItem');
+  await expect(frenchGuianaRow.locator('.legendRegionPin')).toHaveCount(0);
 
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
-  await frenchGuianaPin.click();
+  await frenchGuianaItem.click();
   await expect(page.locator('#pinnedRegionsPanel [data-pinned-region]')).toHaveCount(2);
   await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="FrenchGuiana"]')).toHaveCount(1);
   await expect(page.locator('#pinnedRegionMarkers .pinned-node-marker-group[data-region="FrenchGuiana"]')).toHaveCount(1);
+  await expect(page.locator('#pinnedRegionMarkers .pinned-node-label[data-region="Amazonia"]')).toHaveText('Manaus');
+  await expect(page.locator('#pinnedRegionMarkers .pinned-node-label[data-region="FrenchGuiana"]')).toHaveCount(0);
+  await expect(page.locator('#selectionOutlines .selection-label[data-region="FrenchGuiana"]')).toHaveText('Kourou');
   await expect(page.locator('#regions .region[data-region="FrenchGuiana"]')).toHaveClass(/pinned-node/);
-  await expect(frenchGuianaPin).toHaveText('Unpin');
 
   const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.pinnedRegionMarkerRebuilds).toBeGreaterThan(0);
-  expect(stats.overlayModelBuilds).toBe(0);
-  expect(stats.claimOverlayDescriptorBuilds).toBe(0);
-  expect(stats.claimLabelDescriptorBuilds).toBe(0);
-  expect(stats.claimOverlayDomReplacements).toBe(0);
-  expect(stats.claimLabelDomReplacements).toBe(0);
 
   await page.locator('#pinnedRegionsPanel [data-pinned-unpin="FrenchGuiana"]').click();
   await expect(page.locator('#pinnedRegionsPanel [data-pinned-region]')).toHaveCount(1);
@@ -726,6 +722,52 @@ test('pinned expansion nodes update compact rows and map markers without overlay
   await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
   await expect(page.locator('#pinnedRegionMarkers .pinned-node-marker-group')).toHaveCount(0);
   await expect(page.locator('#regions .region[data-region="Amazonia"]')).not.toHaveClass(/pinned-node/);
+});
+
+test('map region clicks toggle pinned expansion nodes', async ({ page }) => {
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await clickRegion(page, 'Amazonia');
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="Amazonia"]')).toHaveCount(1);
+  await expect(page.locator('#pinnedRegionMarkers .pinned-node-marker-group[data-region="Amazonia"]')).toHaveCount(1);
+  await expect(page.locator('#pinnedRegionMarkers .pinned-node-label[data-region="Amazonia"]')).toHaveCount(0);
+  await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveText('Manaus');
+  await expect(page.locator('#regions .region[data-region="Amazonia"]')).toHaveClass(/pinned-node/);
+
+  await clickRegion(page, 'Amazonia');
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="Amazonia"]')).toHaveCount(0);
+  await expect(page.locator('#pinnedRegionMarkers .pinned-node-marker-group[data-region="Amazonia"]')).toHaveCount(0);
+  await expect(page.locator('#regions .region[data-region="Amazonia"]')).not.toHaveClass(/pinned-node/);
+  await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveCount(1);
+});
+
+test('empty map clicks clear pinned regions before selection', async ({ page }) => {
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await clickRegion(page, 'Amazonia');
+  await page.locator('.claimListItem[data-claim-kind="outgoing"]').first().click();
+  await expect(page.locator('.legendRegionItem[data-region-name="FrenchGuiana"]').first()).toBeVisible();
+  await page.locator('.legendRegionRow')
+    .filter({ has: page.locator('.legendRegionItem[data-region-name="FrenchGuiana"]') })
+    .locator('.legendRegionItem')
+    .click();
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region]')).toHaveCount(2);
+  await expect(page.locator('#selectionOutlines > *')).not.toHaveCount(0);
+
+  await clearMap(page);
+  await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
+  await expect(page.locator('#pinnedRegionMarkers .pinned-node-marker-group')).toHaveCount(0);
+  await expect(page.locator('#search')).toHaveValue(/Brazil/);
+  await expect(page.locator('#selectionOutlines > *')).not.toHaveCount(0);
+
+  await clearMap(page);
+  await expect(page.locator('#search')).toHaveValue('');
+  await expect(page.locator('#claimPill')).toHaveText('Claims: -');
+  await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
 });
 
 test('manual recursive envelope renders pinned capital claimant depths and overlaps', async ({ page }) => {
@@ -739,24 +781,20 @@ test('manual recursive envelope renders pinned capital claimant depths and overl
   await expect(page.locator('.legendRegionItem[data-region-name="NorthHonshu"]').first()).toBeVisible();
   const northHonshuRow = page.locator('.legendRegionRow')
     .filter({ has: page.locator('.legendRegionItem[data-region-name="NorthHonshu"]') });
-  const northHonshuPin = northHonshuRow.locator('.legendRegionPin');
 
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
-  await northHonshuPin.click();
+  await northHonshuRow.locator('.legendRegionItem').click();
 
   await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="NorthHonshu"]')).toHaveCount(1);
   await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-region-outline[data-region="Beijing"][data-envelope-depth="0"][data-envelope-claimant="CHN"]')).toHaveCount(1);
   await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-region-outline[data-region="NorthHonshu"][data-envelope-depth="0"][data-envelope-claimant="CHN"][data-envelope-source-count="2"]')).toHaveCount(1);
   await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-overlap[data-region="NorthHonshu"]')).toHaveCount(1);
-  await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-overlap-marker[data-region="NorthHonshu"]')).toHaveCount(1);
+  await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-overlap-marker')).toHaveCount(0);
+  await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-overlap-count')).toHaveCount(0);
+  await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-overlap-dot')).toHaveCount(0);
 
   const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.manualEnvelopeRebuilds).toBeGreaterThan(0);
-  expect(stats.overlayModelBuilds).toBe(0);
-  expect(stats.claimOverlayDescriptorBuilds).toBe(0);
-  expect(stats.claimLabelDescriptorBuilds).toBe(0);
-  expect(stats.claimOverlayDomReplacements).toBe(0);
-  expect(stats.claimLabelDomReplacements).toBe(0);
 
   await page.selectOption('#claimMode', 'all');
   await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-region-outline[data-region="Luzon"][data-envelope-depth="1"][data-envelope-claimant="JPN"]')).toHaveCount(1);
@@ -765,40 +803,85 @@ test('manual recursive envelope renders pinned capital claimant depths and overl
   await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-region-outline')).toHaveCount(0);
 });
 
-test('reachable capital candidates toggle, focus, and pin without automatic overlay churn', async ({ page }) => {
+test('manual recursive envelope does not put overlap dots on Paris claims after selecting Moscow', async ({ page }) => {
+  await page.goto('/?worldWrap=0');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await clickRegion(page, 'Paris');
+  await clickRegion(page, 'Moskva');
+
+  await expect(page.locator('#search')).toHaveValue(/Russia/);
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="Paris"]')).toHaveCount(1);
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="Moskva"]')).toHaveCount(1);
+  await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-overlap[data-region="Paris"]')).toHaveCount(1);
+  await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-overlap-marker')).toHaveCount(0);
+  await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-overlap-dot')).toHaveCount(0);
+});
+
+test('reachable capital button shows hollow star markers that pin without plus buttons', async ({ page }) => {
   await page.goto('/?worldWrap=0&debugRenderStats=1');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
   await chooseNation(page, 'China', 'CHN');
-  const toggle = page.locator('[data-reachable-candidates-toggle]');
-  await expect(toggle).not.toBeChecked();
-  await toggle.check();
+  const toggle = page.locator('#reachableCapitalsBtn');
+  await expect(toggle).toHaveText('Hide reachable capitals');
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
 
   await expect(page.locator('#reachableCandidatesPanel')).toContainText('candidate capitals');
+  await expect(page.locator('#reachableCandidatesPanel [data-candidate-row="Assam"]')).toHaveCount(0);
   await expect(page.locator('#reachableCandidatesPanel [data-candidate-row="NorthHonshu"]')).toHaveCount(1);
   await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="NorthHonshu"]')).toHaveCount(1);
-
-  await page.locator('#reachableCapitalCandidates [data-candidate-focus="NorthHonshu"]').click();
-  await expect(page.locator('#selectionOutlines .selection-label[data-region="NorthHonshu"]')).toHaveCount(1);
+  await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate-star[data-candidate-focus="NorthHonshu"]')).toHaveCount(1);
+  await expect(page.locator('#reachableCapitalCandidates [data-candidate-pin]')).toHaveCount(0);
 
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
-  await page.locator('#reachableCapitalCandidates [data-candidate-pin="NorthHonshu"]').first().click();
-
+  await page.locator('#reachableCapitalCandidates .reachable-capital-candidate-star[data-candidate-focus="NorthHonshu"]').click();
+  await expect(page.locator('#selectionOutlines .selection-label[data-region="NorthHonshu"]')).toHaveText('Tokyo');
   await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="NorthHonshu"]')).toHaveCount(1);
   await expect(page.locator('#reachableCandidatesPanel [data-candidate-row="NorthHonshu"]')).toHaveCount(0);
   await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="NorthHonshu"]')).toHaveCount(0);
   await expect(page.locator('#pinnedRegionMarkers .pinned-node-marker-group[data-region="NorthHonshu"]')).toHaveCount(1);
+  await expect(page.locator('#pinnedRegionMarkers .pinned-node-label[data-region="NorthHonshu"]')).toHaveCount(0);
 
   const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.reachableCapitalCandidateRebuilds).toBeGreaterThan(0);
-  expect(stats.overlayModelBuilds).toBe(0);
-  expect(stats.claimOverlayDescriptorBuilds).toBe(0);
-  expect(stats.claimLabelDescriptorBuilds).toBe(0);
-  expect(stats.claimOverlayDomReplacements).toBe(0);
-  expect(stats.claimLabelDomReplacements).toBe(0);
 
-  await toggle.uncheck();
+  await toggle.click();
+  await expect(toggle).toHaveText('Show reachable capitals');
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
   await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate')).toHaveCount(0);
+});
+
+test('reachable capitals omit nations fully included in the selected regions claims', async ({ page }) => {
+  await page.goto('/?worldWrap=0');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await clickRegion(page, 'Paris');
+  await expect(page.locator('#search')).toHaveValue(/France/);
+
+  await expect(page.locator('#reachableCandidatesPanel [data-candidate-row="EastGermany"]')).toHaveCount(0);
+  await expect(page.locator('#reachableCandidatesPanel [data-candidate-row="Poland"]')).toHaveCount(0);
+  await expect(page.locator('#reachableCandidatesPanel [data-candidate-row="Kiev"]')).toHaveCount(0);
+  await expect(page.locator('#reachableCandidatesPanel [data-candidate-row="BasqueCountry"]')).toHaveCount(0);
+  await expect(page.locator('#reachableCandidatesPanel [data-candidate-row="Katowice"]')).toHaveCount(0);
+  await expect(page.locator('#reachableCandidatesPanel [data-candidate-row="Milan"]')).toHaveCount(0);
+  await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="EastGermany"]')).toHaveCount(0);
+  await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="Poland"]')).toHaveCount(0);
+  await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="Kiev"]')).toHaveCount(0);
+  await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="BasqueCountry"]')).toHaveCount(0);
+  await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="Katowice"]')).toHaveCount(0);
+  await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="Milan"]')).toHaveCount(0);
+
+  await expect(page.locator('#reachableCandidatesPanel [data-candidate-row="Moskva"]')).toHaveCount(1);
+  await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="Moskva"]')).toHaveCount(1);
+
+  await page.locator('#reachableCapitalCandidates .reachable-capital-candidate-star[data-candidate-focus="Moskva"]').click();
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="Moskva"]')).toHaveCount(1);
+  await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-region-outline[data-region="Irkutsk"][data-envelope-depth="1"][data-envelope-claimant="RUS"]')).toHaveCount(1);
+  await expect(page.locator('#reachableCandidatesPanel [data-candidate-row="Portugal"]')).toHaveCount(0);
+  await expect(page.locator('#reachableCandidatesPanel [data-candidate-row="Irkutsk"]')).toHaveCount(0);
+  await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="Portugal"]')).toHaveCount(0);
+  await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="Irkutsk"]')).toHaveCount(0);
 });
 
 test('claim cards synchronize map overlays, panel state, and empty map clear', async ({ page }) => {
@@ -824,6 +907,15 @@ test('claim cards synchronize map overlays, panel state, and empty map clear', a
   await expect(page.locator('#claimPill')).toHaveText('Bolivia: territory 1, claims 25, research tiers 0');
   await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
   await expect(page.locator('.claimListItem.active[data-claim-kind="outgoing"]')).toHaveCount(1);
+
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region]')).toHaveCount(1);
+  await clearMap(page);
+  await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
+  await expect(page.locator('#search')).toHaveValue(/Bolivia/);
+  await expect(page.locator('#claimMode')).toHaveValue('project');
+  await expect(page.locator('#claimPill')).toHaveText('Bolivia: territory 1, claims 25, research tiers 0');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  await expect(page.locator('#selectionOutlines > *')).not.toHaveCount(0);
 
   await clearMap(page);
   await expect(page.locator('#search')).toHaveValue('');

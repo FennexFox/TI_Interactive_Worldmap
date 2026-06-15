@@ -13,7 +13,7 @@ export function createAppState({activeScenarioId = ''} = {}) {
     selectedRegionIds: new Set(),
     focusedRegionId: '',
     pinnedRegionIds: new Set(),
-    showReachableCapitalCandidates: false,
+    showReachableCapitalCandidates: true,
     hoveredNationId: '',
     hoveredRegionId: '',
     lockedNationId: '',
@@ -23,7 +23,6 @@ export function createAppState({activeScenarioId = ''} = {}) {
     },
     filters: {
       projectId: '',
-      onlyClaims: false,
     },
   };
 }
@@ -73,15 +72,6 @@ export function unpinPinnedRegion(state, regionId = '') {
   const normalized = normalizeId(regionId);
   if (!normalized || !state.pinnedRegionIds) return state;
   state.pinnedRegionIds.delete(normalized);
-  return state;
-}
-
-export function togglePinnedRegion(state, regionId = '') {
-  const normalized = normalizeId(regionId);
-  if (!normalized) return state;
-  if (!state.pinnedRegionIds) state.pinnedRegionIds = new Set();
-  if (state.pinnedRegionIds.has(normalized)) state.pinnedRegionIds.delete(normalized);
-  else state.pinnedRegionIds.add(normalized);
   return state;
 }
 
@@ -142,11 +132,6 @@ export function setClaimFilters(state, filters = {}) {
     changed = changed || state.filters.projectId !== projectId;
     state.filters.projectId = projectId;
   }
-  if ('onlyClaims' in filters) {
-    const onlyClaims = !!filters.onlyClaims;
-    changed = changed || state.filters.onlyClaims !== onlyClaims;
-    state.filters.onlyClaims = onlyClaims;
-  }
   if (changed) setSecondaryHoverNation(state);
   return state;
 }
@@ -157,7 +142,6 @@ export function clearSelectionState(state) {
   setSelectedRegions(state);
   setFocusedRegion(state);
   clearPinnedRegions(state);
-  setReachableCapitalCandidatesVisible(state, false);
   setActiveIncomingClaim(state);
   setSecondaryHoverNation(state);
   return state;

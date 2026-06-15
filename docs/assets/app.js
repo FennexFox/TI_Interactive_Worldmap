@@ -12,11 +12,9 @@ import {
   setHoveredRegion,
   setLockedNation,
   setPinnedRegions,
-  setReachableCapitalCandidatesVisible,
   setSecondaryHoverNation,
   setSelectedNation,
   setSelectedRegions,
-  togglePinnedRegion,
   toggleReachableCapitalCandidates,
   unpinPinnedRegion,
 } from './state/app-state.js';
@@ -227,7 +225,7 @@ const I18N = {
     'section.explore': '탐색 및 선택',
     'search.label': '국가/지역 검색 및 선택',
     'search.placeholder': '국가 태그, 지역명, 프로젝트명 입력: CHN, Korea, Greater India...',
-    'search.help': '입력창을 클릭하면 국가 목록이 열립니다. 입력하면 국가, 지역, 영유권 프로젝트 목록이 필터링되고, 항목을 클릭하면 선택됩니다. 빈 지도 공간을 클릭하면 선택이 해제됩니다.',
+    'search.help': '입력창을 클릭하면 국가 목록이 열립니다. 입력하면 국가, 지역, 영유권 프로젝트 목록이 필터링되고, 항목을 클릭하면 선택됩니다. 빈 지도 공간을 클릭하면 고정된 지역이 먼저 해제되고, 고정된 지역이 없으면 선택이 해제됩니다.',
     'search.noResults': '검색 결과 없음',
     'search.regionTag': '지역',
     'claimMode.label': '영유권 표시',
@@ -245,8 +243,8 @@ const I18N = {
     'baseMode.plain': '단색',
     'baseMode.points': '경계 복잡도',
     'button.toggleLabels': '지역 라벨 토글',
-    'button.onlyClaims': '영유권 대상만 보기',
-    'button.showAllMap': '전체 지도 보기',
+    'button.showReachableCapitals': '도달 가능한 수도 표시',
+    'button.hideReachableCapitals': '도달 가능한 수도 숨기기',
     'section.expansionNodes': '확장 노드',
     'expansionNodes.empty': '고정된 확장 노드가 없습니다.',
     'expansionNodes.count': '고정 노드 {count}개',
@@ -268,13 +266,10 @@ const I18N = {
     'manualEnvelope.kindBase': '기본 영토',
     'manualEnvelope.kindClaim': '{project}',
     'manualEnvelope.overlap': '{region}: {count}개 수동 확장 출처 중첩',
-    'reachableCandidates.toggle': '도달 가능한 수도 표시',
     'reachableCandidates.count': '후보 수도 {count}개',
     'reachableCandidates.empty': '도달 가능한 수도 후보가 없습니다.',
     'reachableCandidates.focus': '초점',
     'reachableCandidates.focusRegion': '{region}에 초점',
-    'reachableCandidates.pin': '고정',
-    'reachableCandidates.pinRegion': '{region} 고정',
     'reachableCandidates.marker': '도달 가능한 수도 {region}: {nations}',
     'reachableCandidates.depth': '깊이 {depth}',
     'section.selectedNation': '선택한 지역',
@@ -363,7 +358,7 @@ const I18N = {
     'section.explore': 'Explore and Select',
     'search.label': 'Search and select nation/region',
     'search.placeholder': 'Enter a nation tag, region, or project: CHN, Korea, Greater India...',
-    'search.help': 'Click the field to open the nation list. Typing filters nations, regions, and claim projects; click an item to select it. Click empty map space to clear the selection.',
+    'search.help': 'Click the field to open the nation list. Typing filters nations, regions, and claim projects; click an item to select it. Click empty map space to clear pinned regions first, then clear selection when none are pinned.',
     'search.noResults': 'No results',
     'search.regionTag': 'REGION',
     'claimMode.label': 'Claim display',
@@ -381,8 +376,8 @@ const I18N = {
     'baseMode.plain': 'Plain',
     'baseMode.points': 'Boundary complexity',
     'button.toggleLabels': 'Toggle region labels',
-    'button.onlyClaims': 'Show claim targets only',
-    'button.showAllMap': 'Show full map',
+    'button.showReachableCapitals': 'Show reachable capitals',
+    'button.hideReachableCapitals': 'Hide reachable capitals',
     'section.expansionNodes': 'Expansion Nodes',
     'expansionNodes.empty': 'No pinned expansion nodes.',
     'expansionNodes.count': '{count} pinned nodes',
@@ -404,13 +399,10 @@ const I18N = {
     'manualEnvelope.kindBase': 'base territory',
     'manualEnvelope.kindClaim': '{project}',
     'manualEnvelope.overlap': '{region}: {count} overlapping manual expansion sources',
-    'reachableCandidates.toggle': 'Show reachable capitals',
     'reachableCandidates.count': '{count} candidate capitals',
     'reachableCandidates.empty': 'No reachable capital candidates.',
     'reachableCandidates.focus': 'Focus',
     'reachableCandidates.focusRegion': 'Focus {region}',
-    'reachableCandidates.pin': 'Pin',
-    'reachableCandidates.pinRegion': 'Pin {region}',
     'reachableCandidates.marker': 'Reachable capital {region}: {nations}',
     'reachableCandidates.depth': 'Depth {depth}',
     'section.selectedNation': 'Selected Region',
@@ -634,9 +626,12 @@ function setClaimsPillEmpty() {
   const el = document.getElementById('claimPill');
   if (el) el.textContent = t('pill.claimsEmpty');
 }
-function updateOnlyClaimsButtonLabel() {
-  const el = document.getElementById('onlyClaimsBtn');
-  if (el) el.textContent = getOnlyClaims() ? t('button.showAllMap') : t('button.onlyClaims');
+function updateReachableCapitalsButtonState() {
+  const el = document.getElementById('reachableCapitalsBtn');
+  if (!el) return;
+  const visible = getShowReachableCapitalCandidates();
+  el.textContent = visible ? t('button.hideReachableCapitals') : t('button.showReachableCapitals');
+  el.setAttribute('aria-pressed', visible ? 'true' : 'false');
 }
 function applyStaticTranslations() {
   document.documentElement.lang = currentLanguage;
@@ -647,7 +642,7 @@ function applyStaticTranslations() {
   document.querySelectorAll('[data-i18n-title]').forEach(el => { el.setAttribute('title', t(el.dataset.i18nTitle)); });
   document.querySelectorAll('[data-i18n-aria-label]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAriaLabel)); });
   if (languageSel) languageSel.value = currentLanguage;
-  updateOnlyClaimsButtonLabel();
+  updateReachableCapitalsButtonState();
   updateAsideCardControls();
 }
 
@@ -773,6 +768,7 @@ function setPinnedRegionIds(regionIds = []) {
 }
 
 function pinRegionState(regionName = '') {
+  if (!regionName || getPinnedRegionIds().has(regionName)) return;
   pinRegion(appState, regionName);
   refreshPinnedRegionOutputs([regionName]);
 }
@@ -782,33 +778,20 @@ function unpinPinnedRegionState(regionName = '') {
   refreshPinnedRegionOutputs([regionName]);
 }
 
-function togglePinnedRegionState(regionName = '') {
-  togglePinnedRegion(appState, regionName);
-  refreshPinnedRegionOutputs([regionName]);
-}
-
 function clearPinnedRegionState() {
   const previous = [...getPinnedRegionIds()];
   clearPinnedRegions(appState);
   refreshPinnedRegionOutputs(previous);
 }
 
-function setReachableCapitalCandidatesState(visible = false) {
-  setReachableCapitalCandidatesVisible(appState, visible);
-  refreshReachableCapitalCandidateOutputs(currentOverlayModel);
-}
-
 function toggleReachableCapitalCandidatesState() {
   toggleReachableCapitalCandidates(appState);
+  updateReachableCapitalsButtonState();
   refreshReachableCapitalCandidateOutputs(currentOverlayModel);
 }
 
 function setProjectFilterState(projectId = '') {
   setClaimFilters(appState, {projectId});
-}
-
-function setOnlyClaimsState(value) {
-  setClaimFilters(appState, {onlyClaims: value});
 }
 
 function setActiveIncomingClaimKeyState(claimKey = '') {
@@ -832,7 +815,6 @@ function getFocusedRegionName() { return appState.focusedRegionId || ''; }
 function getPinnedRegionIds() { return appState.pinnedRegionIds || new Set(); }
 function getShowReachableCapitalCandidates() { return !!appState.showReachableCapitalCandidates; }
 function getProjectFilter() { return appState.filters.projectId || ''; }
-function getOnlyClaims() { return !!appState.filters.onlyClaims; }
 function getActiveIncomingClaimKey() { return appState.activeIncomingClaimKey || ''; }
 
 function setHoverVisualState(regionName = '') {
@@ -1717,42 +1699,6 @@ function pinnedRegionCapitalSummary(regionName) {
 function pinnedRegionOwnerSummary(region) {
   return region?.nationTag ? t('expansionNodes.owner', {nation: nationDisplayName(region.nationTag)}) : '';
 }
-function pinActionKey(regionName) {
-  return getPinnedRegionIds().has(regionName) ? 'unpin' : 'pin';
-}
-function pinActionLabel(regionName) {
-  return t(`expansionNodes.${pinActionKey(regionName)}`);
-}
-function pinActionTitle(regionName) {
-  const region = regionByName[regionName];
-  const label = localizedRegionName(region || regionName);
-  return t(`expansionNodes.${pinActionKey(regionName)}Region`, {region: label});
-}
-function setPinButtonState(button, regionName) {
-  if (!button || !regionName) return;
-  const pinned = getPinnedRegionIds().has(regionName);
-  button.classList.toggle('is-pinned', pinned);
-  button.textContent = pinActionLabel(regionName);
-  const title = pinActionTitle(regionName);
-  button.title = title;
-  button.setAttribute('aria-label', title);
-}
-function updatePinnedControlStates(root = document) {
-  root.querySelectorAll?.('[data-pin-focused-region], [data-region-pin]').forEach(button => {
-    setPinButtonState(button, button.dataset.pinFocusedRegion || button.dataset.regionPin || '');
-  });
-}
-function renderFocusedRegionPinControl() {
-  const regionName = getFocusedRegionName();
-  const region = regionName ? regionByName[regionName] : null;
-  if (!region) return '';
-  const title = pinActionTitle(regionName);
-  return `
-    <div class="focusedRegionPinControl">
-      <button type="button" class="focusedRegionPinButton${getPinnedRegionIds().has(regionName) ? ' is-pinned' : ''}" data-pin-focused-region="${escapeHtml(regionName)}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">${escapeHtml(pinActionLabel(regionName))}</button>
-    </div>
-  `;
-}
 function pinnedRegionRow(regionName) {
   const region = regionByName[regionName];
   const label = localizedRegionName(region || regionName);
@@ -1823,7 +1769,6 @@ function refreshPinnedRegionOutputs(changedRegionIds = []) {
   renderPinnedRegionMarkers();
   renderManualEnvelopeOverlay(currentOverlayModel);
   refreshReachableCapitalCandidateOutputs(currentOverlayModel);
-  updatePinnedControlStates();
 }
 function appendRegionHighlight(frag, r, classPrefix, copyContext = defaultWorldCopyContext()) {
   for (const suffix of ['fill', 'outline-glow', 'outline']) {
@@ -1856,19 +1801,18 @@ function appendSelectedRegionMarker(frag, r, {showDot=true, copyContext=defaultW
   }, {region: r.regionName, ...copyData});
   frag.appendChild(text);
 }
-function pinnedRegionMarkerRenderKey(pinned, copyContexts = worldCopyContexts) {
+function pinnedRegionMarkerRenderKey(pinned, {copyContexts = worldCopyContexts, selectedPinnedRegions = []} = {}) {
   if (!pinned.length) return PINNED_REGION_MARKERS_EMPTY_RENDER_KEY;
   return JSON.stringify({
     kind: 'pinned-region-markers',
     copyPlan: copyContextRenderKey(copyContexts),
     language: currentLanguage,
+    selectedPinnedRegions,
     pinned,
   });
 }
-function appendPinnedRegionMarker(frag, region, index, copyContext = defaultWorldCopyContext()) {
-  const lab = labelPosition(region);
-  if (!lab) return;
-  const copyData = worldCopyDataset(copyContext);
+function appendPinnedRegionMarker(frag, region, index, {copyContext = defaultWorldCopyContext()} = {}) {
+  if (!labelPosition(region)) return;
   const label = localizedRegionName(region);
   const group = createSvgElement('g', {
     class: 'pinned-node-marker-group',
@@ -1876,32 +1820,25 @@ function appendPinnedRegionMarker(frag, region, index, copyContext = defaultWorl
   }, {
     region: region.regionName,
     pinIndex: index,
-    ...copyData,
+    ...worldCopyDataset(copyContext),
   });
-  group.appendChild(createSvgElement('rect', {
-    class: 'pinned-node-marker',
-    x: lab.x - 0.025,
-    y: lab.y - 0.025,
-    width: 0.05,
-    height: 0.05,
-    transform: `rotate(45 ${lab.x} ${lab.y})`,
-  }));
-  group.appendChild(createSvgElement('text', {
-    class: 'pinned-node-label',
-    x: lab.x,
-    y: lab.y + 0.013,
-    textContent: String(index),
-  }));
+  appendSelectedRegionMarker(group, region, {
+    showDot: !selectedRegionIsCapital(region.regionName),
+    copyContext,
+  });
   frag.appendChild(group);
 }
-function createPinnedRegionMarkerFragment(pinned, {copyContexts=worldCopyContexts} = {}) {
+function createPinnedRegionMarkerFragment(pinned, {copyContexts=worldCopyContexts, selectedPinnedRegions=[]} = {}) {
+  const selectedPinnedRegionSet = new Set(selectedPinnedRegions);
   return createProjectedCopyFragment(copyContexts, 'pinned-region-marker-copy', copyContext => {
     const frag = document.createDocumentFragment();
     pinned.forEach((regionName, index) => {
       const region = regionByName[regionName];
       if (!region) return;
       appendRegionHighlight(frag, region, 'pinned', copyContext);
-      appendPinnedRegionMarker(frag, region, index + 1, copyContext);
+      if (!selectedPinnedRegionSet.has(regionName)) {
+        appendPinnedRegionMarker(frag, region, index + 1, {copyContext});
+      }
     });
     return frag;
   });
@@ -1909,11 +1846,12 @@ function createPinnedRegionMarkerFragment(pinned, {copyContexts=worldCopyContext
 function renderPinnedRegionMarkers({copyContexts=worldCopyContexts} = {}) {
   if (!gPinnedRegionMarkers) return;
   const pinned = [...getPinnedRegionIds()].filter(regionName => regionByName[regionName]);
+  const selectedPinnedRegions = pinned.filter(regionName => selectedRegionIds.has(regionName));
   replaceLayerChildrenForRenderKey(
     gPinnedRegionMarkers,
     pinnedRegionMarkerLayerRenderKeys,
-    pinnedRegionMarkerRenderKey(pinned, copyContexts),
-    () => createPinnedRegionMarkerFragment(pinned, {copyContexts}),
+    pinnedRegionMarkerRenderKey(pinned, {copyContexts, selectedPinnedRegions}),
+    () => createPinnedRegionMarkerFragment(pinned, {copyContexts, selectedPinnedRegions}),
     'pinnedRegionMarkerRebuilds'
   );
 }
@@ -2141,8 +2079,8 @@ function updateSelectedRegions() {
   applyMapVisualState();
   renderHoverOutlines();
   renderSelectionOutlines();
+  renderPinnedRegionMarkers();
   renderCapitalMarkers();
-  updatePinnedControlStates();
   const label = selectedRegionSummary();
   if (selectedPill) {
     selectedPill.textContent = label;
@@ -2171,8 +2109,7 @@ function renderRegionList(regionNames, claims={}, prefix='targets', regionSource
       meta: meta ? ` · ${meta}` : '',
       source: source ? ` · ${source}` : '',
     });
-    const pinTitle = pinActionTitle(rn);
-    return `<div class="legendRegionRow"><button type="button" class="legendRegionItem${active ? ' active' : ''}" data-region-name="${escapeHtml(rn)}"><b>${escapeHtml(localizedRegionName(region || rn))}</b><span>${escapeHtml(detail)}</span></button><button type="button" class="legendRegionPin${getPinnedRegionIds().has(rn) ? ' is-pinned' : ''}" data-region-pin="${escapeHtml(rn)}" title="${escapeHtml(pinTitle)}" aria-label="${escapeHtml(pinTitle)}">${escapeHtml(pinActionLabel(rn))}</button></div>`;
+    return `<div class="legendRegionRow"><button type="button" class="legendRegionItem${active ? ' active' : ''}" data-region-name="${escapeHtml(rn)}"><b>${escapeHtml(localizedRegionName(region || rn))}</b><span>${escapeHtml(detail)}</span></button></div>`;
   }).join('');
   return `<div class="legendRegionList">${rows}</div>`;
 }
@@ -2202,6 +2139,7 @@ function focusRegions(regionNames, {selectSingle=false, preserveNation=false, re
 function clearSelection({clearSearch=true} = {}) {
   const clearedPins = [...getPinnedRegionIds()];
   clearSelectionState(appState);
+  updateReachableCapitalsButtonState();
   setActiveNationState();
   setHoverNationState();
   setSecondaryHoverNationState();
@@ -2220,13 +2158,18 @@ function clearSelection({clearSearch=true} = {}) {
     search.value = '';
     search.dataset.selectedNation = '';
   }
-  setOnlyClaimsState(false);
-  updateOnlyClaimsButtonLabel();
   setHoverPill();
   updateNationOverlay('', {renderDetails: true, updateFilters: false, updateSelected: false});
   applyFilters(true);
   updateSelectedRegions();
   refreshPinnedRegionOutputs(clearedPins);
+}
+function clearPinsOrSelection() {
+  if (getPinnedRegionIds().size) {
+    clearPinnedRegionState();
+    return;
+  }
+  clearSelection();
 }
 function focusNation(nation, {fillSearch=true} = {}) {
   if (!nation) { clearSelection({clearSearch:fillSearch}); return; }
@@ -2612,7 +2555,7 @@ function onHitLayerClick(e) {
   const region = resolveHitRegion(e);
   if (!region) return;
   e.stopPropagation();
-  selectRegion(region);
+  selectRegion(region, {togglePin: true});
 }
 function hitRegionElementFromClientPoint(clientX, clientY) {
   const elements = document.elementsFromPoint?.(clientX, clientY)
@@ -2994,6 +2937,13 @@ function manualEnvelopeDepthColor(depth = 0) {
   const index = Math.min(Math.max(Number(depth) || 0, 0), MANUAL_ENVELOPE_DEPTH_COLORS.length - 1);
   return MANUAL_ENVELOPE_DEPTH_COLORS[index];
 }
+function manualEnvelopeOverlapColor(sourceCount = 2, alpha = 0.92) {
+  const t = Math.min(Math.max((Number(sourceCount) || 2) - 2, 0), 4) / 4;
+  const lightness = (0.84 - t * 0.12).toFixed(2);
+  const chroma = (0.15 + t * 0.04).toFixed(2);
+  const hue = (82 - t * 102 + 360) % 360;
+  return `oklch(${lightness} ${chroma} ${hue.toFixed(0)} / ${alpha})`;
+}
 function manualEnvelopeAnchorNation(anchorModel = currentOverlayModel) {
   return anchorModel?.nation || getLockedNation() || getActiveNation() || regionByName[getFocusedRegionName()]?.nationTag || '';
 }
@@ -3214,10 +3164,12 @@ function createManualEnvelopeFragment(model, {copyContexts=worldCopyContexts} = 
       const region = regionByName[item.region];
       const primary = item.primary;
       const hasOverlap = item.overlapSources.length > 1;
+      const overlapColor = hasOverlap ? manualEnvelopeOverlapColor(item.overlapSources.length) : '';
       frag.appendChild(createSvgElement('path', {
         d: region.path,
         class: `manual-envelope-region-outline manual-envelope-depth-${primary.depth}${hasOverlap ? ' has-overlap' : ''}`,
         fill: 'none',
+        stroke: overlapColor || null,
         'aria-label': manualEnvelopeRegionLabel(item),
       }, {
         region: item.region,
@@ -3236,6 +3188,7 @@ function createManualEnvelopeFragment(model, {copyContexts=worldCopyContexts} = 
         d: region.path,
         class: 'manual-envelope-overlap',
         fill: 'none',
+        stroke: overlapColor,
         'aria-label': manualEnvelopeOverlapLabel(item),
       }, {
         region: item.region,
@@ -3243,30 +3196,6 @@ function createManualEnvelopeFragment(model, {copyContexts=worldCopyContexts} = 
         envelopeSourceCount: item.overlapSources.length,
         ...copyData,
       }));
-      const lab = labelPosition(region);
-      if (!lab) continue;
-      const marker = createSvgElement('g', {
-        class: 'manual-envelope-overlap-marker',
-        'aria-label': manualEnvelopeOverlapLabel(item),
-      }, {
-        region: item.region,
-        envelopeOverlap: '1',
-        envelopeSourceCount: item.overlapSources.length,
-        ...copyData,
-      });
-      marker.appendChild(createSvgElement('circle', {
-        class: 'manual-envelope-overlap-dot',
-        cx: lab.x,
-        cy: lab.y,
-        r: 0.026,
-      }));
-      marker.appendChild(createSvgElement('text', {
-        class: 'manual-envelope-overlap-count',
-        x: lab.x,
-        y: lab.y + 0.012,
-        textContent: String(item.overlapSources.length),
-      }));
-      frag.appendChild(marker);
     }
     return frag;
   });
@@ -3292,18 +3221,43 @@ function clearManualEnvelopeOverlay() {
     'manualEnvelopeRebuilds'
   );
 }
-function reachableCapitalCandidateNations(regionName, anchorNation) {
+function nationBaseRegionNames(nation) {
+  return [...new Set(CLAIMS_BY_NATION[nation]?.baseRegions || nationRegions.get(nation) || [])]
+    .filter(regionName => regionByName[regionName]);
+}
+function nationResultRegionNames(nation) {
+  const resultRegions = new Set(nationBaseRegionNames(nation));
+  for (const entry of getVisibleProjectEntries(nation)) {
+    for (const regionName of entry.regions || []) {
+      if (regionByName[regionName]) resultRegions.add(regionName);
+    }
+  }
+  return [...resultRegions];
+}
+function nationFullyIncludedInResult(nation, resultSet) {
+  const resultRegions = nationResultRegionNames(nation);
+  return !!resultRegions.length && resultRegions.every(regionName => resultSet?.has?.(regionName));
+}
+function reachableCapitalCandidateNations(regionName, anchorNation, resultSet = new Set()) {
   return [...new Set(derivedIndices.capitalNationsByRegion?.get?.(regionName) || [])]
-    .filter(nation => nation && nation !== anchorNation);
+    .filter(nation => nation
+      && nation !== anchorNation
+      && !nationFullyIncludedInResult(nation, resultSet));
+}
+function manualEnvelopeVisibleRegionSet(model) {
+  return new Set((model?.regionItems || [])
+    .map(item => item.region)
+    .filter(regionName => regionByName[regionName]));
 }
 function reachableCapitalCandidateDescriptors(anchorModel = currentOverlayModel) {
   const model = buildManualEnvelopeModel(anchorModel, {includeAnchorOnly: true});
   if (!model?.regionItems?.length) return [];
+  const resultSet = manualEnvelopeVisibleRegionSet(model);
   const pinned = getPinnedRegionIds();
   const candidates = [];
   for (const item of model.regionItems) {
     if (pinned.has(item.region)) continue;
-    const nations = reachableCapitalCandidateNations(item.region, model.anchorNation);
+    const nations = reachableCapitalCandidateNations(item.region, model.anchorNation, resultSet);
     if (!nations.length) continue;
     const region = regionByName[item.region];
     const lab = labelPosition(region);
@@ -3346,47 +3300,32 @@ function reachableCandidateRow(candidate) {
         </span>
         <span class="reachableCandidateFocusText">${escapeHtml(t('reachableCandidates.focus'))}</span>
       </button>
-      <button type="button" class="reachableCandidatePin" data-candidate-pin="${escapeHtml(candidate.region)}" title="${escapeHtml(t('reachableCandidates.pinRegion', {region: label}))}" aria-label="${escapeHtml(t('reachableCandidates.pinRegion', {region: label}))}">${escapeHtml(t('reachableCandidates.pin'))}</button>
     </div>
   `;
 }
 function bindReachableCapitalCandidatePanelEvents() {
   if (!reachableCandidatesPanel) return;
-  reachableCandidatesPanel.querySelector('[data-reachable-candidates-toggle]')?.addEventListener('change', event => {
-    setReachableCapitalCandidatesState(!!event.target.checked);
-  });
   reachableCandidatesPanel.querySelectorAll('[data-candidate-focus]').forEach(button => {
     button.addEventListener('click', event => {
       event.stopPropagation();
       focusPinnedRegion(button.dataset.candidateFocus);
     });
   });
-  reachableCandidatesPanel.querySelectorAll('[data-candidate-pin]').forEach(button => {
-    button.addEventListener('click', event => {
-      event.stopPropagation();
-      pinRegionState(button.dataset.candidatePin);
-    });
-  });
 }
 function renderReachableCapitalCandidatesPanel(anchorModel = currentOverlayModel) {
   if (!reachableCandidatesPanel) return;
-  const candidates = reachableCapitalCandidateDescriptors(anchorModel);
   const checked = getShowReachableCapitalCandidates();
-  const summary = checked
-    ? `<span class="reachableCandidateCount">${escapeHtml(t('reachableCandidates.count', {count: formatNumber(candidates.length)}))}</span>`
-    : '';
-  const body = checked
-    ? (candidates.length
-      ? `<div class="reachableCandidateList">${candidates.map(reachableCandidateRow).join('')}</div>`
-      : `<div class="reachableCandidateEmpty small">${escapeHtml(t('reachableCandidates.empty'))}</div>`)
-    : '';
+  if (!checked) {
+    reachableCandidatesPanel.innerHTML = '';
+    return;
+  }
+  const candidates = reachableCapitalCandidateDescriptors(anchorModel);
+  const body = candidates.length
+    ? `<div class="reachableCandidateList">${candidates.map(reachableCandidateRow).join('')}</div>`
+    : `<div class="reachableCandidateEmpty small">${escapeHtml(t('reachableCandidates.empty'))}</div>`;
   reachableCandidatesPanel.innerHTML = `
     <div class="reachableCandidateToolbar">
-      <label class="reachableCandidateToggle">
-        <input type="checkbox" data-reachable-candidates-toggle${checked ? ' checked' : ''}>
-        <span>${escapeHtml(t('reachableCandidates.toggle'))}</span>
-      </label>
-      ${summary}
+      <span class="reachableCandidateCount">${escapeHtml(t('reachableCandidates.count', {count: formatNumber(candidates.length)}))}</span>
     </div>
     ${body}
   `;
@@ -3405,7 +3344,7 @@ function appendReachableCapitalCandidateMarker(frag, candidate, copyContext = de
   if (!Number.isFinite(candidate.x) || !Number.isFinite(candidate.y)) return;
   const copyData = worldCopyDataset(copyContext);
   const group = createSvgElement('g', {
-    class: 'reachable-capital-candidate',
+    class: 'capital-marker is-idle reachable-capital-candidate',
     'aria-label': reachableCandidateMarkerLabel(candidate),
   }, {
     candidateRegion: candidate.region,
@@ -3414,44 +3353,16 @@ function appendReachableCapitalCandidateMarker(frag, candidate, copyContext = de
     candidateSourceCount: candidate.sourceCount,
     ...copyData,
   });
-  group.appendChild(createSvgElement('circle', {
-    class: 'reachable-capital-candidate-focus',
-    cx: candidate.x,
-    cy: candidate.y,
-    r: 0.032,
-  }, {
-    candidateRegion: candidate.region,
-    candidateFocus: candidate.region,
-    ...copyData,
+  const points = starPoints(candidate.x, candidate.y);
+  group.appendChild(createSvgElement('polygon', {
+    class: 'capital-star-shadow',
+    points,
+    'aria-hidden': 'true',
   }));
-  const pin = createSvgElement('g', {
-    class: 'reachable-capital-candidate-pin',
-  }, {
-    candidateRegion: candidate.region,
-    candidatePin: candidate.region,
-    ...copyData,
-  });
-  pin.appendChild(createSvgElement('circle', {
-    class: 'reachable-capital-candidate-pin-dot',
-    cx: candidate.x + 0.043,
-    cy: candidate.y - 0.030,
-    r: 0.020,
-  }, {
-    candidateRegion: candidate.region,
-    candidatePin: candidate.region,
-    ...copyData,
+  group.appendChild(createSvgElement('polygon', {
+    class: 'capital-star',
+    points,
   }));
-  pin.appendChild(createSvgElement('text', {
-    class: 'reachable-capital-candidate-pin-label',
-    x: candidate.x + 0.043,
-    y: candidate.y - 0.022,
-    textContent: '+',
-  }, {
-    candidateRegion: candidate.region,
-    candidatePin: candidate.region,
-    ...copyData,
-  }));
-  group.appendChild(pin);
   frag.appendChild(group);
 }
 function createReachableCapitalCandidateFragment(candidates, {copyContexts=worldCopyContexts} = {}) {
@@ -3785,7 +3696,6 @@ function renderClaimSummaryPill(model) {
 function renderNationInfoPanel(panelRoot, model) {
   const activeNationName = nationDisplayName(model.nation);
   const activeNationTierText = claimTierCountShortText(nationClaimTierCount(model.nation));
-  const focusedPinControl = renderFocusedRegionPinControl();
   const summaryLines = [
     t('nationInfo.summary.baseTerritory', {owned: regionCountText(model.ownedCount)}),
     t('nationInfo.summary.visibleClaims', {claims: regionCountText(model.claimCount)}),
@@ -3802,19 +3712,11 @@ function renderNationInfoPanel(panelRoot, model) {
     [t('nationInfo.kv.claimProjects'), claimTierCountText(nationClaimTierCount(model.nation))],
     [t('nationInfo.kv.displayMode'), claimModeLabel(claimModeSel.value)],
   ].map(([label, value]) => `<div>${escapeHtml(label)}</div><div>${escapeHtml(value)}</div>`).join('');
-  const basicInfo = `<details class="infoSubsection nationBasicSection" data-info-section="basic"${infoSectionOpenAttribute('basic')}><summary><span>${escapeHtml(t('nationInfo.basic.title'))}</span></summary><div class="infoSubsectionBody"><div class="nationTitle"><b>${escapeHtml(activeNationName)}</b> <span class="status tierBadge">${escapeHtml(activeNationTierText)}</span> ${statusBadge(model.data.status)}</div><div class="nationSummary">${summaryHtml}</div><div class="kv">${kvRows}</div>${focusedPinControl}<div class="hint">${escapeHtml(t('nationInfo.hint'))}</div></div></details>`;
+  const basicInfo = `<details class="infoSubsection nationBasicSection" data-info-section="basic"${infoSectionOpenAttribute('basic')}><summary><span>${escapeHtml(t('nationInfo.basic.title'))}</span></summary><div class="infoSubsectionBody"><div class="nationTitle"><b>${escapeHtml(activeNationName)}</b> <span class="status tierBadge">${escapeHtml(activeNationTierText)}</span> ${statusBadge(model.data.status)}</div><div class="nationSummary">${summaryHtml}</div><div class="kv">${kvRows}</div><div class="hint">${escapeHtml(t('nationInfo.hint'))}</div></div></details>`;
   panelRoot.innerHTML = `${basicInfo}<div class="claimSections">${renderClaimSection(t('claimSection.outgoing.title'), model.outgoingEntries, t('claimSection.outgoing.empty'), 'outgoing')}${renderClaimSection(t('claimSection.incoming.title'), model.incomingEntries, t('claimSection.incoming.empty'), 'incoming')}</div>`;
 }
 function bindNationOverlayPanelEvents(panelRoot, model) {
   bindNationInfoSectionToggles();
-  panelRoot.querySelectorAll('[data-pin-focused-region]').forEach(el => el.addEventListener('click', e => {
-    e.stopPropagation();
-    togglePinnedRegionState(el.dataset.pinFocusedRegion);
-  }));
-  panelRoot.querySelectorAll('[data-region-pin]').forEach(el => el.addEventListener('click', e => {
-    e.stopPropagation();
-    togglePinnedRegionState(el.dataset.regionPin);
-  }));
   panelRoot.querySelectorAll('.claimListItem').forEach(el => el.addEventListener('click', () => {
     const kind = el.dataset.claimKind;
     const index = Number(el.dataset.claimIndex);
@@ -3856,7 +3758,10 @@ function bindNationOverlayPanelEvents(panelRoot, model) {
   panelRoot.querySelectorAll('.legendRegionItem[data-region-name]').forEach(el => el.addEventListener('click', e => {
     e.stopPropagation();
     const rn = el.dataset.regionName;
-    if (rn) focusRegions([rn], {selectSingle:true, preserveNation:true, refreshOverlay:true});
+    if (rn) {
+      focusRegions([rn], {selectSingle:true, preserveNation:true, refreshOverlay:true});
+      pinRegionState(rn);
+    }
   }));
 }
 function updateNationOverlay(
@@ -3914,26 +3819,23 @@ function updateProjectOptions(nation) {
   if ([...projectSel.options].some(o => o.value === current)) projectSel.value = current;
   else projectSel.value = '';
 }
-function selectRegion(r) {
+function selectRegion(r, {togglePin = false} = {}) {
+  const wasPinned = togglePin && getPinnedRegionIds().has(r.regionName);
   setHoveredRegionState(r.regionName, r.nationTag);
   setFocusedRegionState(r.regionName);
   setSelectedRegionIds([r.regionName]);
   focusNation(r.nationTag);
+  if (wasPinned) unpinPinnedRegionState(r.regionName);
+  else pinRegionState(r.regionName);
 }
 function applyFilters(rerenderResults=true) {
   const q = searchFilterText();
-  const currentNation = getCurrentNation();
-  const entries = getVisibleProjectEntries(currentNation);
-  const claimSet = new Set();
-  entries.forEach(e => e.regions.forEach(r => claimSet.add(r)));
-  const baseSet = new Set((CLAIMS_BY_NATION[currentNation]?.baseRegions) || (nationRegions.get(currentNation) || []));
   let visible=0; const matches=[]; const hiddenRegionIds = new Set();
   regionPathElements.filter(p => p.dataset.wrapCanonical !== '0').forEach(p => {
     const r = REGIONS[Number(p.dataset.id)];
       const text = (r.name+' '+r.regionName+' '+localizedRegionName(r)+' '+(r.primaryCity || '')+' '+Object.values(r.displayName || {}).join(' ')+' '+r.nationTag).toLowerCase();
     const okQ = !q || text.includes(q);
-    const okClaims = !getOnlyClaims() || !currentNation || claimSet.has(r.regionName) || baseSet.has(r.regionName);
-    const ok = okQ && okClaims;
+    const ok = okQ;
     if (!ok) hiddenRegionIds.add(r.regionName);
     if (ok) { visible++; if (matches.length<90) matches.push(r); }
   });
@@ -3943,8 +3845,7 @@ function applyFilters(rerenderResults=true) {
   labelTextElements.forEach(t => {
     const r = REGIONS[Number(t.dataset.id)];
     const okQ = !q || (r.name+' '+r.regionName+' '+localizedRegionName(r)+' '+(r.primaryCity || '')+' '+Object.values(r.displayName || {}).join(' ')+' '+r.nationTag).toLowerCase().includes(q);
-    const okClaims = !getOnlyClaims() || !currentNation || claimSet.has(r.regionName) || baseSet.has(r.regionName);
-    t.style.display = okQ && okClaims ? '' : 'none';
+    t.style.display = okQ ? '' : 'none';
   });
   if (rerenderResults && results) {
     const nationMatches = q ? matchingNationChoices(q, 25) : [];
@@ -3982,7 +3883,6 @@ function refreshLanguage() {
   renderPinnedRegionMarkers();
   renderManualEnvelopeOverlay(currentOverlayModel);
   refreshReachableCapitalCandidateOutputs(currentOverlayModel);
-  updatePinnedControlStates();
   const hoveredRegion = tooltipRegionId != null ? REGIONS[tooltipRegionId] : null;
   setHoverPill(hoveredRegion);
 }
@@ -4066,22 +3966,9 @@ projectSel.addEventListener('change', () => {
   updateNationOverlay(getCurrentNation());
 });
 document.getElementById('showLabels').addEventListener('click', () => { labelsVisible=!labelsVisible; renderLabels(); applyFilters(); });
-document.getElementById('onlyClaimsBtn').addEventListener('click', () => { setOnlyClaimsState(!getOnlyClaims()); updateOnlyClaimsButtonLabel(); applyFilters(); });
-if (gReachableCapitalCandidates) {
-  gReachableCapitalCandidates.addEventListener('pointerdown', event => {
-    if (event.target?.closest?.('[data-candidate-region]')) event.stopPropagation();
-  });
-  gReachableCapitalCandidates.addEventListener('click', event => {
-    const pinTarget = event.target?.closest?.('[data-candidate-pin]');
-    const focusTarget = event.target?.closest?.('[data-candidate-focus]');
-    const regionName = pinTarget?.dataset?.candidatePin || focusTarget?.dataset?.candidateFocus || '';
-    if (!regionName) return;
-    event.preventDefault();
-    event.stopPropagation();
-    if (pinTarget) pinRegionState(regionName);
-    else focusPinnedRegion(regionName);
-  });
-}
+document.getElementById('reachableCapitalsBtn')?.addEventListener('click', () => {
+  toggleReachableCapitalCandidatesState();
+});
 if (gHitRegions) {
   gHitRegions.addEventListener('pointerover', onHitLayerPointerOver);
   gHitRegions.addEventListener('pointermove', onHitLayerPointerMove);
@@ -4099,7 +3986,7 @@ svg.addEventListener('wheel', onMapWheel, {passive:false});
 svg.addEventListener('click', e => {
   if (consumeSuppressedMapClick(e)) return;
   const target = e.target;
-  if (target === svg || target === gGrid || target === gHitRegions || target.classList?.contains('graticule')) clearSelection();
+  if (target === svg || target === gGrid || target === gHitRegions || target.classList?.contains('graticule')) clearPinsOrSelection();
 });
 svg.addEventListener('mouseleave', onMapLeave);
 window.addEventListener('resize', invalidateTooltipLayout);
