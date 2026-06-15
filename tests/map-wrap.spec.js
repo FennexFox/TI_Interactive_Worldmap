@@ -188,6 +188,96 @@ test('baseline hit layer resolves one canonical region for hover and click', asy
   await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
 });
 
+test('single-copy grouped base fills preserve region-specific hit paths and filtering', async ({ page }) => {
+  await waitForSingleCopyMap(page);
+
+  const regionCount = await page.locator('#hitRegions .region-hit').count();
+  const nationFillStats = await page.evaluate(() => {
+    const groups = [...document.querySelectorAll('#normalRegionColors .normal-region-color')];
+    return {
+      groupCount: groups.length,
+      hasRegionDataset: groups.some(group => !!group.dataset.region),
+      totalGroupedRegions: groups.reduce((sum, group) => sum + Number(group.dataset.visualGroupSize || 0), 0),
+    };
+  });
+
+  expect(nationFillStats.groupCount).toBeGreaterThan(1);
+  expect(nationFillStats.groupCount).toBeLessThan(regionCount);
+  expect(nationFillStats.hasRegionDataset).toBe(false);
+  expect(nationFillStats.totalGroupedRegions).toBe(regionCount);
+
+  await page.selectOption('#baseMode', 'plain');
+  const plainFillStats = await page.evaluate(() => {
+    const groups = [...document.querySelectorAll('#normalRegionColors .normal-region-color')];
+    return {
+      groupCount: groups.length,
+      groupSize: Number(groups[0]?.dataset.visualGroupSize || 0),
+      pointerEvents: groups[0] ? getComputedStyle(groups[0]).pointerEvents : '',
+    };
+  });
+
+  expect(plainFillStats.groupCount).toBe(1);
+  expect(plainFillStats.groupSize).toBe(regionCount);
+  expect(plainFillStats.pointerEvents).toBe('none');
+
+  await page.locator('#search').fill('Amazonia');
+  const filteredStats = await page.evaluate(() => {
+    const groups = [...document.querySelectorAll('#normalRegionColors .normal-region-color')];
+    const hits = [...document.querySelectorAll('#hitRegions .region-hit')];
+    return {
+      groupCount: groups.length,
+      groupedRegions: groups.reduce((sum, group) => sum + Number(group.dataset.visualGroupSize || 0), 0),
+      hiddenHitCount: hits.filter(hit => hit.classList.contains('hidden')).length,
+      amazoniaHidden: document.querySelector('#hitRegions .region-hit[data-region="Amazonia"]')?.classList.contains('hidden') || false,
+      ontarioHidden: document.querySelector('#hitRegions .region-hit[data-region="Ontario"]')?.classList.contains('hidden') || false,
+    };
+  });
+
+  expect(filteredStats.groupCount).toBe(1);
+  expect(filteredStats.groupedRegions).toBeLessThan(regionCount);
+  expect(filteredStats.hiddenHitCount).toBeGreaterThan(0);
+  expect(filteredStats.amazoniaHidden).toBe(false);
+  expect(filteredStats.ontarioHidden).toBe(true);
+});
+
+test('claim grouped fills preserve per-region semantic outline paths', async ({ page }) => {
+  await waitForSingleCopyMap(page);
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+
+  const claimFillStats = await page.evaluate(() => {
+    const fills = [...document.querySelectorAll('#claimOverlays .claim-fill-group')];
+    const outlines = [...document.querySelectorAll('#claimOverlays .claim-overlay')];
+    return {
+      fillGroupCount: fills.length,
+      outlineCount: outlines.length,
+      fillGroupsWithRegion: fills.filter(fill => !!fill.dataset.region).length,
+      groupedRegions: fills.reduce((sum, fill) => sum + Number(fill.dataset.visualGroupSize || 0), 0),
+      ownedFillGroups: fills.filter(fill => fill.classList.contains('owned-territory')).length,
+      ownedOutlines: outlines.filter(outline => outline.classList.contains('owned-territory')).length,
+      peacefulOutlines: outlines.filter(outline => outline.classList.contains('peaceful')).length,
+      hostileOutlines: outlines.filter(outline => outline.classList.contains('hostile')).length,
+      allOutlinesFillNone: outlines.every(outline => outline.getAttribute('fill') === 'none'),
+    };
+  });
+
+  expect(claimFillStats.fillGroupCount).toBeGreaterThan(0);
+  expect(claimFillStats.fillGroupCount).toBeLessThan(claimFillStats.outlineCount);
+  expect(claimFillStats.fillGroupsWithRegion).toBe(0);
+  expect(claimFillStats.groupedRegions).toBe(claimFillStats.outlineCount);
+  expect(claimFillStats.ownedFillGroups).toBeGreaterThan(0);
+  expect(claimFillStats.ownedOutlines).toBeGreaterThan(0);
+  expect(claimFillStats.peacefulOutlines).toBeGreaterThan(0);
+  expect(claimFillStats.hostileOutlines).toBeGreaterThan(0);
+  expect(claimFillStats.allOutlinesFillNone).toBe(true);
+
+  await regionHit(page, 'Amazonia').hover();
+  await expect(page.locator('#hoverPill')).toHaveText('Hover: BRA · Manaus');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
+});
+
 test('baseline selected overlays stay canonical across hover and claim controls', async ({ page }) => {
   await waitForSingleCopyMap(page);
 
@@ -240,6 +330,18 @@ test('world-wrap default renders base, grid, label, and hit copies', async ({ pa
   await page.locator('#showLabels').click();
   await expect(page.locator('#labels .label-copy')).toHaveCount(3);
   await expect(page.locator('#labels .label[data-region="Amazonia"]')).toHaveCount(3);
+});
+
+test('world-wrap default projects grouped base and claim fill copies', async ({ page }) => {
+  await waitForWrappedMap(page);
+
+  await page.selectOption('#baseMode', 'plain');
+  await expectProjectedCopies(page.locator('#normalRegionColors .normal-region-color'));
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  await expectProjectedCopies(page.locator('#claimOverlays .claim-fill-group.owned-territory[data-fill-key^="owned:"]'));
+  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
 });
 
 test('world-wrap default resolves copied hit paths to canonical region state', async ({ page }) => {

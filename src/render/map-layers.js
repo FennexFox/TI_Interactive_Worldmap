@@ -79,6 +79,78 @@ export function createRegionPath(region, attrs = {}, dataset = {}) {
   });
 }
 
+function normalizeDataset(dataset = {}) {
+  return Object.fromEntries(
+    Object.entries(dataset || {})
+      .filter(([, value]) => value != null && value !== '')
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => [key, String(value)])
+  );
+}
+
+function datasetRenderKey(dataset = {}) {
+  return JSON.stringify(normalizeDataset(dataset));
+}
+
+export function buildVisualFillGroups(descriptors = []) {
+  const groups = new Map();
+  for (const descriptor of descriptors || []) {
+    const path = descriptor?.path || descriptor?.region?.path;
+    if (!path) continue;
+    const className = descriptor.className || 'visual-fill-group';
+    const fill = descriptor.fill || 'none';
+    const fillOpacity = descriptor.fillOpacity ?? '';
+    const dataset = normalizeDataset(descriptor.groupDataset || descriptor.dataset || {});
+    const groupKey = descriptor.groupKey || JSON.stringify({
+      className,
+      fill,
+      fillOpacity,
+      dataset: datasetRenderKey(dataset),
+    });
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, {
+        key: groupKey,
+        className,
+        fill,
+        fillOpacity,
+        dataset,
+        paths: [],
+      });
+    }
+    groups.get(groupKey).paths.push(path);
+  }
+  return [...groups.values()];
+}
+
+export function createGroupedVisualFillFragment({
+  descriptors = [],
+  copyContexts,
+  copyGroupClassName = 'visual-fill-copy',
+} = {}) {
+  const contexts = normalizeWorldCopyContexts(copyContexts);
+  const groups = buildVisualFillGroups(descriptors);
+  const frag = document.createDocumentFragment();
+  for (const copyContext of contexts) {
+    appendWorldCopyFragment(frag, copyContext, contexts.length, copyGroupClassName, () => {
+      const copyFrag = document.createDocumentFragment();
+      for (const group of groups) {
+        copyFrag.appendChild(createSvgElement('path', {
+          d: group.paths.join(' '),
+          class: group.className,
+          fill: group.fill,
+          'fill-opacity': group.fillOpacity === '' ? null : group.fillOpacity,
+        }, {
+          ...group.dataset,
+          visualGroupSize: group.paths.length,
+          ...worldCopyDataset(copyContext),
+        }));
+      }
+      return copyFrag;
+    });
+  }
+  return frag;
+}
+
 export function replaceLayerChildren(layer, children = []) {
   if (!layer) return;
   if (children instanceof DocumentFragment) {

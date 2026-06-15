@@ -32,6 +32,8 @@ import {createAppData, getActiveData} from './data/active-data.js';
 import {buildDerivedIndices, resolveSecondaryCapitalPreview} from './data/derived-indices.js';
 import {
   appendWorldCopyFragment,
+  buildVisualFillGroups,
+  createGroupedVisualFillFragment,
   createRegionPath,
   createSvgElement,
   defaultWorldCopyContext,
@@ -836,6 +838,16 @@ function injectClaimOverlayStyles() {
       mix-blend-mode:normal;
       filter:none;
       opacity:1;
+    }
+    .claim-fill-group {
+      pointer-events:none;
+      stroke:none;
+      mix-blend-mode:normal;
+      filter:none;
+      opacity:1;
+    }
+    .claim-fill-group.gated {
+      opacity:.72;
     }
     svg.claims-active .claim-overlay.gated {
       opacity:1;
@@ -1719,7 +1731,7 @@ function hoverClaimPreviewRenderKey(model, descriptorSet, copyContexts = worldCo
   });
 }
 function markHoverClaimPreviewFragment(fragment, nation = hoverClaimPreviewNation) {
-  for (const el of fragment.querySelectorAll?.('.claim-overlay') || []) {
+  for (const el of fragment.querySelectorAll?.('.claim-overlay, .claim-fill-group') || []) {
     el.dataset.preview = 'hover-claim';
     if (nation) el.dataset.nation = nation;
   }
@@ -1945,31 +1957,31 @@ function renderGrid(renderContext = {}) {
 function renderNormalRegionColors(renderContext = {}) {
   if (!gNormalRegionColors) return;
   const copyContexts = normalizeWorldCopyContexts(renderContext.copyContexts || worldCopyContexts);
-  normalRegionColorElements.length = 0;
-  const frag = document.createDocumentFragment();
-  for (const copyContext of copyContexts) {
-    appendWorldCopyFragment(frag, copyContext, copyContexts.length, 'normal-region-color-copy', () => {
-      const copyFrag = document.createDocumentFragment();
-      for (const region of REGIONS) {
-        const path = createRegionPath(region, {
-          class: 'normal-region-color',
-          fill: colorFor(region),
-        }, worldCopyDataset(copyContext));
-        normalRegionColorElements.push(path);
-        copyFrag.appendChild(path);
-      }
-      return copyFrag;
+  const baseMode = baseModeSel.value || 'nation';
+  const descriptors = REGIONS
+    .filter(region => !mapVisualState.hiddenRegionIds.has(region.regionName))
+    .map(region => {
+      const fill = colorFor(region);
+      const fillKey = `base:${baseMode}:${fill}`;
+      return {
+        path: region.path,
+        className: 'normal-region-color visual-fill-group',
+        fill,
+        groupKey: fillKey,
+        dataset: {fillKey},
+      };
     });
-  }
+  normalRegionColorElements.length = 0;
+  const frag = createGroupedVisualFillFragment({
+    descriptors,
+    copyContexts,
+    copyGroupClassName: 'normal-region-color-copy',
+  });
+  normalRegionColorElements.push(...frag.querySelectorAll?.('.normal-region-color') || []);
   replaceLayerChildren(gNormalRegionColors, frag);
-  syncNormalRegionColorVisibility();
 }
 function syncNormalRegionColorVisibility() {
-  if (!normalRegionColorElements.length) return;
-  for (const path of normalRegionColorElements) {
-    const regionName = path.dataset.region;
-    path.classList.toggle('hidden', !!regionName && mapVisualState.hiddenRegionIds.has(regionName));
-  }
+  renderNormalRegionColors();
 }
 function renderRegions(renderContext = {}) {
   renderRegionLayers({
@@ -2595,6 +2607,8 @@ function claimOverlayPathDescriptors(model) {
       descriptors.push({
         region: rn,
         className: 'claim-overlay owned-territory',
+        fillClassName: 'claim-fill-group owned-territory',
+        fillKey: `owned:${BASE_TERRITORY_COLOR}`,
         fill: BASE_TERRITORY_COLOR,
         project: 'initial-territory',
       });
@@ -2608,9 +2622,14 @@ function claimOverlayPathDescriptors(model) {
     for (const rn of visibleClaimRegions) {
       if (!regionByName[rn]) continue;
       const claim = entry.claims?.[rn] || {};
+      const claimClassName = (entry.project ? 'research-claim ' : 'basic-claim ') + (claim.hostileClaim ? 'hostile' : 'peaceful') + (claim.capitalClaim ? ' capital' : '') + (claim.gatedClaim ? ' gated' : '');
+      const fillCategory = entry.project ? `research:${entry.project}` : 'basic';
       descriptors.push({
         region: rn,
-        className: 'claim-overlay ' + (entry.project ? 'research-claim ' : 'basic-claim ') + (claim.hostileClaim ? 'hostile' : 'peaceful') + (claim.capitalClaim ? ' capital' : '') + (claim.gatedClaim ? ' gated' : ''),
+        className: 'claim-overlay ' + claimClassName,
+        fillClassName: 'claim-fill-group ' + (entry.project ? 'research-claim' : 'basic-claim') + (claim.gatedClaim ? ' gated' : ''),
+        fillKey: `${fillCategory}:${color}:${claim.gatedClaim ? 'gated' : 'normal'}`,
+        fillOpacity: claim.gatedClaim ? 0.72 : '',
         fill: color,
         project: entry.project || 'base',
       });
@@ -2677,16 +2696,45 @@ function claimLabelRenderKey(model, descriptorSet, copyContexts = worldCopyConte
   });
 }
 function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyContexts} = {}) {
+  const fillDescriptors = [];
+  for (const descriptor of descriptors) {
+    const r = regionByName[descriptor.region];
+    if (!r) continue;
+    fillDescriptors.push({
+      path: r.path,
+      className: descriptor.fillClassName || 'claim-fill-group',
+      fill: descriptor.fill,
+      fillOpacity: descriptor.fillOpacity,
+      groupKey: descriptor.fillKey || `${descriptor.project || ''}:${descriptor.fill || ''}`,
+      dataset: {
+        fillKey: descriptor.fillKey || descriptor.project || descriptor.fill || '',
+        project: descriptor.project,
+      },
+    });
+  }
+  const fillGroups = buildVisualFillGroups(fillDescriptors);
   return createProjectedCopyFragment(copyContexts, 'claim-overlay-copy', copyContext => {
     const frag = document.createDocumentFragment();
     const copyData = worldCopyDataset(copyContext);
+    for (const group of fillGroups) {
+      frag.appendChild(createSvgElement('path', {
+        d: group.paths.join(' '),
+        class: group.className,
+        fill: group.fill,
+        'fill-opacity': group.fillOpacity === '' ? null : group.fillOpacity,
+      }, {
+        ...group.dataset,
+        visualGroupSize: group.paths.length,
+        ...copyData,
+      }));
+    }
     for (const descriptor of descriptors) {
       const r = regionByName[descriptor.region];
       if (!r) continue;
       frag.appendChild(createSvgElement('path', {
         d: r.path,
         class: descriptor.className,
-        fill: descriptor.fill,
+        fill: 'none',
       }, {
         region: descriptor.region,
         project: descriptor.project,
