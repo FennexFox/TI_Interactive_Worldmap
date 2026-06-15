@@ -765,6 +765,42 @@ test('manual recursive envelope renders pinned capital claimant depths and overl
   await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-region-outline')).toHaveCount(0);
 });
 
+test('reachable capital candidates toggle, focus, and pin without automatic overlay churn', async ({ page }) => {
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await chooseNation(page, 'China', 'CHN');
+  const toggle = page.locator('[data-reachable-candidates-toggle]');
+  await expect(toggle).not.toBeChecked();
+  await toggle.check();
+
+  await expect(page.locator('#reachableCandidatesPanel')).toContainText('candidate capitals');
+  await expect(page.locator('#reachableCandidatesPanel [data-candidate-row="NorthHonshu"]')).toHaveCount(1);
+  await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="NorthHonshu"]')).toHaveCount(1);
+
+  await page.locator('#reachableCapitalCandidates [data-candidate-focus="NorthHonshu"]').click();
+  await expect(page.locator('#selectionOutlines .selection-label[data-region="NorthHonshu"]')).toHaveCount(1);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await page.locator('#reachableCapitalCandidates [data-candidate-pin="NorthHonshu"]').first().click();
+
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="NorthHonshu"]')).toHaveCount(1);
+  await expect(page.locator('#reachableCandidatesPanel [data-candidate-row="NorthHonshu"]')).toHaveCount(0);
+  await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="NorthHonshu"]')).toHaveCount(0);
+  await expect(page.locator('#pinnedRegionMarkers .pinned-node-marker-group[data-region="NorthHonshu"]')).toHaveCount(1);
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.reachableCapitalCandidateRebuilds).toBeGreaterThan(0);
+  expect(stats.overlayModelBuilds).toBe(0);
+  expect(stats.claimOverlayDescriptorBuilds).toBe(0);
+  expect(stats.claimLabelDescriptorBuilds).toBe(0);
+  expect(stats.claimOverlayDomReplacements).toBe(0);
+  expect(stats.claimLabelDomReplacements).toBe(0);
+
+  await toggle.uncheck();
+  await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate')).toHaveCount(0);
+});
+
 test('claim cards synchronize map overlays, panel state, and empty map clear', async ({ page }) => {
   await page.goto('/?worldWrap=0');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });

@@ -390,6 +390,17 @@ test('world-wrap default projects manual recursive envelope copies', async ({ pa
   await expectProjectedCopies(page.locator('#manualEnvelopeOverlays .manual-envelope-fill[data-envelope-depth="1"]'));
 });
 
+test('world-wrap default projects reachable capital candidate markers', async ({ page }) => {
+  await waitForWrappedMap(page);
+
+  await chooseNation(page, 'China', 'CHN');
+  await page.locator('[data-reachable-candidates-toggle]').check();
+
+  await expectProjectedCopies(page.locator('#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="NorthHonshu"]'));
+  await expectProjectedCopies(page.locator('#reachableCapitalCandidates [data-candidate-focus="NorthHonshu"]'));
+  await expectProjectedCopies(page.locator('#reachableCapitalCandidates [data-candidate-pin="NorthHonshu"].reachable-capital-candidate-pin-dot'));
+});
+
 test('world-wrap default resolves copied hit paths to canonical region state', async ({ page }) => {
   await waitForWrappedMap(page);
 

@@ -65,12 +65,19 @@
 
 ## Progress
 
-- Not started.
+- Completed.
 
 ## Decision log
 
 - Candidate markers are derived from the current manual envelope and never perform automatic closure.
+- Candidate descriptors use the anchor's current visible envelope even before any pins exist, then include manually pinned claimant sources as the manual envelope expands.
+- Candidate markers render in a dedicated interactive SVG layer after the hit layer; only the compact focus and pin marker shapes capture pointer events.
+- Already pinned capital regions are removed from candidate rows and markers, so pinning a candidate moves it into the pinned-node flow instead of leaving duplicate affordances.
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- Added a reachable-capital toggle and compact candidate rows to the expansion-node card.
+- Added candidate derivation from `capitalNationsByRegion`, excluding the anchor nation and already pinned regions.
+- Added focus and pin controls in both the compact candidate list and SVG candidate markers.
+- Added wrapped-mode candidate projection and no-churn e2e coverage for toggling, focusing, and pinning candidates.
+- Validation passed with `npm run build`, `npm run verify`, and `npm run test:e2e`.

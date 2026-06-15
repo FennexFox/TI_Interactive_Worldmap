@@ -159,6 +159,15 @@
   .pinned-node-marker-group { pointer-events:none; }
   .pinned-node-marker { fill:#22d3ee; fill-opacity:.92; stroke:rgba(2,6,23,.92); stroke-width:.012; vector-effect:non-scaling-stroke; paint-order:stroke fill; }
   .pinned-node-label { pointer-events:none; font-size:.042px; font-weight:900; fill:#03131a; text-anchor:middle; paint-order:stroke; stroke:rgba(255,255,255,.72); stroke-width:.006; }
+  #reachableCapitalCandidates { pointer-events:none; opacity:1; mix-blend-mode:normal; }
+  .reachable-capital-candidate { pointer-events:none; }
+  .reachable-capital-candidate-focus { pointer-events:all; cursor:pointer; fill:oklch(0.89 0.16 126 / .88); stroke:rgba(6,35,25,.94); stroke-width:.012; vector-effect:non-scaling-stroke; paint-order:stroke fill; }
+  .reachable-capital-candidate-focus:hover { fill:oklch(0.94 0.17 126 / .96); }
+  .reachable-capital-candidate-pin { pointer-events:none; }
+  .reachable-capital-candidate-pin-dot,
+  .reachable-capital-candidate-pin-label { pointer-events:all; cursor:pointer; }
+  .reachable-capital-candidate-pin-dot { fill:#facc15; stroke:rgba(38,30,4,.95); stroke-width:.009; vector-effect:non-scaling-stroke; }
+  .reachable-capital-candidate-pin-label { font-size:.034px; font-weight:900; fill:#1f2937; text-anchor:middle; paint-order:stroke; stroke:rgba(255,255,255,.72); stroke-width:.005; }
   .claim-label { pointer-events:none; font-size:.033px; fill:rgba(255,255,255,.88); text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.7); stroke-width:.008; }
   .label { pointer-events:none; font-size:.035px; fill:rgba(255,255,255,.78); text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.65); stroke-width:.008; }
   .tooltip { position:absolute; pointer-events:none; z-index:5; display:block; visibility:hidden; opacity:0; left:0; top:0; transform:translate3d(-9999px,-9999px,0); will-change:transform; contain:layout style paint; width:max-content; max-width:min(260px, calc(100% - 16px)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:rgba(8,13,24,.9); border:1px solid rgba(255,255,255,.12); border-radius:7px; padding:3px 7px; box-shadow:0 6px 18px rgba(0,0,0,.28); color:rgba(245,248,255,.92); font-size:12px; line-height:1.25; transition:opacity .06s ease; }
@@ -173,6 +182,24 @@
   .item:last-child { border-bottom:0; }
   .item:hover { background:rgba(255,255,255,.06); }
   .small { color:var(--muted); font-size:12px; }
+  .reachableCandidatesPanel { display:flex; flex-direction:column; gap:7px; padding-top:10px; }
+  .reachableCandidateToolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .reachableCandidateToggle { min-width:0; display:flex; align-items:center; gap:7px; color:#d9f99d; font-size:12px; font-weight:800; }
+  .reachableCandidateToggle input { width:14px; height:14px; margin:0; accent-color:#84cc16; }
+  .reachableCandidateCount { flex:0 0 auto; color:#d9f99d; font-size:11.5px; font-weight:800; }
+  .reachableCandidateEmpty { padding:5px 2px; }
+  .reachableCandidateList { display:flex; flex-direction:column; gap:5px; }
+  .reachableCandidateRow { display:grid; grid-template-columns:minmax(0,1fr) 50px; gap:5px; align-items:stretch; }
+  .reachableCandidateFocus { min-width:0; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:7px; align-items:center; min-height:38px; padding:6px 7px; border-radius:8px; background:rgba(132,204,22,.07); border-color:rgba(190,242,100,.16); text-align:left; }
+  .reachableCandidateFocus:hover { background:rgba(132,204,22,.13); border-color:rgba(190,242,100,.34); }
+  .reachableCandidateMain { min-width:0; display:flex; flex-direction:column; gap:1px; }
+  .reachableCandidateMain b,
+  .reachableCandidateMain span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .reachableCandidateMain b { color:#ecfccb; font-size:12px; line-height:1.2; }
+  .reachableCandidateMain span { color:var(--muted); font-size:11px; line-height:1.25; }
+  .reachableCandidateFocusText { color:#d9f99d; font-size:10.5px; font-weight:800; }
+  .reachableCandidatePin { min-width:50px; min-height:38px; padding:5px 6px; border-radius:8px; font-size:11px; font-weight:800; color:#fef9c3; border-color:rgba(250,204,21,.26); background:rgba(250,204,21,.10); }
+  .reachableCandidatePin:hover { background:rgba(250,204,21,.20); border-color:rgba(250,204,21,.46); }
   .pinnedRegionsPanel { display:flex; flex-direction:column; gap:8px; padding-top:10px; }
   .pinnedRegionEmpty { padding:8px 2px; }
   .pinnedRegionToolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; }

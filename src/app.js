@@ -124,11 +124,13 @@ const gCapitalMarkers = document.getElementById('capitalMarkers');
 const gHoverOutlines = document.getElementById('hoverOutlines');
 const gSelectionOutlines = document.getElementById('selectionOutlines');
 const gPinnedRegionMarkers = document.getElementById('pinnedRegionMarkers');
+const gReachableCapitalCandidates = document.getElementById('reachableCapitalCandidates');
 const tip = document.getElementById('tip');
 const search = document.getElementById('search');
 const nationDropdown = document.getElementById('nationDropdown');
 const nationSearchCombo = document.getElementById('nationSearchCombo');
 const pinnedRegionsPanel = document.getElementById('pinnedRegionsPanel');
+const reachableCandidatesPanel = document.getElementById('reachableCandidatesPanel');
 const baseModeSel = document.getElementById('baseMode');
 const claimModeSel = document.getElementById('claimMode');
 const projectSel = document.getElementById('projectSel');
@@ -179,6 +181,7 @@ function createDebugRenderStats() {
     'hoverClaimPreviewOverlayReplacements',
     'secondaryHoverOverlayReplacements',
     'manualEnvelopeRebuilds',
+    'reachableCapitalCandidateRebuilds',
     'capitalMarkerRebuilds',
     'pinnedRegionMarkerRebuilds',
   ];
@@ -265,6 +268,15 @@ const I18N = {
     'manualEnvelope.kindBase': '기본 영토',
     'manualEnvelope.kindClaim': '{project}',
     'manualEnvelope.overlap': '{region}: {count}개 수동 확장 출처 중첩',
+    'reachableCandidates.toggle': '도달 가능한 수도 표시',
+    'reachableCandidates.count': '후보 수도 {count}개',
+    'reachableCandidates.empty': '도달 가능한 수도 후보가 없습니다.',
+    'reachableCandidates.focus': '초점',
+    'reachableCandidates.focusRegion': '{region}에 초점',
+    'reachableCandidates.pin': '고정',
+    'reachableCandidates.pinRegion': '{region} 고정',
+    'reachableCandidates.marker': '도달 가능한 수도 {region}: {nations}',
+    'reachableCandidates.depth': '깊이 {depth}',
     'section.selectedNation': '선택한 지역',
     'sectionCard.moveUp': '카드 위로 이동',
     'sectionCard.moveDown': '카드 아래로 이동',
@@ -392,6 +404,15 @@ const I18N = {
     'manualEnvelope.kindBase': 'base territory',
     'manualEnvelope.kindClaim': '{project}',
     'manualEnvelope.overlap': '{region}: {count} overlapping manual expansion sources',
+    'reachableCandidates.toggle': 'Show reachable capitals',
+    'reachableCandidates.count': '{count} candidate capitals',
+    'reachableCandidates.empty': 'No reachable capital candidates.',
+    'reachableCandidates.focus': 'Focus',
+    'reachableCandidates.focusRegion': 'Focus {region}',
+    'reachableCandidates.pin': 'Pin',
+    'reachableCandidates.pinRegion': 'Pin {region}',
+    'reachableCandidates.marker': 'Reachable capital {region}: {nations}',
+    'reachableCandidates.depth': 'Depth {depth}',
     'section.selectedNation': 'Selected Region',
     'sectionCard.moveUp': 'Move card up',
     'sectionCard.moveDown': 'Move card down',
@@ -682,10 +703,12 @@ const SECONDARY_HOVER_EMPTY_RENDER_KEY = 'secondary-hover:empty';
 const HOVER_OUTLINE_EMPTY_RENDER_KEY = 'hover-outline:empty';
 const MANUAL_ENVELOPE_EMPTY_RENDER_KEY = 'manual-envelope:empty';
 const PINNED_REGION_MARKERS_EMPTY_RENDER_KEY = 'pinned-region-markers:empty';
+const REACHABLE_CAPITAL_CANDIDATES_EMPTY_RENDER_KEY = 'reachable-capital-candidates:empty';
 const claimOverlayLayerRenderKeys = new WeakMap();
 const claimLabelLayerRenderKeys = new WeakMap();
 const manualEnvelopeLayerRenderKeys = new WeakMap();
 const pinnedRegionMarkerLayerRenderKeys = new WeakMap();
+const reachableCapitalCandidateLayerRenderKeys = new WeakMap();
 const claimOverlayBufferStates = new WeakMap();
 const claimLabelBufferStates = new WeakMap();
 const MAP_PAN_DRAG_THRESHOLD_PX = 4;
@@ -772,10 +795,12 @@ function clearPinnedRegionState() {
 
 function setReachableCapitalCandidatesState(visible = false) {
   setReachableCapitalCandidatesVisible(appState, visible);
+  refreshReachableCapitalCandidateOutputs(currentOverlayModel);
 }
 
 function toggleReachableCapitalCandidatesState() {
   toggleReachableCapitalCandidates(appState);
+  refreshReachableCapitalCandidateOutputs(currentOverlayModel);
 }
 
 function setProjectFilterState(projectId = '') {
@@ -1797,6 +1822,7 @@ function refreshPinnedRegionOutputs(changedRegionIds = []) {
   renderPinnedRegionsPanel();
   renderPinnedRegionMarkers();
   renderManualEnvelopeOverlay(currentOverlayModel);
+  refreshReachableCapitalCandidateOutputs(currentOverlayModel);
   updatePinnedControlStates();
 }
 function appendRegionHighlight(frag, r, classPrefix, copyContext = defaultWorldCopyContext()) {
@@ -3072,14 +3098,14 @@ function addManualEnvelopeContribution(regionContributions, source, regionName, 
     sourceOrder: source.sourceOrder,
   });
 }
-function buildManualEnvelopeModel(anchorModel = currentOverlayModel) {
+function buildManualEnvelopeModel(anchorModel = currentOverlayModel, {includeAnchorOnly = false} = {}) {
   const anchorNation = manualEnvelopeAnchorNation(anchorModel);
   const specs = manualEnvelopeSourceSpecs(anchorNation);
-  if (specs.length <= 1) return null;
+  if (specs.length <= 1 && !includeAnchorOnly) return null;
   const sources = specs
     .map((spec, sourceOrder) => buildManualEnvelopeSource(spec, sourceOrder))
     .filter(source => source.baseSet.size || source.entries.length);
-  if (sources.length <= 1) return null;
+  if (sources.length <= 1 && !includeAnchorOnly) return null;
 
   const regionContributions = new Map();
   for (const source of sources) {
@@ -3265,6 +3291,192 @@ function clearManualEnvelopeOverlay() {
     () => document.createDocumentFragment(),
     'manualEnvelopeRebuilds'
   );
+}
+function reachableCapitalCandidateNations(regionName, anchorNation) {
+  return [...new Set(derivedIndices.capitalNationsByRegion?.get?.(regionName) || [])]
+    .filter(nation => nation && nation !== anchorNation);
+}
+function reachableCapitalCandidateDescriptors(anchorModel = currentOverlayModel) {
+  const model = buildManualEnvelopeModel(anchorModel, {includeAnchorOnly: true});
+  if (!model?.regionItems?.length) return [];
+  const pinned = getPinnedRegionIds();
+  const candidates = [];
+  for (const item of model.regionItems) {
+    if (pinned.has(item.region)) continue;
+    const nations = reachableCapitalCandidateNations(item.region, model.anchorNation);
+    if (!nations.length) continue;
+    const region = regionByName[item.region];
+    const lab = labelPosition(region);
+    candidates.push({
+      region: item.region,
+      depth: item.primary.depth,
+      sourceCount: item.overlapSources.length,
+      primaryNation: nations[0],
+      nations,
+      x: lab?.x,
+      y: lab?.y,
+    });
+  }
+  return candidates.sort((a, b) => (
+    a.depth - b.depth
+    || a.region.localeCompare(b.region)
+    || a.primaryNation.localeCompare(b.primaryNation)
+  ));
+}
+function reachableCandidateNationsText(candidate) {
+  const names = candidate.nations.map(nation => nationDisplayName(nation));
+  return names.slice(0, 3).join(', ') + (names.length > 3 ? `, +${names.length - 3}` : '');
+}
+function reachableCandidateMarkerLabel(candidate) {
+  return t('reachableCandidates.marker', {
+    region: localizedRegionName(regionByName[candidate.region] || candidate.region),
+    nations: reachableCandidateNationsText(candidate),
+  });
+}
+function reachableCandidateRow(candidate) {
+  const label = localizedRegionName(regionByName[candidate.region] || candidate.region);
+  const depth = t('reachableCandidates.depth', {depth: formatNumber(candidate.depth)});
+  const nations = reachableCandidateNationsText(candidate);
+  return `
+    <div class="reachableCandidateRow" data-candidate-row="${escapeHtml(candidate.region)}">
+      <button type="button" class="reachableCandidateFocus" data-candidate-focus="${escapeHtml(candidate.region)}" aria-label="${escapeHtml(t('reachableCandidates.focusRegion', {region: label}))}">
+        <span class="reachableCandidateMain">
+          <b>${escapeHtml(label)}</b>
+          <span>${escapeHtml(`${depth} · ${nations}`)}</span>
+        </span>
+        <span class="reachableCandidateFocusText">${escapeHtml(t('reachableCandidates.focus'))}</span>
+      </button>
+      <button type="button" class="reachableCandidatePin" data-candidate-pin="${escapeHtml(candidate.region)}" title="${escapeHtml(t('reachableCandidates.pinRegion', {region: label}))}" aria-label="${escapeHtml(t('reachableCandidates.pinRegion', {region: label}))}">${escapeHtml(t('reachableCandidates.pin'))}</button>
+    </div>
+  `;
+}
+function bindReachableCapitalCandidatePanelEvents() {
+  if (!reachableCandidatesPanel) return;
+  reachableCandidatesPanel.querySelector('[data-reachable-candidates-toggle]')?.addEventListener('change', event => {
+    setReachableCapitalCandidatesState(!!event.target.checked);
+  });
+  reachableCandidatesPanel.querySelectorAll('[data-candidate-focus]').forEach(button => {
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      focusPinnedRegion(button.dataset.candidateFocus);
+    });
+  });
+  reachableCandidatesPanel.querySelectorAll('[data-candidate-pin]').forEach(button => {
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      pinRegionState(button.dataset.candidatePin);
+    });
+  });
+}
+function renderReachableCapitalCandidatesPanel(anchorModel = currentOverlayModel) {
+  if (!reachableCandidatesPanel) return;
+  const candidates = reachableCapitalCandidateDescriptors(anchorModel);
+  const checked = getShowReachableCapitalCandidates();
+  const summary = checked
+    ? `<span class="reachableCandidateCount">${escapeHtml(t('reachableCandidates.count', {count: formatNumber(candidates.length)}))}</span>`
+    : '';
+  const body = checked
+    ? (candidates.length
+      ? `<div class="reachableCandidateList">${candidates.map(reachableCandidateRow).join('')}</div>`
+      : `<div class="reachableCandidateEmpty small">${escapeHtml(t('reachableCandidates.empty'))}</div>`)
+    : '';
+  reachableCandidatesPanel.innerHTML = `
+    <div class="reachableCandidateToolbar">
+      <label class="reachableCandidateToggle">
+        <input type="checkbox" data-reachable-candidates-toggle${checked ? ' checked' : ''}>
+        <span>${escapeHtml(t('reachableCandidates.toggle'))}</span>
+      </label>
+      ${summary}
+    </div>
+    ${body}
+  `;
+  bindReachableCapitalCandidatePanelEvents();
+}
+function reachableCapitalCandidateRenderKey(candidates, copyContexts = worldCopyContexts) {
+  if (!getShowReachableCapitalCandidates() || !candidates.length) return REACHABLE_CAPITAL_CANDIDATES_EMPTY_RENDER_KEY;
+  return JSON.stringify({
+    kind: 'reachable-capital-candidates',
+    copyPlan: copyContextRenderKey(copyContexts),
+    language: currentLanguage,
+    candidates: candidates.map(candidate => `${candidate.region}:${candidate.depth}:${candidate.sourceCount}:${candidate.primaryNation}:${candidate.nations.join(',')}`).join('|'),
+  });
+}
+function appendReachableCapitalCandidateMarker(frag, candidate, copyContext = defaultWorldCopyContext()) {
+  if (!Number.isFinite(candidate.x) || !Number.isFinite(candidate.y)) return;
+  const copyData = worldCopyDataset(copyContext);
+  const group = createSvgElement('g', {
+    class: 'reachable-capital-candidate',
+    'aria-label': reachableCandidateMarkerLabel(candidate),
+  }, {
+    candidateRegion: candidate.region,
+    candidateNation: candidate.primaryNation,
+    candidateDepth: candidate.depth,
+    candidateSourceCount: candidate.sourceCount,
+    ...copyData,
+  });
+  group.appendChild(createSvgElement('circle', {
+    class: 'reachable-capital-candidate-focus',
+    cx: candidate.x,
+    cy: candidate.y,
+    r: 0.032,
+  }, {
+    candidateRegion: candidate.region,
+    candidateFocus: candidate.region,
+    ...copyData,
+  }));
+  const pin = createSvgElement('g', {
+    class: 'reachable-capital-candidate-pin',
+  }, {
+    candidateRegion: candidate.region,
+    candidatePin: candidate.region,
+    ...copyData,
+  });
+  pin.appendChild(createSvgElement('circle', {
+    class: 'reachable-capital-candidate-pin-dot',
+    cx: candidate.x + 0.043,
+    cy: candidate.y - 0.030,
+    r: 0.020,
+  }, {
+    candidateRegion: candidate.region,
+    candidatePin: candidate.region,
+    ...copyData,
+  }));
+  pin.appendChild(createSvgElement('text', {
+    class: 'reachable-capital-candidate-pin-label',
+    x: candidate.x + 0.043,
+    y: candidate.y - 0.022,
+    textContent: '+',
+  }, {
+    candidateRegion: candidate.region,
+    candidatePin: candidate.region,
+    ...copyData,
+  }));
+  group.appendChild(pin);
+  frag.appendChild(group);
+}
+function createReachableCapitalCandidateFragment(candidates, {copyContexts=worldCopyContexts} = {}) {
+  return createProjectedCopyFragment(copyContexts, 'reachable-capital-candidate-copy', copyContext => {
+    const frag = document.createDocumentFragment();
+    candidates.forEach(candidate => appendReachableCapitalCandidateMarker(frag, candidate, copyContext));
+    return frag;
+  });
+}
+function renderReachableCapitalCandidateMarkers(anchorModel = currentOverlayModel, {copyContexts=worldCopyContexts} = {}) {
+  if (!gReachableCapitalCandidates) return;
+  const candidates = getShowReachableCapitalCandidates()
+    ? reachableCapitalCandidateDescriptors(anchorModel)
+    : [];
+  replaceLayerChildrenForRenderKey(
+    gReachableCapitalCandidates,
+    reachableCapitalCandidateLayerRenderKeys,
+    reachableCapitalCandidateRenderKey(candidates, copyContexts),
+    () => createReachableCapitalCandidateFragment(candidates, {copyContexts}),
+    'reachableCapitalCandidateRebuilds'
+  );
+}
+function refreshReachableCapitalCandidateOutputs(anchorModel = currentOverlayModel) {
+  renderReachableCapitalCandidatesPanel(anchorModel);
+  renderReachableCapitalCandidateMarkers(anchorModel);
 }
 function getClaimOverlayDescriptorSet(model) {
   const cacheKey = claimOverlayDescriptorCacheKey(model);
@@ -3666,6 +3878,7 @@ function updateNationOverlay(
     setSecondaryHoverNationState();
     clearClaimOverlayDom({claimOverlayLayer: gClaimOverlays, claimLabelLayer: gClaimLabels});
     clearManualEnvelopeOverlay();
+    refreshReachableCapitalCandidateOutputs(null);
     renderHoverOutlines();
     if (renderDetails) nationInfo.textContent = t('nationInfo.empty');
     setClaimsPillEmpty();
@@ -3680,6 +3893,7 @@ function updateNationOverlay(
   visibleNationRegionNames = new Set(overlayModel.resultSet);
   renderMapOverlay(overlayModel, {claimOverlayLayer: gClaimOverlays, claimLabelLayer: gClaimLabels, mapView});
   renderManualEnvelopeOverlay(overlayModel);
+  refreshReachableCapitalCandidateOutputs(overlayModel);
   refreshSecondaryCapitalPreviewForHoveredRegion();
   renderHoverOutlines();
   renderClaimSummaryPill(overlayModel);
@@ -3767,6 +3981,7 @@ function refreshLanguage() {
   renderPinnedRegionsPanel();
   renderPinnedRegionMarkers();
   renderManualEnvelopeOverlay(currentOverlayModel);
+  refreshReachableCapitalCandidateOutputs(currentOverlayModel);
   updatePinnedControlStates();
   const hoveredRegion = tooltipRegionId != null ? REGIONS[tooltipRegionId] : null;
   setHoverPill(hoveredRegion);
@@ -3852,6 +4067,21 @@ projectSel.addEventListener('change', () => {
 });
 document.getElementById('showLabels').addEventListener('click', () => { labelsVisible=!labelsVisible; renderLabels(); applyFilters(); });
 document.getElementById('onlyClaimsBtn').addEventListener('click', () => { setOnlyClaimsState(!getOnlyClaims()); updateOnlyClaimsButtonLabel(); applyFilters(); });
+if (gReachableCapitalCandidates) {
+  gReachableCapitalCandidates.addEventListener('pointerdown', event => {
+    if (event.target?.closest?.('[data-candidate-region]')) event.stopPropagation();
+  });
+  gReachableCapitalCandidates.addEventListener('click', event => {
+    const pinTarget = event.target?.closest?.('[data-candidate-pin]');
+    const focusTarget = event.target?.closest?.('[data-candidate-focus]');
+    const regionName = pinTarget?.dataset?.candidatePin || focusTarget?.dataset?.candidateFocus || '';
+    if (!regionName) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (pinTarget) pinRegionState(regionName);
+    else focusPinnedRegion(regionName);
+  });
+}
 if (gHitRegions) {
   gHitRegions.addEventListener('pointerover', onHitLayerPointerOver);
   gHitRegions.addEventListener('pointermove', onHitLayerPointerMove);
@@ -3880,6 +4110,7 @@ setHoverPill();
 setClaimsPillEmpty();
 initMapViewControls();
 renderPinnedRegionsPanel();
+refreshReachableCapitalCandidateOutputs();
 populate(); renderGrid({mapView}); renderRegions({mapView}); renderPinnedRegionMarkers();
 }).catch((error) => {
   console.error(error);
