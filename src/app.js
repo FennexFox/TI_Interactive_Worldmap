@@ -1,16 +1,24 @@
 import {
+  clearPinnedRegions,
   clearSelectionState,
   clearTransientClaimState as clearTransientClaimAppState,
   createAppState,
+  pinRegion,
   setActiveIncomingClaim,
   setActiveScenarioId,
   setClaimFilters,
+  setFocusedRegion,
   setHoveredNation,
   setHoveredRegion,
   setLockedNation,
+  setPinnedRegions,
+  setReachableCapitalCandidatesVisible,
   setSecondaryHoverNation,
   setSelectedNation,
   setSelectedRegions,
+  togglePinnedRegion,
+  toggleReachableCapitalCandidates,
+  unpinPinnedRegion,
 } from './state/app-state.js';
 import {
   applyMapVisualState as applyVisualState,
@@ -674,9 +682,41 @@ function setHoveredRegionState(regionName = '', nationId) {
   setHoveredRegion(appState, regionName, nationId);
 }
 
+function setFocusedRegionState(regionName = '') {
+  setFocusedRegion(appState, regionName);
+}
+
 function setSelectedRegionIds(regionIds = []) {
   setSelectedRegions(appState, regionIds);
   syncSelectedVisualState();
+}
+
+function setPinnedRegionIds(regionIds = []) {
+  setPinnedRegions(appState, regionIds);
+}
+
+function pinRegionState(regionName = '') {
+  pinRegion(appState, regionName);
+}
+
+function unpinPinnedRegionState(regionName = '') {
+  unpinPinnedRegion(appState, regionName);
+}
+
+function togglePinnedRegionState(regionName = '') {
+  togglePinnedRegion(appState, regionName);
+}
+
+function clearPinnedRegionState() {
+  clearPinnedRegions(appState);
+}
+
+function setReachableCapitalCandidatesState(visible = false) {
+  setReachableCapitalCandidatesVisible(appState, visible);
+}
+
+function toggleReachableCapitalCandidatesState() {
+  toggleReachableCapitalCandidates(appState);
 }
 
 function setProjectFilterState(projectId = '') {
@@ -700,6 +740,9 @@ function getHoverNation() { return appState.hoveredNationId || ''; }
 function getSecondaryHoverNation() { return appState.interaction?.secondaryHoverNationId || ''; }
 function getLockedNation() { return appState.lockedNationId || ''; }
 function getHoveredRegionName() { return appState.hoveredRegionId || ''; }
+function getFocusedRegionName() { return appState.focusedRegionId || ''; }
+function getPinnedRegionIds() { return appState.pinnedRegionIds || new Set(); }
+function getShowReachableCapitalCandidates() { return !!appState.showReachableCapitalCandidates; }
 function getProjectFilter() { return appState.filters.projectId || ''; }
 function getOnlyClaims() { return !!appState.filters.onlyClaims; }
 function getActiveIncomingClaimKey() { return appState.activeIncomingClaimKey || ''; }
@@ -1854,6 +1897,7 @@ function focusRegions(regionNames, {selectSingle=false, preserveNation=false, re
     if (region) {
       if (preserveNation && getActiveNation()) {
         setSelectedRegionIds([region.regionName]);
+        setFocusedRegionState(region.regionName);
         updateSelectedRegions();
         // TODO: Future mapView pan/zoom support should keep this focused region visible.
         if (refreshOverlay) updateNationOverlay(getActiveNation());
@@ -1864,6 +1908,7 @@ function focusRegions(regionNames, {selectSingle=false, preserveNation=false, re
     }
   }
   setSelectedRegionIds(names);
+  setFocusedRegionState(names.length === 1 ? names[0] : '');
   // TODO: Future mapView pan/zoom support should keep these focused regions visible.
   updateSelectedRegions();
   if (refreshOverlay && getActiveNation()) updateNationOverlay(getActiveNation());
@@ -1874,6 +1919,7 @@ function clearSelection({clearSearch=true} = {}) {
   setHoverNationState();
   setSecondaryHoverNationState();
   setHoveredRegionState();
+  setFocusedRegionState();
   setHoverVisualState();
   setLockedNationState();
   setSelectedRegionIds();
@@ -3080,6 +3126,7 @@ function updateProjectOptions(nation) {
 }
 function selectRegion(r) {
   setHoveredRegionState(r.regionName, r.nationTag);
+  setFocusedRegionState(r.regionName);
   setSelectedRegionIds([r.regionName]);
   focusNation(r.nationTag);
 }
@@ -3156,6 +3203,7 @@ search.addEventListener('input', () => {
     search.dataset.selectedNation = '';
     setLockedNationState();
     setSelectedRegionIds();
+    setFocusedRegionState();
     resetTransientClaimState();
     updateNationOverlay(getHoverNation() || '');
   }

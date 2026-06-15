@@ -58,12 +58,20 @@
 
 ## Progress
 
-- Not started.
+- Added `focusedRegionId`, `pinnedRegionIds`, and `showReachableCapitalCandidates` to app state.
+- Added app-state helpers for setting focus, pinning, unpinning, replacing, clearing, and toggling candidate visibility.
+- Added app orchestration wrappers in `src/app.js` for later phases and kept focused-region bookkeeping aligned with current selection paths.
+- Rebuilt generated Pages assets from source.
+- Validation passed on 2026-06-15 with a temporary `/tmp` `python` to `python3` PATH shim because the local shell does not provide `python`.
 
 ## Decision log
 
 - Pin state is distinct from selected-region state to satisfy issue #32 and issue #24 E3.
+- `clearSelectionState` clears pins and hides reachable capital candidates; transient hover/claim clearing does not mutate pins.
+- Focused region state is additive in phase 1 so later phases can distinguish full detail focus from pinned nodes without changing current visible behavior.
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- Completed. The phase introduced the state model needed by later UI and renderer phases while preserving current visible behavior.
+- Validation: `npm run build`, `npm run verify`, and `npm run test:e2e` passed. `npm run test:e2e` reported 48 passing tests.
+- Manual smoke coverage: existing e2e coverage exercised China search/selection paths, language switching, claim controls, and clear-map behavior; no new visible UI was introduced in this phase.

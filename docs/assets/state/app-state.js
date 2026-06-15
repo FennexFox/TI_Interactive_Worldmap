@@ -2,11 +2,18 @@ function normalizeId(value) {
   return String(value || '');
 }
 
+function normalizeIds(values = []) {
+  return [...new Set([...values].map(normalizeId).filter(Boolean))];
+}
+
 export function createAppState({activeScenarioId = ''} = {}) {
   return {
     activeScenarioId: normalizeId(activeScenarioId),
     selectedNationId: '',
     selectedRegionIds: new Set(),
+    focusedRegionId: '',
+    pinnedRegionIds: new Set(),
+    showReachableCapitalCandidates: false,
     hoveredNationId: '',
     hoveredRegionId: '',
     lockedNationId: '',
@@ -38,10 +45,59 @@ export function setSelectedNation(state, nationId = '', {locked = false, clearHo
 
 export function setSelectedRegions(state, regionIds = []) {
   state.selectedRegionIds.clear();
-  for (const regionId of regionIds || []) {
-    const normalized = normalizeId(regionId);
-    if (normalized) state.selectedRegionIds.add(normalized);
-  }
+  for (const normalized of normalizeIds(regionIds || [])) state.selectedRegionIds.add(normalized);
+  return state;
+}
+
+export function setFocusedRegion(state, regionId = '') {
+  state.focusedRegionId = normalizeId(regionId);
+  return state;
+}
+
+export function setPinnedRegions(state, regionIds = []) {
+  if (!state.pinnedRegionIds) state.pinnedRegionIds = new Set();
+  state.pinnedRegionIds.clear();
+  for (const normalized of normalizeIds(regionIds || [])) state.pinnedRegionIds.add(normalized);
+  return state;
+}
+
+export function pinRegion(state, regionId = '') {
+  const normalized = normalizeId(regionId);
+  if (!normalized) return state;
+  if (!state.pinnedRegionIds) state.pinnedRegionIds = new Set();
+  state.pinnedRegionIds.add(normalized);
+  return state;
+}
+
+export function unpinPinnedRegion(state, regionId = '') {
+  const normalized = normalizeId(regionId);
+  if (!normalized || !state.pinnedRegionIds) return state;
+  state.pinnedRegionIds.delete(normalized);
+  return state;
+}
+
+export function togglePinnedRegion(state, regionId = '') {
+  const normalized = normalizeId(regionId);
+  if (!normalized) return state;
+  if (!state.pinnedRegionIds) state.pinnedRegionIds = new Set();
+  if (state.pinnedRegionIds.has(normalized)) state.pinnedRegionIds.delete(normalized);
+  else state.pinnedRegionIds.add(normalized);
+  return state;
+}
+
+export function clearPinnedRegions(state) {
+  if (!state.pinnedRegionIds) state.pinnedRegionIds = new Set();
+  state.pinnedRegionIds.clear();
+  return state;
+}
+
+export function setReachableCapitalCandidatesVisible(state, visible = false) {
+  state.showReachableCapitalCandidates = !!visible;
+  return state;
+}
+
+export function toggleReachableCapitalCandidates(state) {
+  state.showReachableCapitalCandidates = !state.showReachableCapitalCandidates;
   return state;
 }
 
@@ -99,6 +155,9 @@ export function clearSelectionState(state) {
   state.selectedNationId = '';
   state.lockedNationId = '';
   setSelectedRegions(state);
+  setFocusedRegion(state);
+  clearPinnedRegions(state);
+  setReachableCapitalCandidatesVisible(state, false);
   setActiveIncomingClaim(state);
   setSecondaryHoverNation(state);
   return state;
