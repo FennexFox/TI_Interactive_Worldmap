@@ -61,12 +61,22 @@
 
 ## Progress
 
-- Not started.
+- Added the `expansionNodes` side card to the existing aside-card list and default order.
+- Added localized English and Korean copy for the card, empty state, row metadata, focus, unpin, and clear-all actions.
+- Added a compact pinned-region renderer that preserves `pinnedRegionIds` order, resolves owner and capital claimant metadata, and binds focus/unpin/clear events with propagation isolated from row actions.
+- Added compact row and toolbar styling in `src/styles.css`.
+- Updated Playwright sidebar/language coverage for the new card and localized empty state.
+- Rebuilt generated Pages assets from source.
+- Validation passed on 2026-06-15 with the temporary `/tmp` `python` to `python3` PATH shim.
 
 ## Decision log
 
 - Pinned summaries are compact rows, not full detail cards, to preserve the current single-detail workflow.
+- The card can render and operate on existing pin state in this phase, while visible add-pin controls remain phase 3 scope.
+- Pinned row focus preserves the locked/active anchor when present, so focusing a pinned row does not implicitly replace the route anchor.
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- Completed. The expansion-node card is visible with an empty state now and will populate once phase 3 adds pin controls.
+- Validation: `npm run build`, `npm run verify`, and `npm run test:e2e` passed. `npm run test:e2e` reported 48 passing tests.
+- Manual smoke coverage: the e2e suite verified sidebar fallback order, localized empty-state text, language switching, and existing map selection/claim behavior. Row focus/unpin/clear actions are implemented but will become directly user-testable after phase 3 adds add-pin affordances.

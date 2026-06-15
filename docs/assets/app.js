@@ -125,6 +125,7 @@ const tip = document.getElementById('tip');
 const search = document.getElementById('search');
 const nationDropdown = document.getElementById('nationDropdown');
 const nationSearchCombo = document.getElementById('nationSearchCombo');
+const pinnedRegionsPanel = document.getElementById('pinnedRegionsPanel');
 const baseModeSel = document.getElementById('baseMode');
 const claimModeSel = document.getElementById('claimMode');
 const projectSel = document.getElementById('projectSel');
@@ -210,7 +211,7 @@ const LANGUAGE_STORAGE_KEY = 'ti-map-language';
 const ASIDE_CARD_ORDER_STORAGE_KEY = 'ti-map-aside-card-order';
 const ASIDE_CARD_COLLAPSE_STORAGE_KEY = 'ti-map-aside-card-collapsed';
 const NATION_INFO_SECTION_STORAGE_KEY = 'ti-map-nation-info-sections';
-const DEFAULT_ASIDE_CARD_ORDER = ['explore', 'selected'];
+const DEFAULT_ASIDE_CARD_ORDER = ['explore', 'expansionNodes', 'selected'];
 const I18N = {
   ko: {
     'document.title': 'Terra Invicta 영유권 / 통합 지도',
@@ -238,6 +239,18 @@ const I18N = {
     'button.toggleLabels': '지역 라벨 토글',
     'button.onlyClaims': '영유권 대상만 보기',
     'button.showAllMap': '전체 지도 보기',
+    'section.expansionNodes': '확장 노드',
+    'expansionNodes.empty': '고정된 확장 노드가 없습니다.',
+    'expansionNodes.count': '고정 노드 {count}개',
+    'expansionNodes.clear': '모두 해제',
+    'expansionNodes.focus': '초점',
+    'expansionNodes.focusRegion': '{region}에 초점',
+    'expansionNodes.unpin': '고정 해제',
+    'expansionNodes.unpinRegion': '{region} 고정 해제',
+    'expansionNodes.owner': '소유국 {nation}',
+    'expansionNodes.capitalClaimant': '수도 국가 {nation}',
+    'expansionNodes.capitalClaimants': '수도 국가 {count}개: {nations}',
+    'expansionNodes.noCapitalClaimant': '수도 국가 없음',
     'section.selectedNation': '선택한 지역',
     'sectionCard.moveUp': '카드 위로 이동',
     'sectionCard.moveDown': '카드 아래로 이동',
@@ -344,6 +357,18 @@ const I18N = {
     'button.toggleLabels': 'Toggle region labels',
     'button.onlyClaims': 'Show claim targets only',
     'button.showAllMap': 'Show full map',
+    'section.expansionNodes': 'Expansion Nodes',
+    'expansionNodes.empty': 'No pinned expansion nodes.',
+    'expansionNodes.count': '{count} pinned nodes',
+    'expansionNodes.clear': 'Clear all',
+    'expansionNodes.focus': 'Focus',
+    'expansionNodes.focusRegion': 'Focus {region}',
+    'expansionNodes.unpin': 'Unpin',
+    'expansionNodes.unpinRegion': 'Unpin {region}',
+    'expansionNodes.owner': 'Owner {nation}',
+    'expansionNodes.capitalClaimant': 'Capital claimant {nation}',
+    'expansionNodes.capitalClaimants': '{count} capital claimants: {nations}',
+    'expansionNodes.noCapitalClaimant': 'No capital claimant',
     'section.selectedNation': 'Selected Region',
     'sectionCard.moveUp': 'Move card up',
     'sectionCard.moveDown': 'Move card down',
@@ -693,22 +718,27 @@ function setSelectedRegionIds(regionIds = []) {
 
 function setPinnedRegionIds(regionIds = []) {
   setPinnedRegions(appState, regionIds);
+  renderPinnedRegionsPanel();
 }
 
 function pinRegionState(regionName = '') {
   pinRegion(appState, regionName);
+  renderPinnedRegionsPanel();
 }
 
 function unpinPinnedRegionState(regionName = '') {
   unpinPinnedRegion(appState, regionName);
+  renderPinnedRegionsPanel();
 }
 
 function togglePinnedRegionState(regionName = '') {
   togglePinnedRegion(appState, regionName);
+  renderPinnedRegionsPanel();
 }
 
 function clearPinnedRegionState() {
   clearPinnedRegions(appState);
+  renderPinnedRegionsPanel();
 }
 
 function setReachableCapitalCandidatesState(visible = false) {
@@ -1602,6 +1632,83 @@ function selectedRegionSummary() {
   }
   return t('selected.regions', {count: names.length});
 }
+function pinnedCapitalClaimants(regionName) {
+  return [...new Set(derivedIndices.capitalNationsByRegion?.get?.(regionName) || [])].filter(Boolean);
+}
+function pinnedRegionCapitalSummary(regionName) {
+  const claimants = pinnedCapitalClaimants(regionName);
+  if (!claimants.length) return t('expansionNodes.noCapitalClaimant');
+  const names = claimants.map(nation => nationDisplayName(nation));
+  if (claimants.length === 1) return t('expansionNodes.capitalClaimant', {nation: names[0]});
+  return t('expansionNodes.capitalClaimants', {
+    count: formatNumber(claimants.length),
+    nations: names.slice(0, 3).join(', ') + (names.length > 3 ? `, +${names.length - 3}` : ''),
+  });
+}
+function pinnedRegionOwnerSummary(region) {
+  return region?.nationTag ? t('expansionNodes.owner', {nation: nationDisplayName(region.nationTag)}) : '';
+}
+function pinnedRegionRow(regionName) {
+  const region = regionByName[regionName];
+  const label = localizedRegionName(region || regionName);
+  const owner = pinnedRegionOwnerSummary(region);
+  const capital = pinnedRegionCapitalSummary(regionName);
+  const meta = [owner, capital].filter(Boolean).join(' · ');
+  return `
+    <div class="pinnedRegionRow" data-pinned-region="${escapeHtml(regionName)}">
+      <button type="button" class="pinnedRegionFocus" data-pinned-focus="${escapeHtml(regionName)}" aria-label="${escapeHtml(t('expansionNodes.focusRegion', {region: label}))}">
+        <span class="pinnedRegionMain">
+          <b>${escapeHtml(label)}</b>
+          <span>${escapeHtml(meta)}</span>
+        </span>
+        <span class="pinnedRegionFocusText">${escapeHtml(t('expansionNodes.focus'))}</span>
+      </button>
+      <button type="button" class="pinnedRegionUnpin" data-pinned-unpin="${escapeHtml(regionName)}" title="${escapeHtml(t('expansionNodes.unpinRegion', {region: label}))}" aria-label="${escapeHtml(t('expansionNodes.unpinRegion', {region: label}))}">×</button>
+    </div>
+  `;
+}
+function focusPinnedRegion(regionName) {
+  const region = regionByName[regionName];
+  if (!region) return;
+  if (getLockedNation() || getActiveNation()) {
+    focusRegions([regionName], {selectSingle: true, preserveNation: true, refreshOverlay: true});
+    return;
+  }
+  selectRegion(region);
+}
+function bindPinnedRegionsPanelEvents() {
+  if (!pinnedRegionsPanel) return;
+  pinnedRegionsPanel.querySelectorAll('[data-pinned-focus]').forEach(button => {
+    button.addEventListener('click', () => focusPinnedRegion(button.dataset.pinnedFocus));
+  });
+  pinnedRegionsPanel.querySelectorAll('[data-pinned-unpin]').forEach(button => {
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      unpinPinnedRegionState(button.dataset.pinnedUnpin);
+    });
+  });
+  pinnedRegionsPanel.querySelector('[data-pinned-clear]')?.addEventListener('click', event => {
+    event.stopPropagation();
+    clearPinnedRegionState();
+  });
+}
+function renderPinnedRegionsPanel() {
+  if (!pinnedRegionsPanel) return;
+  const pinned = [...getPinnedRegionIds()].filter(regionName => regionByName[regionName]);
+  if (!pinned.length) {
+    pinnedRegionsPanel.innerHTML = `<div class="pinnedRegionEmpty small">${escapeHtml(t('expansionNodes.empty'))}</div>`;
+    return;
+  }
+  const rows = pinned.map(pinnedRegionRow).join('');
+  pinnedRegionsPanel.innerHTML = `
+    <div class="pinnedRegionToolbar">
+      <span class="pinnedRegionCount">${escapeHtml(t('expansionNodes.count', {count: formatNumber(pinned.length)}))}</span>
+      <button type="button" class="pinnedRegionClear" data-pinned-clear>${escapeHtml(t('expansionNodes.clear'))}</button>
+    </div>
+    <div class="pinnedRegionList">${rows}</div>
+  `;
+  bindPinnedRegionsPanelEvents();
+}
 function appendRegionHighlight(frag, r, classPrefix, copyContext = defaultWorldCopyContext()) {
   for (const suffix of ['fill', 'outline-glow', 'outline']) {
     const p = createRegionPath(r, {class: `${classPrefix}-${suffix}`}, {
@@ -1939,6 +2046,7 @@ function clearSelection({clearSearch=true} = {}) {
   updateNationOverlay('', {renderDetails: true, updateFilters: false, updateSelected: false});
   applyFilters(true);
   updateSelectedRegions();
+  renderPinnedRegionsPanel();
 }
 function focusNation(nation, {fillSearch=true} = {}) {
   if (!nation) { clearSelection({clearSearch:fillSearch}); return; }
@@ -3188,6 +3296,7 @@ function refreshLanguage() {
   }
   applyFilters(true);
   updateSelectedRegions();
+  renderPinnedRegionsPanel();
   const hoveredRegion = tooltipRegionId != null ? REGIONS[tooltipRegionId] : null;
   setHoverPill(hoveredRegion);
 }
@@ -3299,6 +3408,7 @@ if ('ResizeObserver' in window) new ResizeObserver(invalidateTooltipLayout).obse
 setHoverPill();
 setClaimsPillEmpty();
 initMapViewControls();
+renderPinnedRegionsPanel();
 populate(); renderGrid({mapView}); renderRegions({mapView});
 }).catch((error) => {
   console.error(error);

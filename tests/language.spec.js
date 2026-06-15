@@ -74,6 +74,7 @@ test('language selector switches static and dynamic UI copy', async ({ page }) =
   await expect(page.locator('#search')).toHaveAttribute('placeholder', 'Enter a nation tag, region, or project: CHN, Korea, Greater India...');
   await expect(page.locator('#claimMode option[value="project"]')).toHaveText('Selected project only');
   await expect(page.locator('#claimPill')).toHaveText('Claims: -');
+  await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
 
   await page.locator('#search').click();
   await expect(page.locator('#nationDropdown')).toBeVisible();
@@ -84,10 +85,12 @@ test('language selector switches static and dynamic UI copy', async ({ page }) =
   await expect(page.locator('h1')).toHaveText('Terra Invicta 영유권 / 통합 지도');
   await expect(page.locator('#search')).toHaveAttribute('placeholder', '국가 태그, 지역명, 프로젝트명 입력: CHN, Korea, Greater India...');
   await expect(page.locator('#claimPill')).toHaveText('영유권: -');
+  await expect(page.locator('#pinnedRegionsPanel')).toContainText('고정된 확장 노드가 없습니다.');
 
   await page.selectOption('#languageSel', 'en');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.locator('#claimPill')).toHaveText('Claims: -');
+  await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
 });
 
 test('sidebar falls back when persisted settings have unexpected JSON types', async ({ page }) => {
@@ -102,11 +105,14 @@ test('sidebar falls back when persisted settings have unexpected JSON types', as
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
   const cards = page.locator('#asideCardList .sideCard');
-  await expect(cards).toHaveCount(2);
+  await expect(cards).toHaveCount(3);
   await expect(cards.nth(0)).toHaveAttribute('data-aside-card', 'explore');
-  await expect(cards.nth(1)).toHaveAttribute('data-aside-card', 'selected');
+  await expect(cards.nth(1)).toHaveAttribute('data-aside-card', 'expansionNodes');
+  await expect(cards.nth(2)).toHaveAttribute('data-aside-card', 'selected');
   await expect(cards.nth(0).locator('.sideCardBody')).toBeVisible();
   await expect(cards.nth(1).locator('.sideCardBody')).toBeVisible();
+  await expect(cards.nth(1).locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
+  await expect(cards.nth(2).locator('.sideCardBody')).toBeVisible();
 });
 
 test('nation search uses catalog names and keeps region names separate', async ({ page }) => {

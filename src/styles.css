@@ -154,6 +154,21 @@
   .item:last-child { border-bottom:0; }
   .item:hover { background:rgba(255,255,255,.06); }
   .small { color:var(--muted); font-size:12px; }
+  .pinnedRegionsPanel { display:flex; flex-direction:column; gap:8px; padding-top:10px; }
+  .pinnedRegionEmpty { padding:8px 2px; }
+  .pinnedRegionToolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .pinnedRegionCount { color:#dbeafe; font-size:12px; font-weight:800; }
+  .pinnedRegionClear { width:auto; min-height:28px; padding:5px 9px; border-radius:8px; font-size:12px; font-weight:700; }
+  .pinnedRegionList { display:flex; flex-direction:column; gap:6px; }
+  .pinnedRegionRow { display:grid; grid-template-columns:minmax(0,1fr) 30px; gap:6px; align-items:stretch; }
+  .pinnedRegionFocus { min-width:0; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; align-items:center; min-height:44px; padding:7px 8px; border-radius:8px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); text-align:left; }
+  .pinnedRegionFocus:hover { background:rgba(145,183,255,.10); border-color:rgba(145,183,255,.28); }
+  .pinnedRegionMain { min-width:0; display:flex; flex-direction:column; gap:1px; }
+  .pinnedRegionMain b { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12.5px; line-height:1.2; }
+  .pinnedRegionMain span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font-size:11.5px; line-height:1.25; }
+  .pinnedRegionFocusText { color:#dbeafe; font-size:11px; font-weight:800; }
+  .pinnedRegionUnpin { width:30px; min-width:30px; min-height:44px; padding:0; border-radius:8px; color:#ffd6d2; background:rgba(255,87,87,.12); border-color:rgba(255,126,116,.30); font-size:18px; font-weight:800; line-height:1; }
+  .pinnedRegionUnpin:hover { background:rgba(255,87,87,.24); border-color:rgba(255,126,116,.58); }
   .legendRegionList { display:flex; flex-direction:column; gap:4px; margin-left:26px; padding-left:8px; border-left:1px solid rgba(255,255,255,.12); }
   .legendRegionItem { display:flex; flex-direction:column; align-items:flex-start; gap:1px; width:100%; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07); color:var(--text); font:inherit; text-align:left; cursor:pointer; }
   .legendRegionItem:hover { background:rgba(255,255,255,.075); border-color:rgba(255,255,255,.18); }
