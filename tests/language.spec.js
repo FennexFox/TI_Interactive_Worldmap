@@ -743,7 +743,7 @@ test('map region clicks toggle pinned expansion nodes', async ({ page }) => {
   await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveCount(1);
 });
 
-test('empty map clicks clear pinned regions before selection', async ({ page }) => {
+test('empty map clicks clear pinned regions and selection together', async ({ page }) => {
   await page.goto('/?worldWrap=0&debugRenderStats=1');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
@@ -761,10 +761,6 @@ test('empty map clicks clear pinned regions before selection', async ({ page }) 
   await clearMap(page);
   await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
   await expect(page.locator('#pinnedRegionMarkers .pinned-node-marker-group')).toHaveCount(0);
-  await expect(page.locator('#search')).toHaveValue(/Brazil/);
-  await expect(page.locator('#selectionOutlines > *')).not.toHaveCount(0);
-
-  await clearMap(page);
   await expect(page.locator('#search')).toHaveValue('');
   await expect(page.locator('#claimPill')).toHaveText('Claims: -');
   await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
@@ -818,7 +814,7 @@ test('manual recursive envelope does not put overlap dots on Paris claims after 
   await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-overlap-dot')).toHaveCount(0);
 });
 
-test('reachable capital button shows hollow star markers that pin without plus buttons', async ({ page }) => {
+test('reachable capital button shows capital markers that pin without plus buttons', async ({ page }) => {
   await page.goto('/?worldWrap=0&debugRenderStats=1');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
@@ -835,7 +831,7 @@ test('reachable capital button shows hollow star markers that pin without plus b
   await expect(page.locator('#reachableCapitalCandidates [data-candidate-pin]')).toHaveCount(0);
 
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
-  await page.locator('#reachableCapitalCandidates .reachable-capital-candidate-star[data-candidate-focus="NorthHonshu"]').click();
+  await clickRegion(page, 'NorthHonshu');
   await expect(page.locator('#selectionOutlines .selection-label[data-region="NorthHonshu"]')).toHaveText('Tokyo');
   await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="NorthHonshu"]')).toHaveCount(1);
   await expect(page.locator('#reachableCandidatesPanel [data-candidate-row="NorthHonshu"]')).toHaveCount(0);
@@ -875,7 +871,7 @@ test('reachable capitals omit nations fully included in the selected regions cla
   await expect(page.locator('#reachableCandidatesPanel [data-candidate-row="Moskva"]')).toHaveCount(1);
   await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="Moskva"]')).toHaveCount(1);
 
-  await page.locator('#reachableCapitalCandidates .reachable-capital-candidate-star[data-candidate-focus="Moskva"]').click();
+  await clickRegion(page, 'Moskva');
   await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="Moskva"]')).toHaveCount(1);
   await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-region-outline[data-region="Irkutsk"][data-envelope-depth="1"][data-envelope-claimant="RUS"]')).toHaveCount(1);
   await expect(page.locator('#reachableCandidatesPanel [data-candidate-row="Portugal"]')).toHaveCount(0);

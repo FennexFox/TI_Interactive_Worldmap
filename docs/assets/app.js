@@ -1211,6 +1211,8 @@ function appendCapitalMarkerGroup(frag, region, {
   className = '',
   ariaLabel = '',
   dataset = {},
+  starClassName = '',
+  starDataset = {},
 } = {}) {
   const lab = labelPosition(region);
   if (!lab) return null;
@@ -1230,9 +1232,9 @@ function appendCapitalMarkerGroup(frag, region, {
     'aria-hidden': 'true',
   }));
   group.appendChild(createSvgElement('polygon', {
-    class: 'capital-star',
+    class: `capital-star${starClassName ? ` ${starClassName}` : ''}`,
     points,
-  }));
+  }, starDataset));
   frag.appendChild(group);
   return group;
 }
@@ -1600,6 +1602,7 @@ function clearHoverPreview() {
   if (useHoverDelta) applyMapVisualStateForRegions([previousRegionName]);
   else applyMapVisualState();
   renderHoverOutlines();
+  renderReachableCapitalCandidateMarkers(currentOverlayModel);
   if (getLockedNation()) {
     setHoverNationState();
     renderCapitalMarkers();
@@ -1816,13 +1819,18 @@ function appendRegionHighlight(frag, r, classPrefix, copyContext = defaultWorldC
     frag.appendChild(p);
   }
 }
-function appendSelectedRegionMarker(frag, r, {showDot=true, copyContext=defaultWorldCopyContext()} = {}) {
+function appendSelectedRegionMarker(frag, r, {
+  showDot = true,
+  copyContext = defaultWorldCopyContext(),
+  dotClassName = '',
+  labelClassName = '',
+} = {}) {
   const lab = labelPosition(r);
   if (!lab) return;
   const copyData = worldCopyDataset(copyContext);
   if (showDot) {
     const dot = createSvgElement('circle', {
-      class: 'selection-dot',
+      class: `selection-dot${dotClassName ? ` ${dotClassName}` : ''}`,
       cx: lab.x,
       cy: lab.y,
       r: '.032',
@@ -1830,7 +1838,7 @@ function appendSelectedRegionMarker(frag, r, {showDot=true, copyContext=defaultW
     frag.appendChild(dot);
   }
   const text = createSvgElement('text', {
-    class: 'selection-label',
+    class: `selection-label${labelClassName ? ` ${labelClassName}` : ''}`,
     x: lab.x,
     y: lab.y - 0.052,
     textContent: localizedRegionName(r),
@@ -1875,6 +1883,8 @@ function appendPinnedRegionMarker(frag, region, index, {copyContext = defaultWor
   appendSelectedRegionMarker(group, region, {
     showDot: !isCapital,
     copyContext,
+    dotClassName: 'pinned-node-dot',
+    labelClassName: 'pinned-node-label',
   });
   frag.appendChild(group);
 }
@@ -2216,14 +2226,6 @@ function unpinClickedPinnedRegion(region) {
   const regionName = region?.regionName || '';
   if (!regionName || !getPinnedRegionIds().has(regionName)) return false;
   unpinPinnedRegionState(regionName);
-  if (selectedRegionIds.has(regionName)) {
-    const remainingSelected = [...selectedRegionIds].filter(name => name !== regionName);
-    setSelectedRegionIds(remainingSelected);
-    if (getFocusedRegionName() === regionName) {
-      setFocusedRegionState(remainingSelected.length === 1 ? remainingSelected[0] : '');
-    }
-    updateSelectedRegions();
-  }
   refreshSecondaryCapitalPreviewForHoveredRegion();
   renderHoverOutlines();
   renderCapitalMarkers();
@@ -2576,6 +2578,7 @@ function updateHoveredRegion(r, {force=false} = {}) {
   else setHoverNationState(r.nationTag);
   renderHoverOutlines();
   renderCapitalMarkers();
+  renderReachableCapitalCandidateMarkers(currentOverlayModel);
   setHoverPill(r);
 }
 function onRegionEnter(e, r, {force=true} = {}) {
@@ -3487,6 +3490,7 @@ function reachableCapitalCandidateRenderKey(candidates, copyContexts = worldCopy
     kind: 'reachable-capital-candidates',
     copyPlan: copyContextRenderKey(copyContexts),
     language: currentLanguage,
+    hoveredRegion: getHoveredRegionName(),
     candidates: candidates.map(candidate => `${candidate.region}:${candidate.depth}:${candidate.sourceCount}:${candidate.primaryNation}:${candidate.nations.join(',')}`).join('|'),
   });
 }
@@ -3495,7 +3499,7 @@ function appendReachableCapitalCandidateMarker(frag, candidate, copyContext = de
   if (!region) return;
   appendCapitalMarkerGroup(frag, region, {
     nation: candidate.primaryNation,
-    selected: false,
+    selected: candidate.region === getHoveredRegionName(),
     copyContext,
     className: 'reachable-capital-candidate',
     ariaLabel: reachableCandidateMarkerLabel(candidate),
@@ -3504,6 +3508,11 @@ function appendReachableCapitalCandidateMarker(frag, candidate, copyContext = de
       candidateNation: candidate.primaryNation,
       candidateDepth: candidate.depth,
       candidateSourceCount: candidate.sourceCount,
+    },
+    starClassName: 'reachable-capital-candidate-star',
+    starDataset: {
+      candidateFocus: candidate.region,
+      candidateNation: candidate.primaryNation,
     },
   });
 }
