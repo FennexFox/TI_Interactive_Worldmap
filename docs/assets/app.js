@@ -3637,6 +3637,23 @@ function selectReachableCapitalCandidateRegion(regionName, anchorModel = current
   const candidate = reachableCapitalCandidateForRegion(regionName, anchorModel);
   return candidate ? selectReachableCapitalCandidate(candidate) : false;
 }
+function shouldKeepActiveNationForCapitalRegion(region, anchorModel = currentOverlayModel) {
+  const anchorNation = manualEnvelopeAnchorNation(anchorModel);
+  return !!region?.regionName
+    && !!anchorNation
+    && !!(getLockedNation() || getActiveNation())
+    && isCapitalRegionForNation(anchorNation, region.regionName);
+}
+function selectActiveNationCapitalRegion(region, anchorModel = currentOverlayModel) {
+  if (!shouldKeepActiveNationForCapitalRegion(region, anchorModel)) return false;
+  setHoveredRegionState(region.regionName, region.nationTag);
+  setFocusedRegionState(region.regionName);
+  const changedSelectionRegionIds = setSelectedRegionIds([region.regionName]);
+  pinRegionState(region.regionName);
+  updateSecondaryCapitalPreview(region);
+  updateSelectedRegions({bounded: true, changedRegionIds: changedSelectionRegionIds});
+  return true;
+}
 function bindReachableCapitalCandidatePanelEvents() {
   if (!reachableCandidatesPanel) return;
   reachableCandidatesPanel.querySelectorAll('[data-candidate-focus]').forEach(button => {
@@ -4172,6 +4189,7 @@ function updateProjectOptions(nation) {
 }
 function selectRegion(r) {
   if (commitReachableCapitalSelection(r)) return;
+  if (selectActiveNationCapitalRegion(r)) return;
   setHoveredRegionState(r.regionName, r.nationTag);
   setFocusedRegionState(r.regionName);
   setSelectedRegionIds([r.regionName]);

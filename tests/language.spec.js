@@ -951,6 +951,15 @@ test('reachable capital activation requires the claimant capital to match the di
   await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="Shanghai"]')).toHaveCount(0);
   await expect(page.locator('#selectionOutlines .selection-label[data-region="Shanghai"]')).toHaveCount(0);
 
+  await clickRegion(page, 'Shanghai');
+  await waitForAnimationFrames(page, 2);
+  await expect(page.locator('#search')).toHaveValue(/Taiwan/);
+  await expect(page.locator('#claimPill')).toContainText('Taiwan');
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="Shanghai"]')).toHaveCount(1);
+
+  await page.locator('#pinnedRegionsPanel [data-pinned-unpin="Shanghai"]').click();
+  await waitForAnimationFrames(page, 2);
+
   await beijingButton.evaluate(button => {
     button.dataset.candidateFocus = 'Beijing';
   });
