@@ -1,32 +1,67 @@
 # .graphifyignore for TI_Interactive_Worldmap
-# Goal: keep Graphify focused on editable source, build scripts, tests, and planning docs.
-# Exclude generated GitHub Pages output and bulky generated data.
+# Goal: focus Graphify on editable source, build scripts, tests, and selected
+# human-authored project docs.
+#
+# Intentional inclusions:
+# - src/ remains visible as the app source of truth.
+# - tools/, scripts/, and tests/ remain visible because they define the
+#   data-build, verification, and regression-test flow.
+# - README.md, AGENTS.md, package.json, and data/manual/ remain visible as
+#   human-authored project context.
+#
+# Intentional exclusions:
+# - docs/ is the generated GitHub Pages output and duplicates src/ plus data.
+# - data/generated/ contains generated Terra Invicta map/catalog data.
+# - .github/ contains process/hosting metadata rather than app structure.
 
 # VCS / dependencies / local env
 .git/
 node_modules/
 .venv*/
+.venv/
 __pycache__/
 .pytest_cache/
 .cache/
+.DS_Store
 
-# GitHub Pages build output
+# Generated GitHub Pages output
 /docs/
 
-# Large generated game/map data
+# Generated Terra Invicta data and catalogs
+# Keep data/manual/ visible; generated catalogs should live under data/generated/.
 /data/generated/
 
-# Runtime/test artifacts
+# GitHub/process metadata noise
+.github/
+
+# Dependency lockfiles are bulky dependency snapshots; package.json is enough
+# for Graphify's project-structure context.
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Browser/test artifacts
 playwright-report/
 test-results/
 coverage/
 
-# Archives / local transfer artifacts
+# Runtime/build/cache artifacts
+dist/
+build/
+*.map
+*.tmp
+*.temp
+
+# Archives / local transfer artifacts / logs
 *.tar.gz
+*.tgz
 *.zip
 *.7z
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Graphify output/cache if stored in repo
+# Graphify output/cache
 graphify-out/
 .graphify/

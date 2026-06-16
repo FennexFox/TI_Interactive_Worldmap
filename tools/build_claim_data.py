@@ -302,8 +302,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--region-map", default="data/generated/region_map.generated.json")
     parser.add_argument("--bilateral-template", required=True)
     parser.add_argument("--aliases", default="data/manual/region_aliases.json")
-    parser.add_argument("--nation-catalog", default="data/nations.catalog.json")
-    parser.add_argument("--research-catalog", default="data/research.catalog.json")
+    parser.add_argument("--nation-catalog", default="data/generated/nations.catalog.json")
+    parser.add_argument("--research-catalog", default="data/generated/research.catalog.json")
     parser.add_argument("--output", default="data/generated/claim_map.generated.json")
     return parser.parse_args()
 
