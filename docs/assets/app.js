@@ -3527,6 +3527,7 @@ function commitReachableCapitalSelection(region, capitalClaimantId = '') {
   setFocusedRegionState(region.regionName);
   const changedSelectionRegionIds = setSelectedRegionIds([region.regionName]);
   pinRegionState(region.regionName, {capitalClaimant: claimant});
+  updateSecondaryCapitalPreview(region);
   updateSelectedRegions({bounded: true, changedRegionIds: changedSelectionRegionIds});
   if (getActiveNation()) {
     updateNationOverlay(getActiveNation(), {
