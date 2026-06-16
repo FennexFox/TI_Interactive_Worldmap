@@ -932,6 +932,51 @@ test('reachable capital hover keeps candidate marker DOM stable after multiple p
   expect(stats.reachableCapitalCandidateRebuilds).toBe(0);
 });
 
+
+test('pre-drag click hold still allows hit-layer hover updates', async ({ page }) => {
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await hoverRegion(page, 'Amazonia');
+  await expect(page.locator('#hoverPill')).toContainText('BRA');
+
+  await regionTarget(page, 'Amazonia').dispatchEvent('pointerdown', {
+    bubbles: true,
+    button: 0,
+    pointerId: 41,
+    pointerType: 'mouse',
+    clientX: 200,
+    clientY: 200,
+  });
+  await regionTarget(page, 'Bolivia').dispatchEvent('pointerover', {
+    bubbles: true,
+    pointerId: 41,
+    pointerType: 'mouse',
+    clientX: 201,
+    clientY: 201,
+  });
+  await regionTarget(page, 'Bolivia').dispatchEvent('pointermove', {
+    bubbles: true,
+    pointerId: 41,
+    pointerType: 'mouse',
+    clientX: 201,
+    clientY: 201,
+  });
+
+  await expect(page.locator('#hoverPill')).toContainText('BOL');
+  await expect(page.locator('#map')).toHaveClass(/is-panning-ready/);
+  await expect(page.locator('#map')).not.toHaveClass(/is-panning/);
+
+  await page.locator('#map').dispatchEvent('pointerup', {
+    bubbles: true,
+    pointerId: 41,
+    pointerType: 'mouse',
+    clientX: 201,
+    clientY: 201,
+  });
+  await expect(page.locator('#map')).not.toHaveClass(/is-panning-ready/);
+});
+
 test('map pan after multiple reachable capital pins avoids hover and marker churn during drag', async ({ page }) => {
   await page.goto('/?debugRenderStats=1');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });

@@ -2585,7 +2585,7 @@ function onRegionLeave(e) {
   clearHoverPreview();
 }
 function onHitLayerPointerOver(e) {
-  if (mapPanState) return;
+  if (mapPanState?.dragging) return;
   const region = resolveHitRegion(e);
   if (!region) return;
   const previousRegion = resolveRelatedHitRegion(e);
@@ -2593,12 +2593,12 @@ function onHitLayerPointerOver(e) {
   onRegionEnter(e, region, {force: !previousRegion});
 }
 function onHitLayerPointerMove(e) {
-  if (mapPanState) return;
+  if (mapPanState?.dragging) return;
   const region = resolveHitRegion(e);
   if (region) onRegionMove(e, region);
 }
 function onHitLayerPointerOut(e) {
-  if (mapPanState) return;
+  if (mapPanState?.dragging) return;
   const region = resolveHitRegion(e);
   if (!region) return;
   if (resolveRelatedHitRegion(e)) return;
@@ -3491,6 +3491,7 @@ function reachableCandidateRow(candidate) {
 function commitReachableCapitalSelection(region, capitalClaimantId = '') {
   const claimant = capitalClaimantId || resolveReachableCapitalSelectionClaimant(region);
   if (!region?.regionName || !claimant) return false;
+  const shouldRefreshIncomingOverlay = !!getActiveIncomingClaimKey();
   setHoveredRegionState(region.regionName, region.nationTag);
   setFocusedRegionState(region.regionName);
   const changedSelectionRegionIds = setSelectedRegionIds([region.regionName]);
@@ -3502,8 +3503,8 @@ function commitReachableCapitalSelection(region, capitalClaimantId = '') {
       renderDetails: true,
       updateFilters: false,
       updateSelected: false,
-      renderMap: false,
-      updateManualExpansion: false,
+      renderMap: shouldRefreshIncomingOverlay,
+      updateManualExpansion: shouldRefreshIncomingOverlay,
     });
   }
   return true;
