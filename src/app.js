@@ -3429,11 +3429,16 @@ function nationFullyIncludedInResult(nation, resultSet) {
   const resultRegions = nationResultRegionNames(nation);
   return !!resultRegions.length && resultRegions.every(regionName => resultSet?.has?.(regionName));
 }
+function isReachableCapitalCandidateNation(regionName, nation, anchorNation, resultSet = new Set()) {
+  return !!regionName
+    && !!nation
+    && nation !== anchorNation
+    && isCapitalRegionForNation(nation, regionName)
+    && !nationFullyIncludedInResult(nation, resultSet);
+}
 function reachableCapitalCandidateNations(regionName, anchorNation, resultSet = new Set()) {
   return [...new Set(derivedIndices.capitalNationsByRegion?.get?.(regionName) || [])]
-    .filter(nation => nation
-      && nation !== anchorNation
-      && !nationFullyIncludedInResult(nation, resultSet));
+    .filter(nation => isReachableCapitalCandidateNation(regionName, nation, anchorNation, resultSet));
 }
 function reachableCapitalCandidateDescriptorCacheKey(model) {
   return JSON.stringify({
@@ -3507,13 +3512,19 @@ function buildActiveExpansionScope(anchorModel = currentOverlayModel) {
 }
 function resolveCapitalClaimantForRegion(regionName, scope = buildActiveExpansionScope()) {
   if (!regionName || !scope?.regionSet?.has?.(regionName)) return '';
+  const candidates = reachableCapitalCandidateNations(regionName, scope.anchorNation, scope.regionSet);
   const override = getPinnedCapitalClaimant(regionName);
-  if (override && override !== scope.anchorNation) return override;
-  return reachableCapitalCandidateNations(regionName, scope.anchorNation, scope.regionSet)[0] || '';
+  if (override && candidates.includes(override)) return override;
+  return candidates[0] || '';
 }
-function resolveReachableCapitalSelectionClaimant(region) {
+function resolveReachableCapitalSelectionClaimant(region, capitalClaimantId = '') {
   if (!region?.regionName || !(getLockedNation() || getActiveNation())) return '';
-  return resolveCapitalClaimantForRegion(region.regionName, buildActiveExpansionScope(currentOverlayModel));
+  const scope = buildActiveExpansionScope(currentOverlayModel);
+  if (capitalClaimantId) {
+    const candidates = reachableCapitalCandidateNations(region.regionName, scope.anchorNation, scope.regionSet);
+    return candidates.includes(capitalClaimantId) ? capitalClaimantId : '';
+  }
+  return resolveCapitalClaimantForRegion(region.regionName, scope);
 }
 function reachableCapitalCandidateDescriptors(anchorModel = currentOverlayModel, {manualEnvelopeModel = null} = {}) {
   const model = manualEnvelopeModel || buildManualEnvelopeModel(anchorModel, {includeAnchorOnly: true});
@@ -3542,11 +3553,14 @@ function reachableCapitalCandidateDescriptors(anchorModel = currentOverlayModel,
     if (!nations.length) continue;
     const region = regionByName[item.region];
     const lab = labelPosition(region);
+    const candidateNationId = nations[0];
     candidates.push({
       region: item.region,
+      capitalRegionId: item.region,
       depth: item.primary.depth,
       sourceCount: item.overlapSources.length,
-      primaryNation: nations[0],
+      primaryNation: candidateNationId,
+      candidateNationId,
       nations,
       x: lab?.x,
       y: lab?.y,
@@ -3590,7 +3604,7 @@ function reachableCandidateRow(candidate) {
   `;
 }
 function commitReachableCapitalSelection(region, capitalClaimantId = '') {
-  const claimant = capitalClaimantId || resolveReachableCapitalSelectionClaimant(region);
+  const claimant = resolveReachableCapitalSelectionClaimant(region, capitalClaimantId);
   if (!region?.regionName || !claimant) return false;
   const shouldRefreshIncomingOverlay = !!getActiveIncomingClaimKey();
   setHoveredRegionState(region.regionName, region.nationTag);

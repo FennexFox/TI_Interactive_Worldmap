@@ -916,6 +916,51 @@ test('reachable capital button shows capital markers that pin without plus butto
   await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate')).toHaveCount(0);
 });
 
+test('reachable capital activation requires the claimant capital to match the displayed region', async ({ page }) => {
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  const capitalData = await page.evaluate(async () => {
+    const data = await window.TI_DATA_PROMISE;
+    const claims = data.claimMap.claimsByNation || {};
+    return {
+      chinaCapitals: claims.CHN?.capitalRegions || [],
+      shanghaiCapitalNations: Object.entries(claims)
+        .filter(([, nation]) => (nation.capitalRegions || []).includes('Shanghai'))
+        .map(([tag]) => tag)
+        .sort(),
+    };
+  });
+  expect(capitalData.chinaCapitals).toContain('Beijing');
+  expect(capitalData.chinaCapitals).not.toContain('Shanghai');
+  expect(capitalData.shanghaiCapitalNations.length).toBeGreaterThan(0);
+  expect(capitalData.shanghaiCapitalNations).not.toContain('CHN');
+
+  await chooseNation(page, 'Taiwan', 'TWN');
+  await expect(page.locator('#reachableCandidatesPanel [data-candidate-row="Shanghai"]')).toHaveCount(0);
+  const beijingButton = page.locator('#reachableCandidatesPanel [data-candidate-row="Beijing"] [data-candidate-focus]').first();
+  await expect(beijingButton).toHaveAttribute('data-candidate-focus', 'Beijing');
+  await expect(beijingButton).toHaveAttribute('data-candidate-nation', 'CHN');
+
+  await beijingButton.evaluate(button => {
+    button.dataset.candidateFocus = 'Shanghai';
+  });
+  await beijingButton.click();
+  await waitForAnimationFrames(page, 2);
+
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="Shanghai"]')).toHaveCount(0);
+  await expect(page.locator('#selectionOutlines .selection-label[data-region="Shanghai"]')).toHaveCount(0);
+
+  await beijingButton.evaluate(button => {
+    button.dataset.candidateFocus = 'Beijing';
+  });
+  await beijingButton.click();
+  await waitForAnimationFrames(page, 2);
+
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="Beijing"]')).toHaveCount(1);
+  await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-region-outline[data-envelope-claimant="CHN"][data-envelope-via-capital="Beijing"]')).not.toHaveCount(0);
+});
+
 test('reachable capital hover keeps candidate marker DOM stable after multiple pins', async ({ page }) => {
   await page.goto('/?worldWrap=0&debugRenderStats=1');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
