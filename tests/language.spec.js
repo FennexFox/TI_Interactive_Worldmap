@@ -194,6 +194,12 @@ test('debug render stats capture real pointer hover baseline', async ({ page }) 
   await expect.poll(() => page.evaluate(() => Boolean(window.__TI_DEBUG_RENDER_STATS__))).toBe(true);
   await expect.poll(() => page.evaluate(() => typeof window.__TI_DEBUG_RENDER_STATS__.reset)).toBe('function');
   await expect.poll(() => page.evaluate(() => Object.keys(window.__TI_DEBUG_RENDER_STATS__).includes('reset'))).toBe(false);
+  await expect.poll(() => page.evaluate(() => Object.keys(window.__TI_DEBUG_RENDER_STATS__))).toEqual(expect.arrayContaining([
+    'manualEnvelopeModelBuilds',
+    'manualEnvelopeModelCacheHits',
+    'reachableCapitalCandidateDescriptorBuilds',
+    'reachableCapitalCandidateDescriptorCacheHits',
+  ]));
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
 
   await chooseNation(page, 'Brazil', 'BRA');
@@ -860,6 +866,12 @@ test('reachable capital button shows capital markers that pin without plus butto
 
   const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.reachableCapitalCandidateRebuilds).toBeGreaterThan(0);
+  expect(stats.fullVisualStateApplications).toBe(0);
+  expect(stats.boundedVisualStateApplications).toBeGreaterThan(0);
+  expect(stats.manualEnvelopeModelBuilds).toBeLessThanOrEqual(2);
+  expect(stats.manualEnvelopeModelCacheHits).toBeGreaterThan(0);
+  expect(stats.reachableCapitalCandidateDescriptorBuilds).toBeLessThanOrEqual(1);
+  expect(stats.reachableCapitalCandidateDescriptorCacheHits).toBeGreaterThan(0);
 
   await toggle.click();
   await expect(toggle).toHaveText('Show reachable capitals');
