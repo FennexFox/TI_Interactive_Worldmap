@@ -1216,6 +1216,7 @@ function appendCapitalMarkerGroup(frag, region, {
 } = {}) {
   const lab = labelPosition(region);
   if (!lab) return null;
+  const copyData = worldCopyDataset(copyContext);
   const group = createSvgElement('g', {
     class: `capital-marker${selected ? ' is-selected' : ' is-idle'}${className ? ` ${className}` : ''}`,
     'aria-label': ariaLabel || `${t('nationInfo.kv.capitalRegion')}: ${localizedRegionName(region)}`,
@@ -1223,7 +1224,7 @@ function appendCapitalMarkerGroup(frag, region, {
     region: region.regionName,
     nation,
     ...dataset,
-    ...worldCopyDataset(copyContext),
+    ...copyData,
   });
   const points = starPoints(lab.x, lab.y);
   group.appendChild(createSvgElement('polygon', {
@@ -1234,7 +1235,7 @@ function appendCapitalMarkerGroup(frag, region, {
   group.appendChild(createSvgElement('polygon', {
     class: `capital-star${starClassName ? ` ${starClassName}` : ''}`,
     points,
-  }, starDataset));
+  }, {...starDataset, ...copyData}));
   frag.appendChild(group);
   return group;
 }
@@ -1821,6 +1822,7 @@ function appendRegionHighlight(frag, r, classPrefix, copyContext = defaultWorldC
 }
 function appendSelectedRegionMarker(frag, r, {
   showDot = true,
+  showLabel = true,
   copyContext = defaultWorldCopyContext(),
   dotClassName = '',
   labelClassName = '',
@@ -1837,6 +1839,7 @@ function appendSelectedRegionMarker(frag, r, {
     }, {region: r.regionName, ...copyData});
     frag.appendChild(dot);
   }
+  if (!showLabel) return;
   const text = createSvgElement('text', {
     class: `selection-label${labelClassName ? ` ${labelClassName}` : ''}`,
     x: lab.x,
@@ -1855,7 +1858,7 @@ function pinnedRegionMarkerRenderKey(pinned, {copyContexts = worldCopyContexts, 
     pinned,
   });
 }
-function appendPinnedRegionMarker(frag, region, index, {copyContext = defaultWorldCopyContext()} = {}) {
+function appendPinnedRegionMarker(frag, region, index, {copyContext = defaultWorldCopyContext(), showLabel = true} = {}) {
   const lab = labelPosition(region);
   if (!lab) return;
   const label = localizedRegionName(region);
@@ -1882,6 +1885,7 @@ function appendPinnedRegionMarker(frag, region, index, {copyContext = defaultWor
   }
   appendSelectedRegionMarker(group, region, {
     showDot: !isCapital,
+    showLabel,
     copyContext,
     dotClassName: 'pinned-node-dot',
     labelClassName: 'pinned-node-label',
@@ -1896,9 +1900,10 @@ function createPinnedRegionMarkerFragment(pinned, {copyContexts=worldCopyContext
       const region = regionByName[regionName];
       if (!region) return;
       appendRegionHighlight(frag, region, 'pinned', copyContext);
-      if (!selectedPinnedRegionSet.has(regionName)) {
-        appendPinnedRegionMarker(frag, region, index + 1, {copyContext});
-      }
+      appendPinnedRegionMarker(frag, region, index + 1, {
+        copyContext,
+        showLabel: !selectedPinnedRegionSet.has(regionName),
+      });
     });
     return frag;
   });
@@ -2221,15 +2226,6 @@ function clearSelection({clearSearch=true} = {}) {
 }
 function clearPinsOrSelection() {
   clearSelection();
-}
-function unpinClickedPinnedRegion(region) {
-  const regionName = region?.regionName || '';
-  if (!regionName || !getPinnedRegionIds().has(regionName)) return false;
-  unpinPinnedRegionState(regionName);
-  refreshSecondaryCapitalPreviewForHoveredRegion();
-  renderHoverOutlines();
-  renderCapitalMarkers();
-  return true;
 }
 function focusNation(nation, {fillSearch=true} = {}) {
   if (!nation) { clearSelection({clearSearch:fillSearch}); return; }
@@ -2617,7 +2613,6 @@ function onHitLayerClick(e) {
   const region = resolveHitRegion(e);
   if (!region) return;
   e.stopPropagation();
-  if (unpinClickedPinnedRegion(region)) return;
   if (selectReachableCapitalCandidateRegion(region.regionName)) return;
   selectRegion(region);
 }

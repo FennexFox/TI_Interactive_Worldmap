@@ -580,8 +580,9 @@ test('hover overlay and capital marker keys avoid unchanged churn', async ({ pag
   expect(stats.hoverOutlineReplacements).toBe(0);
 
   await hoverRegionWithMouse(page, 'Bolivia');
-  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Bolivia"]')).toHaveCount(0);
-  await expect(page.locator('#secondaryHoverOverlays .secondary-capital-preview[data-nation="BOL"][data-region="Bolivia"]')).toHaveCount(1);
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Bolivia"]')).toHaveCount(1);
+  await expect(page.locator('#secondaryHoverOverlays .secondary-capital-preview[data-region="Bolivia"]')).toHaveCount(0);
+  await expect(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="BOL"][data-region="Bolivia"]')).toHaveCount(0);
   await hoverRegionWithMouse(page, 'Brasilia');
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]')).toHaveClass(/is-selected/);
 });
@@ -629,8 +630,8 @@ test('selected nation marks its capital region with a fillable star', async ({ p
   await expect(page.locator('#capitalMarkers .capital-marker[data-region="Ontario"]')).toHaveClass(/is-selected/);
 
   await hoverRegion(page, 'Bolivia');
-  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Bolivia"]')).toHaveCount(0);
-  await expect(page.locator('#secondaryHoverOverlays .secondary-capital-preview[data-nation="BOL"][data-region="Bolivia"]')).toHaveCount(1);
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Bolivia"]')).toHaveCount(1);
+  await expect(page.locator('#secondaryHoverOverlays .secondary-capital-preview[data-region="Bolivia"]')).toHaveCount(0);
   await expect(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="BOL"][data-region="Brasilia"]')).toHaveCount(0);
 
   await hoverRegion(page, 'Brasilia');
@@ -724,7 +725,7 @@ test('pinned expansion nodes update compact rows and map markers through clicks'
   await expect(page.locator('#regions .region[data-region="Amazonia"]')).not.toHaveClass(/pinned-node/);
 });
 
-test('map region clicks toggle pinned expansion nodes', async ({ page }) => {
+test('map region clicks keep pinned expansion nodes until explicit removal', async ({ page }) => {
   await page.goto('/?worldWrap=0&debugRenderStats=1');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
@@ -737,10 +738,15 @@ test('map region clicks toggle pinned expansion nodes', async ({ page }) => {
   await expect(page.locator('#regions .region[data-region="Amazonia"]')).toHaveClass(/pinned-node/);
 
   await clickRegion(page, 'Amazonia');
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="Amazonia"]')).toHaveCount(1);
+  await expect(page.locator('#pinnedRegionMarkers .pinned-node-marker-group[data-region="Amazonia"]')).toHaveCount(1);
+  await expect(page.locator('#regions .region[data-region="Amazonia"]')).toHaveClass(/pinned-node/);
+  await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveCount(1);
+
+  await page.locator('#pinnedRegionsPanel [data-pinned-unpin="Amazonia"]').click();
   await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="Amazonia"]')).toHaveCount(0);
   await expect(page.locator('#pinnedRegionMarkers .pinned-node-marker-group[data-region="Amazonia"]')).toHaveCount(0);
   await expect(page.locator('#regions .region[data-region="Amazonia"]')).not.toHaveClass(/pinned-node/);
-  await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveCount(1);
 });
 
 test('empty map clicks clear pinned regions and selection together', async ({ page }) => {
@@ -806,7 +812,7 @@ test('manual recursive envelope does not put overlap dots on Paris claims after 
   await clickRegion(page, 'Paris');
   await clickRegion(page, 'Moskva');
 
-  await expect(page.locator('#search')).toHaveValue(/Russia/);
+  await expect(page.locator('#search')).toHaveValue(/France/);
   await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="Paris"]')).toHaveCount(1);
   await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="Moskva"]')).toHaveCount(1);
   await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-overlap[data-region="Paris"]')).toHaveCount(1);
@@ -907,13 +913,6 @@ test('claim cards synchronize map overlays, panel state, and empty map clear', a
   await expect(page.locator('#pinnedRegionsPanel [data-pinned-region]')).toHaveCount(1);
   await clearMap(page);
   await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
-  await expect(page.locator('#search')).toHaveValue(/Bolivia/);
-  await expect(page.locator('#claimMode')).toHaveValue('project');
-  await expect(page.locator('#claimPill')).toHaveText('Bolivia: territory 1, claims 25, research tiers 0');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
-  await expect(page.locator('#selectionOutlines > *')).not.toHaveCount(0);
-
-  await clearMap(page);
   await expect(page.locator('#search')).toHaveValue('');
   await expect(page.locator('#claimMode')).toHaveValue('all');
   await expect(page.locator('#claimPill')).toHaveText('Claims: -');

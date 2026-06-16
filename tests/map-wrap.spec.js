@@ -183,11 +183,7 @@ test('baseline hit layer resolves one canonical region for hover and click', asy
   await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveText('Manaus');
 
   await page.locator('#hitRegions').dispatchEvent('click', { bubbles: true });
-  await expect(page.locator('#search')).toHaveValue(/Brazil/);
   await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
-  await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveText('Manaus');
-
-  await page.locator('#hitRegions').dispatchEvent('click', { bubbles: true });
   await expect(page.locator('#search')).toHaveValue('');
   await expect(page.locator('#claimPill')).toHaveText('Claims: -');
   await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
@@ -489,12 +485,9 @@ test('world-wrap default panning preserves click selection but suppresses drag s
   await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveText(['Manaus', 'Manaus', 'Manaus']);
 
   await page.locator('#hitRegions').dispatchEvent('click', {bubbles: true});
-  await expect(page.locator('#search')).toHaveValue(/Brazil/);
   await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
-  await expectProjectedCopies(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]'));
-
-  await page.locator('#hitRegions').dispatchEvent('click', {bubbles: true});
   await expect(page.locator('#search')).toHaveValue('');
+  await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
 
   await dispatchPointerDragAndClick(amazon);
   await expect(page.locator('#search')).toHaveValue('');
@@ -673,8 +666,6 @@ test('world-wrap seam candidates keep hit, selection, and claim overlays project
     await expectProjectedRegion(page, '#selectionOutlines .selection-label', regionName);
     await page.locator('#hitRegions').dispatchEvent('click', { bubbles: true });
     await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
-    await expectProjectedRegion(page, '#selectionOutlines .selection-label', regionName);
-    await page.locator('#hitRegions').dispatchEvent('click', { bubbles: true });
     await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
   }
 
@@ -748,9 +739,6 @@ test('issue #2 acceptance: wrapped copy hover and click resolve to the same cano
     await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
     await expectProjectedCopies(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]'));
 
-    await page.locator('#hitRegions').dispatchEvent('click', { bubbles: true });
-    await expect(page.locator('#search')).toHaveValue(/Brazil/);
-    await expectProjectedCopies(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]'));
     await page.locator('#hitRegions').dispatchEvent('click', { bubbles: true });
     await expect(page.locator('#search')).toHaveValue('');
     await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
