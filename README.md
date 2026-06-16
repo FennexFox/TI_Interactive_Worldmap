@@ -173,12 +173,12 @@ python .\tools\rebuild_pages.py --templates-dir "<Templates>" --region-outlines 
 
 The deploy helper only stages generated paths:
 
-- `data/nations.catalog.json`
-- `data/research.catalog.json`
+- `data/generated/nations.catalog.json`
+- `data/generated/research.catalog.json`
 - `data/generated/region_map.generated.json`
 - `data/generated/claim_map.generated.json`
-- `docs/data/nations.catalog.json`
-- `docs/data/research.catalog.json`
+- `docs/data/generated/nations.catalog.json`
+- `docs/data/generated/research.catalog.json`
 - `docs/data/region_map.generated.json`
 - `docs/data/claim_map.generated.json`
 - `docs/assets/data.generated.js`

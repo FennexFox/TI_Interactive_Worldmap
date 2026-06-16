@@ -17,7 +17,6 @@ Do **not** read, review, summarize, refactor, or hand-edit generated artifacts d
 Generated and derived paths include:
 
 - `data/generated/**`
-- `data/*.catalog.json`
 - `docs/index.html`
 - `docs/assets/**`
 - `docs/data/**`

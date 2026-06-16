@@ -20,7 +20,7 @@ from catalog_utils import (
 
 
 SCHEMA_VERSION = 1
-DEFAULT_OUTPUT = Path("data/nations.catalog.json")
+DEFAULT_OUTPUT = Path("data/generated/nations.catalog.json")
 SCENARIO_YEARS = ("2022", "2026", "2070")
 DEFAULT_SCENARIO_YEAR = "2026"
 

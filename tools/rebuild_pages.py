@@ -14,12 +14,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 GENERATED_PATHS = (
-    "data/nations.catalog.json",
-    "data/research.catalog.json",
+    "data/generated/nations.catalog.json",
+    "data/generated/research.catalog.json",
     "data/generated/region_map.generated.json",
     "data/generated/claim_map.generated.json",
-    "docs/data/nations.catalog.json",
-    "docs/data/research.catalog.json",
+    "docs/data/generated/nations.catalog.json",
+    "docs/data/generated/research.catalog.json",
     "docs/data/region_map.generated.json",
     "docs/data/claim_map.generated.json",
     "docs/assets/data.generated.js",
@@ -148,7 +148,7 @@ def build_pages(args: argparse.Namespace) -> None:
             "--scenario-year",
             args.scenario_year,
             "--output",
-            "data/nations.catalog.json",
+            "data/generated/nations.catalog.json",
         ])
     if (
         templates_dir
@@ -167,7 +167,7 @@ def build_pages(args: argparse.Namespace) -> None:
             "--aliases",
             "data/manual/region_aliases.json",
             "--output",
-            "data/research.catalog.json",
+            "data/generated/research.catalog.json",
         ])
 
     claim_command = [
@@ -180,9 +180,9 @@ def build_pages(args: argparse.Namespace) -> None:
         "--aliases",
         "data/manual/region_aliases.json",
         "--nation-catalog",
-        "data/nations.catalog.json",
+        "data/generated/nations.catalog.json",
         "--research-catalog",
-        "data/research.catalog.json",
+        "data/generated/research.catalog.json",
         "--output",
         "data/generated/claim_map.generated.json",
     ]

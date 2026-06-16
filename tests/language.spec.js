@@ -60,6 +60,36 @@ async function clickRegion(page, regionName) {
   await regionTarget(page, regionName).dispatchEvent('click', { bubbles: true });
 }
 
+async function mapViewBox(page) {
+  const value = await page.locator('#map').getAttribute('viewBox');
+  return String(value || '').split(/\s+/).map(Number);
+}
+
+async function debugRenderStats(page) {
+  return page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+}
+
+async function resetDebugRenderStats(page) {
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+}
+
+async function pinFirstReachableCapitalCandidate(page) {
+  const candidate = page.locator('#reachableCandidatesPanel [data-candidate-focus]').first();
+  await expect(candidate).toBeVisible();
+  const region = await candidate.getAttribute('data-candidate-focus');
+  await candidate.click();
+  await waitForAnimationFrames(page, 3);
+  return region;
+}
+
+async function pinReachableCapitalCandidates(page, count) {
+  const pinned = [];
+  for (let index = 0; index < count; index += 1) {
+    pinned.push(await pinFirstReachableCapitalCandidate(page));
+  }
+  return pinned;
+}
+
 async function clearMap(page) {
   await page.locator('#hitRegions').dispatchEvent('click', { bubbles: true });
 }
@@ -194,6 +224,12 @@ test('debug render stats capture real pointer hover baseline', async ({ page }) 
   await expect.poll(() => page.evaluate(() => Boolean(window.__TI_DEBUG_RENDER_STATS__))).toBe(true);
   await expect.poll(() => page.evaluate(() => typeof window.__TI_DEBUG_RENDER_STATS__.reset)).toBe('function');
   await expect.poll(() => page.evaluate(() => Object.keys(window.__TI_DEBUG_RENDER_STATS__).includes('reset'))).toBe(false);
+  await expect.poll(() => page.evaluate(() => Object.keys(window.__TI_DEBUG_RENDER_STATS__))).toEqual(expect.arrayContaining([
+    'manualEnvelopeModelBuilds',
+    'manualEnvelopeModelCacheHits',
+    'reachableCapitalCandidateDescriptorBuilds',
+    'reachableCapitalCandidateDescriptorCacheHits',
+  ]));
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
 
   await chooseNation(page, 'Brazil', 'BRA');
@@ -208,7 +244,7 @@ test('debug render stats capture real pointer hover baseline', async ({ page }) 
 
   const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.fullVisualStateApplications).toBeGreaterThan(0);
-  expect(stats.boundedVisualStateApplications).toBe(0);
+  expect(stats.boundedVisualStateApplications).toBeGreaterThan(0);
   expect(stats.visiblePathsTouched).toBeGreaterThan(0);
   expect(stats.hitPathsTouched).toBeGreaterThan(0);
   expect(stats.overlayModelBuilds).toBeGreaterThan(0);
@@ -860,11 +896,121 @@ test('reachable capital button shows capital markers that pin without plus butto
 
   const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.reachableCapitalCandidateRebuilds).toBeGreaterThan(0);
+  expect(stats.fullVisualStateApplications).toBe(0);
+  expect(stats.boundedVisualStateApplications).toBeGreaterThan(0);
+  expect(stats.manualEnvelopeModelBuilds).toBeLessThanOrEqual(2);
+  expect(stats.manualEnvelopeModelCacheHits).toBeGreaterThan(0);
+  expect(stats.reachableCapitalCandidateDescriptorBuilds).toBeLessThanOrEqual(1);
+  expect(stats.reachableCapitalCandidateDescriptorCacheHits).toBeGreaterThan(0);
 
   await toggle.click();
   await expect(toggle).toHaveText('Show reachable capitals');
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');
   await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate')).toHaveCount(0);
+});
+
+test('reachable capital hover keeps candidate marker DOM stable after multiple pins', async ({ page }) => {
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await chooseNation(page, 'China', 'CHN');
+  await pinReachableCapitalCandidates(page, 3);
+  const candidateRegions = await page.locator('#reachableCapitalCandidates .reachable-capital-candidate')
+    .evaluateAll(nodes => [...new Set(nodes.map(node => node.dataset.candidateRegion).filter(Boolean))].slice(0, 2));
+  expect(candidateRegions.length).toBeGreaterThanOrEqual(2);
+
+  await resetDebugRenderStats(page);
+  await hoverRegion(page, candidateRegions[0]);
+  await expect(page.locator(`#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="${candidateRegions[0]}"]`)).toHaveClass(/is-selected/);
+
+  await hoverRegion(page, candidateRegions[1]);
+  await expect(page.locator(`#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="${candidateRegions[0]}"]`)).not.toHaveClass(/is-selected/);
+  await expect(page.locator(`#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="${candidateRegions[1]}"]`)).toHaveClass(/is-selected/);
+
+  const stats = await debugRenderStats(page);
+  expect(stats.reachableCapitalCandidateDescriptorBuilds).toBe(0);
+  expect(stats.reachableCapitalCandidateRebuilds).toBe(0);
+});
+
+
+test('pre-drag click hold still allows hit-layer hover updates', async ({ page }) => {
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await hoverRegion(page, 'Amazonia');
+  await expect(page.locator('#hoverPill')).toContainText('BRA');
+
+  await regionTarget(page, 'Amazonia').dispatchEvent('pointerdown', {
+    bubbles: true,
+    button: 0,
+    pointerId: 41,
+    pointerType: 'mouse',
+    clientX: 200,
+    clientY: 200,
+  });
+  await regionTarget(page, 'Bolivia').dispatchEvent('pointerover', {
+    bubbles: true,
+    pointerId: 41,
+    pointerType: 'mouse',
+    clientX: 201,
+    clientY: 201,
+  });
+  await regionTarget(page, 'Bolivia').dispatchEvent('pointermove', {
+    bubbles: true,
+    pointerId: 41,
+    pointerType: 'mouse',
+    clientX: 201,
+    clientY: 201,
+  });
+
+  await expect(page.locator('#hoverPill')).toContainText('BOL');
+  await expect(page.locator('#map')).toHaveClass(/is-panning-ready/);
+  await expect(page.locator('#map')).not.toHaveClass(/is-panning/);
+
+  await page.locator('#map').dispatchEvent('pointerup', {
+    bubbles: true,
+    pointerId: 41,
+    pointerType: 'mouse',
+    clientX: 201,
+    clientY: 201,
+  });
+  await expect(page.locator('#map')).not.toHaveClass(/is-panning-ready/);
+});
+
+test('map pan after multiple reachable capital pins avoids hover and marker churn during drag', async ({ page }) => {
+  await page.goto('/?debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await chooseNation(page, 'China', 'CHN');
+  await pinReachableCapitalCandidates(page, 3);
+
+  const mapBox = await page.locator('#map').boundingBox();
+  expect(mapBox).toBeTruthy();
+  const start = await blankMapPoint(page);
+  const end = {x: Math.min(mapBox.x + mapBox.width - 20, start.x + 420), y: start.y + 20};
+  const beforeViewBox = await mapViewBox(page);
+
+  await page.mouse.move(start.x, start.y);
+  await waitForAnimationFrames(page, 2);
+  await resetDebugRenderStats(page);
+  await page.mouse.down();
+  await page.mouse.move(end.x, end.y, {steps: 12});
+  await waitForAnimationFrames(page, 3);
+
+  const duringStats = await debugRenderStats(page);
+  const duringViewBox = await mapViewBox(page);
+  expect(Math.abs(duringViewBox[0] - beforeViewBox[0])).toBeGreaterThan(0.01);
+  expect(duringStats.reachableCapitalCandidateRebuilds).toBe(0);
+  expect(duringStats.capitalMarkerRebuilds).toBe(0);
+  expect(duringStats.manualEnvelopeRebuilds).toBe(0);
+  expect(duringStats.hoverOutlineReplacements).toBe(0);
+  expect(duringStats.foreignHoverOverlayReplacements).toBe(0);
+  expect(duringStats.fullVisualStateApplications).toBe(0);
+
+  await page.mouse.up();
+  await waitForAnimationFrames(page, 3);
+  await hoverRegion(page, 'Moskva');
+  await expect(page.locator('#hoverPill')).not.toHaveText('Hover: -');
 });
 
 test('reachable capitals omit nations fully included in the selected regions claims', async ({ page }) => {

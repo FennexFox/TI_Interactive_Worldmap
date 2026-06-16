@@ -42,6 +42,7 @@ def build_pages() -> None:
     docs = ROOT / "docs"
     (docs / "assets").mkdir(parents=True, exist_ok=True)
     (docs / "data").mkdir(parents=True, exist_ok=True)
+    (docs / "data" / "generated").mkdir(parents=True, exist_ok=True)
 
     shutil.copyfile(ROOT / "src" / "index.html", docs / "index.html")
     shutil.copyfile(ROOT / "src" / "styles.css", docs / "assets" / "styles.css")
@@ -52,12 +53,12 @@ def build_pages() -> None:
 
     region_map = load_json(ROOT / "data" / "generated" / "region_map.generated.json")
     claim_map = load_json(ROOT / "data" / "generated" / "claim_map.generated.json")
-    nation_catalog = load_json(ROOT / "data" / "nations.catalog.json")
-    research_catalog = load_json(ROOT / "data" / "research.catalog.json")
+    nation_catalog = load_json(ROOT / "data" / "generated" / "nations.catalog.json")
+    research_catalog = load_json(ROOT / "data" / "generated" / "research.catalog.json")
     write_compact_json(ROOT / "data" / "generated" / "region_map.generated.json", region_map)
     write_compact_json(ROOT / "data" / "generated" / "claim_map.generated.json", claim_map)
-    shutil.copyfile(ROOT / "data" / "nations.catalog.json", docs / "data" / "nations.catalog.json")
-    shutil.copyfile(ROOT / "data" / "research.catalog.json", docs / "data" / "research.catalog.json")
+    shutil.copyfile(ROOT / "data" / "generated" / "nations.catalog.json", docs / "data" / "generated" / "nations.catalog.json")
+    shutil.copyfile(ROOT / "data" / "generated" / "research.catalog.json", docs / "data" / "generated" / "research.catalog.json")
     write_compact_json(docs / "data" / "region_map.generated.json", region_map)
     write_compact_json(docs / "data" / "claim_map.generated.json", claim_map)
 
