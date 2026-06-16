@@ -2,11 +2,19 @@ function normalizeId(value) {
   return String(value || '');
 }
 
+function normalizeIds(values = []) {
+  return [...new Set([...values].map(normalizeId).filter(Boolean))];
+}
+
 export function createAppState({activeScenarioId = ''} = {}) {
   return {
     activeScenarioId: normalizeId(activeScenarioId),
     selectedNationId: '',
     selectedRegionIds: new Set(),
+    focusedRegionId: '',
+    pinnedRegionIds: new Set(),
+    pinnedCapitalClaimants: new Map(),
+    showReachableCapitalCandidates: true,
     hoveredNationId: '',
     hoveredRegionId: '',
     lockedNationId: '',
@@ -16,7 +24,6 @@ export function createAppState({activeScenarioId = ''} = {}) {
     },
     filters: {
       projectId: '',
-      onlyClaims: false,
     },
   };
 }
@@ -38,10 +45,61 @@ export function setSelectedNation(state, nationId = '', {locked = false, clearHo
 
 export function setSelectedRegions(state, regionIds = []) {
   state.selectedRegionIds.clear();
-  for (const regionId of regionIds || []) {
-    const normalized = normalizeId(regionId);
-    if (normalized) state.selectedRegionIds.add(normalized);
+  for (const normalized of normalizeIds(regionIds || [])) state.selectedRegionIds.add(normalized);
+  return state;
+}
+
+export function setFocusedRegion(state, regionId = '') {
+  state.focusedRegionId = normalizeId(regionId);
+  return state;
+}
+
+export function setPinnedRegions(state, regionIds = []) {
+  if (!state.pinnedRegionIds) state.pinnedRegionIds = new Set();
+  if (!state.pinnedCapitalClaimants) state.pinnedCapitalClaimants = new Map();
+  state.pinnedRegionIds.clear();
+  state.pinnedCapitalClaimants.clear();
+  for (const normalized of normalizeIds(regionIds || [])) state.pinnedRegionIds.add(normalized);
+  return state;
+}
+
+export function pinRegion(state, regionId = '', {capitalClaimant, capitalClaimantId} = {}) {
+  const normalized = normalizeId(regionId);
+  if (!normalized) return state;
+  if (!state.pinnedRegionIds) state.pinnedRegionIds = new Set();
+  if (!state.pinnedCapitalClaimants) state.pinnedCapitalClaimants = new Map();
+  state.pinnedRegionIds.add(normalized);
+  const hasClaimantOverride = capitalClaimant !== undefined || capitalClaimantId !== undefined;
+  if (hasClaimantOverride) {
+    const claimant = normalizeId(capitalClaimantId ?? capitalClaimant);
+    if (claimant) state.pinnedCapitalClaimants.set(normalized, claimant);
+    else state.pinnedCapitalClaimants.delete(normalized);
   }
+  return state;
+}
+
+export function unpinPinnedRegion(state, regionId = '') {
+  const normalized = normalizeId(regionId);
+  if (!normalized || !state.pinnedRegionIds) return state;
+  state.pinnedRegionIds.delete(normalized);
+  state.pinnedCapitalClaimants?.delete?.(normalized);
+  return state;
+}
+
+export function clearPinnedRegions(state) {
+  if (!state.pinnedRegionIds) state.pinnedRegionIds = new Set();
+  state.pinnedRegionIds.clear();
+  state.pinnedCapitalClaimants?.clear?.();
+  return state;
+}
+
+export function setReachableCapitalCandidatesVisible(state, visible = false) {
+  state.showReachableCapitalCandidates = !!visible;
+  return state;
+}
+
+export function toggleReachableCapitalCandidates(state) {
+  state.showReachableCapitalCandidates = !state.showReachableCapitalCandidates;
   return state;
 }
 
@@ -86,11 +144,6 @@ export function setClaimFilters(state, filters = {}) {
     changed = changed || state.filters.projectId !== projectId;
     state.filters.projectId = projectId;
   }
-  if ('onlyClaims' in filters) {
-    const onlyClaims = !!filters.onlyClaims;
-    changed = changed || state.filters.onlyClaims !== onlyClaims;
-    state.filters.onlyClaims = onlyClaims;
-  }
   if (changed) setSecondaryHoverNation(state);
   return state;
 }
@@ -99,6 +152,8 @@ export function clearSelectionState(state) {
   state.selectedNationId = '';
   state.lockedNationId = '';
   setSelectedRegions(state);
+  setFocusedRegion(state);
+  clearPinnedRegions(state);
   setActiveIncomingClaim(state);
   setSecondaryHoverNation(state);
   return state;

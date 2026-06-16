@@ -6,3 +6,11 @@ node_modules/
 playwright-report/
 test-results/
 data/generated/region_outlines.raw.json
+.venv-wsl
+.wsl-build-bin/
+
+# graphify local metadata and cache; keep portable graph outputs trackable.
+graphify-out/*
+!graphify-out/GRAPH_REPORT.md
+!graphify-out/graph.html
+!graphify-out/graph.json

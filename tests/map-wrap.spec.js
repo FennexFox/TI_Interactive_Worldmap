@@ -183,9 +183,100 @@ test('baseline hit layer resolves one canonical region for hover and click', asy
   await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveText('Manaus');
 
   await page.locator('#hitRegions').dispatchEvent('click', { bubbles: true });
+  await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
   await expect(page.locator('#search')).toHaveValue('');
   await expect(page.locator('#claimPill')).toHaveText('Claims: -');
   await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
+});
+
+test('single-copy grouped base fills preserve region-specific hit paths and filtering', async ({ page }) => {
+  await waitForSingleCopyMap(page);
+
+  const regionCount = await page.locator('#hitRegions .region-hit').count();
+  const nationFillStats = await page.evaluate(() => {
+    const groups = [...document.querySelectorAll('#normalRegionColors .normal-region-color')];
+    return {
+      groupCount: groups.length,
+      hasRegionDataset: groups.some(group => !!group.dataset.region),
+      totalGroupedRegions: groups.reduce((sum, group) => sum + Number(group.dataset.visualGroupSize || 0), 0),
+    };
+  });
+
+  expect(nationFillStats.groupCount).toBeGreaterThan(1);
+  expect(nationFillStats.groupCount).toBeLessThan(regionCount);
+  expect(nationFillStats.hasRegionDataset).toBe(false);
+  expect(nationFillStats.totalGroupedRegions).toBe(regionCount);
+
+  await page.selectOption('#baseMode', 'plain');
+  const plainFillStats = await page.evaluate(() => {
+    const groups = [...document.querySelectorAll('#normalRegionColors .normal-region-color')];
+    return {
+      groupCount: groups.length,
+      groupSize: Number(groups[0]?.dataset.visualGroupSize || 0),
+      pointerEvents: groups[0] ? getComputedStyle(groups[0]).pointerEvents : '',
+    };
+  });
+
+  expect(plainFillStats.groupCount).toBe(1);
+  expect(plainFillStats.groupSize).toBe(regionCount);
+  expect(plainFillStats.pointerEvents).toBe('none');
+
+  await page.locator('#search').fill('Amazonia');
+  const filteredStats = await page.evaluate(() => {
+    const groups = [...document.querySelectorAll('#normalRegionColors .normal-region-color')];
+    const hits = [...document.querySelectorAll('#hitRegions .region-hit')];
+    return {
+      groupCount: groups.length,
+      groupedRegions: groups.reduce((sum, group) => sum + Number(group.dataset.visualGroupSize || 0), 0),
+      hiddenHitCount: hits.filter(hit => hit.classList.contains('hidden')).length,
+      amazoniaHidden: document.querySelector('#hitRegions .region-hit[data-region="Amazonia"]')?.classList.contains('hidden') || false,
+      ontarioHidden: document.querySelector('#hitRegions .region-hit[data-region="Ontario"]')?.classList.contains('hidden') || false,
+    };
+  });
+
+  expect(filteredStats.groupCount).toBe(1);
+  expect(filteredStats.groupedRegions).toBeLessThan(regionCount);
+  expect(filteredStats.hiddenHitCount).toBeGreaterThan(0);
+  expect(filteredStats.amazoniaHidden).toBe(false);
+  expect(filteredStats.ontarioHidden).toBe(true);
+});
+
+test('claim grouped fills preserve per-region semantic outline paths', async ({ page }) => {
+  await waitForSingleCopyMap(page);
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+
+  const claimFillStats = await page.evaluate(() => {
+    const fills = [...document.querySelectorAll('#claimOverlays .claim-fill-group')];
+    const outlines = [...document.querySelectorAll('#claimOverlays .claim-overlay')];
+    return {
+      fillGroupCount: fills.length,
+      outlineCount: outlines.length,
+      fillGroupsWithRegion: fills.filter(fill => !!fill.dataset.region).length,
+      groupedRegions: fills.reduce((sum, fill) => sum + Number(fill.dataset.visualGroupSize || 0), 0),
+      ownedFillGroups: fills.filter(fill => fill.classList.contains('owned-territory')).length,
+      ownedOutlines: outlines.filter(outline => outline.classList.contains('owned-territory')).length,
+      peacefulOutlines: outlines.filter(outline => outline.classList.contains('peaceful')).length,
+      hostileOutlines: outlines.filter(outline => outline.classList.contains('hostile')).length,
+      allOutlinesFillNone: outlines.every(outline => outline.getAttribute('fill') === 'none'),
+    };
+  });
+
+  expect(claimFillStats.fillGroupCount).toBeGreaterThan(0);
+  expect(claimFillStats.fillGroupCount).toBeLessThan(claimFillStats.outlineCount);
+  expect(claimFillStats.fillGroupsWithRegion).toBe(0);
+  expect(claimFillStats.groupedRegions).toBe(claimFillStats.outlineCount);
+  expect(claimFillStats.ownedFillGroups).toBeGreaterThan(0);
+  expect(claimFillStats.ownedOutlines).toBeGreaterThan(0);
+  expect(claimFillStats.peacefulOutlines).toBeGreaterThan(0);
+  expect(claimFillStats.hostileOutlines).toBeGreaterThan(0);
+  expect(claimFillStats.allOutlinesFillNone).toBe(true);
+
+  await regionHit(page, 'Amazonia').hover();
+  await expect(page.locator('#hoverPill')).toHaveText('Hover: BRA · Manaus');
+  await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
 });
 
 test('baseline selected overlays stay canonical across hover and claim controls', async ({ page }) => {
@@ -240,6 +331,76 @@ test('world-wrap default renders base, grid, label, and hit copies', async ({ pa
   await page.locator('#showLabels').click();
   await expect(page.locator('#labels .label-copy')).toHaveCount(3);
   await expect(page.locator('#labels .label[data-region="Amazonia"]')).toHaveCount(3);
+});
+
+test('world-wrap default projects grouped base and claim fill copies', async ({ page }) => {
+  await waitForWrappedMap(page);
+
+  await page.selectOption('#baseMode', 'plain');
+  await expectProjectedCopies(page.locator('#normalRegionColors .normal-region-color'));
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
+  await expectProjectedCopies(page.locator('#claimOverlays .claim-fill-group.owned-territory[data-fill-key^="owned:"]'));
+  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
+});
+
+test('world-wrap default projects pinned node markers from row clicks', async ({ page }) => {
+  await waitForWrappedMap(page, '/?debugRenderStats=1');
+
+  await chooseNation(page, 'Brazil', 'BRA');
+  await page.locator('.claimListItem[data-claim-kind="outgoing"]').first().click();
+  await expect(page.locator('.legendRegionItem[data-region-name="FrenchGuiana"]').first()).toBeVisible();
+  const frenchGuianaRow = page.locator('.legendRegionRow')
+    .filter({ has: page.locator('.legendRegionItem[data-region-name="FrenchGuiana"]') });
+  const frenchGuianaItem = frenchGuianaRow.locator('.legendRegionItem');
+  await expect(frenchGuianaRow.locator('.legendRegionPin')).toHaveCount(0);
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await frenchGuianaItem.click();
+
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="FrenchGuiana"]')).toHaveCount(1);
+  await expectProjectedCopies(page.locator('#pinnedRegionMarkers .pinned-node-marker-group[data-region="FrenchGuiana"]'));
+  await expect(page.locator('#pinnedRegionMarkers .pinned-node-label[data-region="FrenchGuiana"]')).toHaveCount(0);
+  await expectProjectedCopies(page.locator('#selectionOutlines .selection-label[data-region="FrenchGuiana"]'));
+  await expect(page.locator('#selectionOutlines .selection-label[data-region="FrenchGuiana"]')).toHaveText(['Kourou', 'Kourou', 'Kourou']);
+  await expectProjectedCopies(page.locator('#pinnedRegionMarkers .pinned-outline[data-region="FrenchGuiana"]'));
+  await expectProjectedCopies(page.locator('#regions .region[data-region="FrenchGuiana"]'));
+  await expect(page.locator('#regions .region[data-region="FrenchGuiana"]')).toHaveClass([/pinned-node/, /pinned-node/, /pinned-node/]);
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.pinnedRegionMarkerRebuilds).toBeGreaterThan(0);
+});
+
+test('world-wrap default projects manual recursive envelope copies', async ({ page }) => {
+  await waitForWrappedMap(page);
+
+  await chooseNation(page, 'China', 'CHN');
+  await page.selectOption('#projectSel', 'Project_GreaterPanAsia');
+  await expect(page.locator('.legendRegionItem[data-region-name="NorthHonshu"]').first()).toBeVisible();
+  const northHonshuRow = page.locator('.legendRegionRow')
+    .filter({ has: page.locator('.legendRegionItem[data-region-name="NorthHonshu"]') });
+  await northHonshuRow.locator('.legendRegionItem').click();
+  await page.selectOption('#claimMode', 'all');
+
+  await expectProjectedCopies(page.locator('#manualEnvelopeOverlays .manual-envelope-region-outline[data-region="NorthHonshu"][data-envelope-depth="0"][data-envelope-source-count="2"]'));
+  await expectProjectedCopies(page.locator('#manualEnvelopeOverlays .manual-envelope-overlap[data-region="NorthHonshu"]'));
+  await expectProjectedCopies(page.locator('#manualEnvelopeOverlays .manual-envelope-region-outline[data-region="Luzon"][data-envelope-depth="1"][data-envelope-claimant="JPN"]'));
+  await expectProjectedCopies(page.locator('#manualEnvelopeOverlays .manual-envelope-fill[data-envelope-depth="0"]'));
+  await expectProjectedCopies(page.locator('#manualEnvelopeOverlays .manual-envelope-fill[data-envelope-depth="1"]'));
+});
+
+test('world-wrap default projects reachable capital candidate markers', async ({ page }) => {
+  await waitForWrappedMap(page);
+
+  await chooseNation(page, 'China', 'CHN');
+  await expect(page.locator('#reachableCapitalsBtn')).toHaveText('Hide reachable capitals');
+  await expect(page.locator('#reachableCapitalsBtn')).toHaveAttribute('aria-pressed', 'true');
+
+  await expectProjectedCopies(page.locator('#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="NorthHonshu"]'));
+  await expectProjectedCopies(page.locator('#reachableCapitalCandidates .reachable-capital-candidate-star[data-candidate-focus="NorthHonshu"]'));
+  await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="Assam"]')).toHaveCount(0);
+  await expect(page.locator('#reachableCapitalCandidates [data-candidate-pin]')).toHaveCount(0);
 });
 
 test('world-wrap default resolves copied hit paths to canonical region state', async ({ page }) => {
@@ -324,7 +485,9 @@ test('world-wrap default panning preserves click selection but suppresses drag s
   await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveText(['Manaus', 'Manaus', 'Manaus']);
 
   await page.locator('#hitRegions').dispatchEvent('click', {bubbles: true});
+  await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
   await expect(page.locator('#search')).toHaveValue('');
+  await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
 
   await dispatchPointerDragAndClick(amazon);
   await expect(page.locator('#search')).toHaveValue('');
@@ -502,6 +665,7 @@ test('world-wrap seam candidates keep hit, selection, and claim overlays project
     await copiedHit.dispatchEvent('click', { bubbles: true });
     await expectProjectedRegion(page, '#selectionOutlines .selection-label', regionName);
     await page.locator('#hitRegions').dispatchEvent('click', { bubbles: true });
+    await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
     await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
   }
 

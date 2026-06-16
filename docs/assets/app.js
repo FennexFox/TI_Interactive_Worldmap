@@ -1,16 +1,22 @@
 import {
+  clearPinnedRegions,
   clearSelectionState,
   clearTransientClaimState as clearTransientClaimAppState,
   createAppState,
+  pinRegion,
   setActiveIncomingClaim,
   setActiveScenarioId,
   setClaimFilters,
+  setFocusedRegion,
   setHoveredNation,
   setHoveredRegion,
   setLockedNation,
+  setPinnedRegions,
   setSecondaryHoverNation,
   setSelectedNation,
   setSelectedRegions,
+  toggleReachableCapitalCandidates,
+  unpinPinnedRegion,
 } from './state/app-state.js';
 import {
   applyMapVisualState as applyVisualState,
@@ -20,6 +26,7 @@ import {
   setHiddenVisualState as setHiddenState,
   setHoverVisualState as setHoverState,
   setOverlayVisualState as setOverlayState,
+  syncPinnedVisualState as syncPinnedState,
   syncSelectedVisualState as syncSelectedState,
 } from './state/map-visual-state.js';
 import {
@@ -29,9 +36,11 @@ import {
   zoomMapView,
 } from './state/map-view-state.js';
 import {createAppData, getActiveData} from './data/active-data.js';
-import {buildDerivedIndices, resolveSecondaryCapitalPreview} from './data/derived-indices.js';
+import {buildDerivedIndices} from './data/derived-indices.js';
 import {
   appendWorldCopyFragment,
+  buildVisualFillGroups,
+  createGroupedVisualFillFragment,
   createRegionPath,
   createSvgElement,
   defaultWorldCopyContext,
@@ -43,7 +52,33 @@ import {
   worldCopyDataset,
 } from './render/map-layers.js';
 
-window.TI_DATA_PROMISE.then(({regionMap, claimMap, catalogs = {}}) => {
+const appLoading = document.getElementById('appLoading');
+const appLoadingDetail = document.getElementById('appLoadingDetail');
+
+function dismissLoadingScreen() {
+  if (!appLoading) return;
+  window.requestAnimationFrame(() => {
+    appLoading.dataset.loadingState = 'done';
+    appLoading.setAttribute('aria-hidden', 'true');
+    window.setTimeout(() => appLoading.remove(), 240);
+  });
+}
+
+function showLoadingFailure(message, error) {
+  if (!appLoading) return false;
+  appLoading.dataset.loadingState = 'error';
+  appLoading.setAttribute('role', 'alert');
+  appLoading.removeAttribute('aria-hidden');
+  if (appLoadingDetail) {
+    const suffix = error?.message ? ` ${error.message}` : '';
+    appLoadingDetail.textContent = `${message}${suffix}`;
+  }
+  return true;
+}
+
+const tiDataPromise = window.TI_DATA_PROMISE || Promise.reject(new Error('Generated Terra Invicta map data promise is unavailable.'));
+
+tiDataPromise.then(({regionMap, claimMap, catalogs = {}}) => {
 const appData = createAppData({regionMap, claimMap, catalogs});
 function shouldEnableWorldWrap() {
   try {
@@ -107,14 +142,19 @@ const gGrid = document.getElementById('grid');
 const gForeignHoverOverlays = document.getElementById('foreignHoverOverlays');
 const gHoverClaimPreviewOverlays = document.getElementById('hoverClaimPreviewOverlays');
 const gClaimOverlays = document.getElementById('claimOverlays');
+const gManualEnvelopeOverlays = document.getElementById('manualEnvelopeOverlays');
 const gSecondaryHoverOverlays = document.getElementById('secondaryHoverOverlays');
 const gCapitalMarkers = document.getElementById('capitalMarkers');
 const gHoverOutlines = document.getElementById('hoverOutlines');
 const gSelectionOutlines = document.getElementById('selectionOutlines');
+const gPinnedRegionMarkers = document.getElementById('pinnedRegionMarkers');
+const gReachableCapitalCandidates = document.getElementById('reachableCapitalCandidates');
 const tip = document.getElementById('tip');
 const search = document.getElementById('search');
 const nationDropdown = document.getElementById('nationDropdown');
 const nationSearchCombo = document.getElementById('nationSearchCombo');
+const pinnedRegionsPanel = document.getElementById('pinnedRegionsPanel');
+const reachableCandidatesPanel = document.getElementById('reachableCandidatesPanel');
 const baseModeSel = document.getElementById('baseMode');
 const claimModeSel = document.getElementById('claimMode');
 const projectSel = document.getElementById('projectSel');
@@ -164,7 +204,28 @@ function createDebugRenderStats() {
     'foreignHoverOverlayReplacements',
     'hoverClaimPreviewOverlayReplacements',
     'secondaryHoverOverlayReplacements',
+    'manualEnvelopeModelBuilds',
+    'manualEnvelopeModelCacheHits',
+    'manualEnvelopeRebuilds',
+    'reachableCapitalCandidateDescriptorBuilds',
+    'reachableCapitalCandidateDescriptorCacheHits',
+    'reachableCapitalCandidateRebuilds',
     'capitalMarkerRebuilds',
+    'pinnedRegionMarkerRebuilds',
+    'panPointerMoveCount',
+    'panFrameMsCount',
+    'panFrameMsTotal',
+    'panFrameMsMax',
+    'mapViewApplyMsCount',
+    'mapViewApplyMsTotal',
+    'mapViewApplyMsMax',
+    'gridRenderMsCount',
+    'gridRenderMsTotal',
+    'gridRenderMsMax',
+    'panViewBoxApplyCount',
+    'gridRebuildsDuringPan',
+    'panSvgRectReads',
+    'visibleSvgNodeCount',
   ];
   const stats = {};
   for (const key of keys) stats[key] = 0;
@@ -183,6 +244,17 @@ function recordRenderStat(key, amount = 1) {
   if (!debugRenderStats) return;
   debugRenderStats[key] = (debugRenderStats[key] || 0) + amount;
 }
+function setRenderStat(key, value) {
+  if (!debugRenderStats) return;
+  debugRenderStats[key] = Number.isFinite(Number(value)) ? Number(value) : 0;
+}
+function recordRenderTiming(key, value) {
+  if (!debugRenderStats) return;
+  const ms = Math.max(0, Number(value) || 0);
+  recordRenderStat(`${key}Count`);
+  recordRenderStat(`${key}Total`, ms);
+  debugRenderStats[`${key}Max`] = Math.max(debugRenderStats[`${key}Max`] || 0, ms);
+}
 
 const DEBUG_CLAIM_OVERLAY_DELAY_QUERY = 'debugClaimOverlayDelayFrames';
 function debugClaimOverlayDelayFrames() {
@@ -200,7 +272,7 @@ const LANGUAGE_STORAGE_KEY = 'ti-map-language';
 const ASIDE_CARD_ORDER_STORAGE_KEY = 'ti-map-aside-card-order';
 const ASIDE_CARD_COLLAPSE_STORAGE_KEY = 'ti-map-aside-card-collapsed';
 const NATION_INFO_SECTION_STORAGE_KEY = 'ti-map-nation-info-sections';
-const DEFAULT_ASIDE_CARD_ORDER = ['explore', 'selected'];
+const DEFAULT_ASIDE_CARD_ORDER = ['explore', 'expansionNodes', 'selected'];
 const I18N = {
   ko: {
     'document.title': 'Terra Invicta 영유권 / 통합 지도',
@@ -208,7 +280,7 @@ const I18N = {
     'section.explore': '탐색 및 선택',
     'search.label': '국가/지역 검색 및 선택',
     'search.placeholder': '국가 태그, 지역명, 프로젝트명 입력: CHN, Korea, Greater India...',
-    'search.help': '입력창을 클릭하면 국가 목록이 열립니다. 입력하면 국가, 지역, 영유권 프로젝트 목록이 필터링되고, 항목을 클릭하면 선택됩니다. 빈 지도 공간을 클릭하면 선택이 해제됩니다.',
+    'search.help': '입력창을 클릭하면 국가 목록이 열립니다. 입력하면 국가, 지역, 영유권 프로젝트 목록이 필터링되고, 항목을 클릭하면 선택됩니다. 빈 지도 공간을 클릭하면 고정된 확장 노드와 선택이 함께 해제됩니다.',
     'search.noResults': '검색 결과 없음',
     'search.regionTag': '지역',
     'claimMode.label': '영유권 표시',
@@ -226,8 +298,35 @@ const I18N = {
     'baseMode.plain': '단색',
     'baseMode.points': '경계 복잡도',
     'button.toggleLabels': '지역 라벨 토글',
-    'button.onlyClaims': '영유권 대상만 보기',
-    'button.showAllMap': '전체 지도 보기',
+    'button.showReachableCapitals': '도달 가능한 수도 표시',
+    'button.hideReachableCapitals': '도달 가능한 수도 숨기기',
+    'section.expansionNodes': '확장 노드',
+    'expansionNodes.empty': '고정된 확장 노드가 없습니다.',
+    'expansionNodes.count': '고정 노드 {count}개',
+    'expansionNodes.clear': '모두 해제',
+    'expansionNodes.focus': '초점',
+    'expansionNodes.focusRegion': '{region}에 초점',
+    'expansionNodes.pin': '고정',
+    'expansionNodes.pinRegion': '{region} 고정',
+    'expansionNodes.unpin': '고정 해제',
+    'expansionNodes.unpinRegion': '{region} 고정 해제',
+    'expansionNodes.marker': '고정 노드 {index}: {region}',
+    'expansionNodes.owner': '소유국 {nation}',
+    'expansionNodes.capitalClaimant': '수도 국가 {nation}',
+    'expansionNodes.capitalClaimants': '수도 국가 {count}개: {nations}',
+    'expansionNodes.noCapitalClaimant': '수도 국가 없음',
+    'manualEnvelope.depth': '수동 확장 깊이 {depth}',
+    'manualEnvelope.region': '{region}: 깊이 {depth}, {source}',
+    'manualEnvelope.source': '{nation} · {kind}',
+    'manualEnvelope.kindBase': '기본 영토',
+    'manualEnvelope.kindClaim': '{project}',
+    'manualEnvelope.overlap': '{region}: {count}개 수동 확장 출처 중첩',
+    'reachableCandidates.count': '후보 수도 {count}개',
+    'reachableCandidates.empty': '도달 가능한 수도 후보가 없습니다.',
+    'reachableCandidates.focus': '초점',
+    'reachableCandidates.focusRegion': '{region}에 초점',
+    'reachableCandidates.marker': '도달 가능한 수도 {region}: {nations}',
+    'reachableCandidates.depth': '깊이 {depth}',
     'section.selectedNation': '선택한 지역',
     'sectionCard.moveUp': '카드 위로 이동',
     'sectionCard.moveDown': '카드 아래로 이동',
@@ -314,7 +413,7 @@ const I18N = {
     'section.explore': 'Explore and Select',
     'search.label': 'Search and select nation/region',
     'search.placeholder': 'Enter a nation tag, region, or project: CHN, Korea, Greater India...',
-    'search.help': 'Click the field to open the nation list. Typing filters nations, regions, and claim projects; click an item to select it. Click empty map space to clear the selection.',
+    'search.help': 'Click the field to open the nation list. Typing filters nations, regions, and claim projects; click an item to select it. Click empty map space to clear the selection and pinned expansion nodes together.',
     'search.noResults': 'No results',
     'search.regionTag': 'REGION',
     'claimMode.label': 'Claim display',
@@ -332,8 +431,35 @@ const I18N = {
     'baseMode.plain': 'Plain',
     'baseMode.points': 'Boundary complexity',
     'button.toggleLabels': 'Toggle region labels',
-    'button.onlyClaims': 'Show claim targets only',
-    'button.showAllMap': 'Show full map',
+    'button.showReachableCapitals': 'Show reachable capitals',
+    'button.hideReachableCapitals': 'Hide reachable capitals',
+    'section.expansionNodes': 'Expansion Nodes',
+    'expansionNodes.empty': 'No pinned expansion nodes.',
+    'expansionNodes.count': '{count} pinned nodes',
+    'expansionNodes.clear': 'Clear all',
+    'expansionNodes.focus': 'Focus',
+    'expansionNodes.focusRegion': 'Focus {region}',
+    'expansionNodes.pin': 'Pin',
+    'expansionNodes.pinRegion': 'Pin {region}',
+    'expansionNodes.unpin': 'Unpin',
+    'expansionNodes.unpinRegion': 'Unpin {region}',
+    'expansionNodes.marker': 'Pinned node {index}: {region}',
+    'expansionNodes.owner': 'Owner {nation}',
+    'expansionNodes.capitalClaimant': 'Capital claimant {nation}',
+    'expansionNodes.capitalClaimants': '{count} capital claimants: {nations}',
+    'expansionNodes.noCapitalClaimant': 'No capital claimant',
+    'manualEnvelope.depth': 'Manual expansion depth {depth}',
+    'manualEnvelope.region': '{region}: depth {depth}, {source}',
+    'manualEnvelope.source': '{nation} · {kind}',
+    'manualEnvelope.kindBase': 'base territory',
+    'manualEnvelope.kindClaim': '{project}',
+    'manualEnvelope.overlap': '{region}: {count} overlapping manual expansion sources',
+    'reachableCandidates.count': '{count} candidate capitals',
+    'reachableCandidates.empty': 'No reachable capital candidates.',
+    'reachableCandidates.focus': 'Focus',
+    'reachableCandidates.focusRegion': 'Focus {region}',
+    'reachableCandidates.marker': 'Reachable capital {region}: {nations}',
+    'reachableCandidates.depth': 'Depth {depth}',
     'section.selectedNation': 'Selected Region',
     'sectionCard.moveUp': 'Move card up',
     'sectionCard.moveDown': 'Move card down',
@@ -555,9 +681,12 @@ function setClaimsPillEmpty() {
   const el = document.getElementById('claimPill');
   if (el) el.textContent = t('pill.claimsEmpty');
 }
-function updateOnlyClaimsButtonLabel() {
-  const el = document.getElementById('onlyClaimsBtn');
-  if (el) el.textContent = getOnlyClaims() ? t('button.showAllMap') : t('button.onlyClaims');
+function updateReachableCapitalsButtonState() {
+  const el = document.getElementById('reachableCapitalsBtn');
+  if (!el) return;
+  const visible = getShowReachableCapitalCandidates();
+  el.textContent = visible ? t('button.hideReachableCapitals') : t('button.showReachableCapitals');
+  el.setAttribute('aria-pressed', visible ? 'true' : 'false');
 }
 function applyStaticTranslations() {
   document.documentElement.lang = currentLanguage;
@@ -568,7 +697,7 @@ function applyStaticTranslations() {
   document.querySelectorAll('[data-i18n-title]').forEach(el => { el.setAttribute('title', t(el.dataset.i18nTitle)); });
   document.querySelectorAll('[data-i18n-aria-label]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAriaLabel)); });
   if (languageSel) languageSel.value = currentLanguage;
-  updateOnlyClaimsButtonLabel();
+  updateReachableCapitalsButtonState();
   updateAsideCardControls();
 }
 
@@ -591,6 +720,8 @@ let hoverPreviewFrame = 0;
 let hoverClaimPreviewNation = '';
 let visibleNationRegionNames = new Set();
 let currentOverlayModel = null;
+let activeClaimPreviewRegionScopeKey = '';
+let activeClaimPreviewRegionScope = null;
 let tooltipRegionId = null;
 let svgWrapRectCache = null;
 let tooltipSizeCache = {width: 160, height: 26, valid: false};
@@ -602,6 +733,7 @@ let secondaryHoverVisualKey = '';
 let hoverOutlineVisualKey = '';
 let capitalMarkersKey = '';
 let mapViewFrame = 0;
+let pendingMapViewRenderContext = null;
 let panHoverRefreshFrame = 0;
 let pendingPanHoverPoint = null;
 let mapPanState = null;
@@ -612,18 +744,29 @@ const regionCenterCache = new Map();
 const OVERLAY_MODEL_CACHE_LIMIT = 256;
 const OVERLAY_DESCRIPTOR_CACHE_LIMIT = 256;
 const FOREIGN_HOVER_DESCRIPTOR_CACHE_LIMIT = 128;
+const MANUAL_ENVELOPE_MODEL_CACHE_LIMIT = 128;
+const REACHABLE_CAPITAL_CANDIDATE_DESCRIPTOR_CACHE_LIMIT = 128;
+const EMPTY_MANUAL_ENVELOPE_MODEL_CACHE_VALUE = Symbol('empty-manual-envelope-model');
 const overlayModelCache = new Map();
 const claimOverlayDescriptorCache = new Map();
 const claimLabelDescriptorCache = new Map();
 const foreignHoverDescriptorCache = new Map();
+const manualEnvelopeModelCache = new Map();
+const reachableCapitalCandidateDescriptorCache = new Map();
 const CLAIM_OVERLAY_EMPTY_RENDER_KEY = 'claim-overlay-paths:empty';
 const CLAIM_LABEL_EMPTY_RENDER_KEY = 'claim-labels:empty';
 const FOREIGN_HOVER_EMPTY_RENDER_KEY = 'foreign-hover:empty';
 const HOVER_CLAIM_PREVIEW_EMPTY_RENDER_KEY = 'hover-claim-preview:empty';
 const SECONDARY_HOVER_EMPTY_RENDER_KEY = 'secondary-hover:empty';
 const HOVER_OUTLINE_EMPTY_RENDER_KEY = 'hover-outline:empty';
+const MANUAL_ENVELOPE_EMPTY_RENDER_KEY = 'manual-envelope:empty';
+const PINNED_REGION_MARKERS_EMPTY_RENDER_KEY = 'pinned-region-markers:empty';
+const REACHABLE_CAPITAL_CANDIDATES_EMPTY_RENDER_KEY = 'reachable-capital-candidates:empty';
 const claimOverlayLayerRenderKeys = new WeakMap();
 const claimLabelLayerRenderKeys = new WeakMap();
+const manualEnvelopeLayerRenderKeys = new WeakMap();
+const pinnedRegionMarkerLayerRenderKeys = new WeakMap();
+const reachableCapitalCandidateLayerRenderKeys = new WeakMap();
 const claimOverlayBufferStates = new WeakMap();
 const claimLabelBufferStates = new WeakMap();
 const MAP_PAN_DRAG_THRESHOLD_PX = 4;
@@ -672,17 +815,60 @@ function setHoveredRegionState(regionName = '', nationId) {
   setHoveredRegion(appState, regionName, nationId);
 }
 
+function setFocusedRegionState(regionName = '') {
+  setFocusedRegion(appState, regionName);
+}
+
+function changedRegionIds(previousRegionIds = [], nextRegionIds = []) {
+  return [...new Set([...(previousRegionIds || []), ...(nextRegionIds || [])].filter(Boolean))];
+}
+
 function setSelectedRegionIds(regionIds = []) {
+  const previous = [...selectedRegionIds];
   setSelectedRegions(appState, regionIds);
   syncSelectedVisualState();
+  return changedRegionIds(previous, [...selectedRegionIds]);
+}
+
+function setPinnedRegionIds(regionIds = []) {
+  const previous = [...getPinnedRegionIds()];
+  setPinnedRegions(appState, regionIds);
+  refreshPinnedRegionOutputs([...previous, ...getPinnedRegionIds()]);
+}
+
+function getPinnedCapitalClaimant(regionName = '') {
+  return appState.pinnedCapitalClaimants?.get?.(regionName) || '';
+}
+
+function pinRegionState(regionName = '', options = {}) {
+  if (!regionName) return;
+  const wasPinned = getPinnedRegionIds().has(regionName);
+  const previousClaimant = getPinnedCapitalClaimant(regionName);
+  pinRegion(appState, regionName, options);
+  const nextClaimant = getPinnedCapitalClaimant(regionName);
+  if (wasPinned && previousClaimant === nextClaimant) return;
+  refreshPinnedRegionOutputs([regionName]);
+}
+
+function unpinPinnedRegionState(regionName = '') {
+  unpinPinnedRegion(appState, regionName);
+  refreshPinnedRegionOutputs([regionName]);
+}
+
+function clearPinnedRegionState() {
+  const previous = [...getPinnedRegionIds()];
+  clearPinnedRegions(appState);
+  refreshPinnedRegionOutputs(previous);
+}
+
+function toggleReachableCapitalCandidatesState() {
+  toggleReachableCapitalCandidates(appState);
+  updateReachableCapitalsButtonState();
+  refreshReachableCapitalCandidateOutputs(currentOverlayModel);
 }
 
 function setProjectFilterState(projectId = '') {
   setClaimFilters(appState, {projectId});
-}
-
-function setOnlyClaimsState(value) {
-  setClaimFilters(appState, {onlyClaims: value});
 }
 
 function setActiveIncomingClaimKeyState(claimKey = '') {
@@ -693,13 +879,19 @@ function syncSelectedVisualState() {
   syncSelectedState(mapVisualState, selectedRegionIds);
 }
 
+function syncPinnedVisualState() {
+  syncPinnedState(mapVisualState, getPinnedRegionIds());
+}
+
 function getActiveNation() { return appState.selectedNationId || ''; }
 function getHoverNation() { return appState.hoveredNationId || ''; }
 function getSecondaryHoverNation() { return appState.interaction?.secondaryHoverNationId || ''; }
 function getLockedNation() { return appState.lockedNationId || ''; }
 function getHoveredRegionName() { return appState.hoveredRegionId || ''; }
+function getFocusedRegionName() { return appState.focusedRegionId || ''; }
+function getPinnedRegionIds() { return appState.pinnedRegionIds || new Set(); }
+function getShowReachableCapitalCandidates() { return !!appState.showReachableCapitalCandidates; }
 function getProjectFilter() { return appState.filters.projectId || ''; }
-function getOnlyClaims() { return !!appState.filters.onlyClaims; }
 function getActiveIncomingClaimKey() { return appState.activeIncomingClaimKey || ''; }
 
 function setHoverVisualState(regionName = '') {
@@ -776,6 +968,12 @@ const CLAIM_TIER_COLORS = [
   claimGradientColor(5, 0.53, 0.21), // research tier 4
   claimGradientColor(6, 0.49, 0.22), // research tier 5+
 ];
+const MANUAL_ENVELOPE_DEPTH_COLORS = [
+  'oklch(0.80 0.13 168 / .30)',
+  'oklch(0.76 0.15 214 / .28)',
+  'oklch(0.75 0.16 285 / .26)',
+  'oklch(0.78 0.14 35 / .24)',
+];
 // Reuse the same hue as the single-region hover fill, then fade it by tier.
 // The final hidden step is no overlay at all, which returns to the muted non-hover map.
 const HOVER_NATION_OVERLAY_COLOR = 'oklch(0.86 0.17 95)';
@@ -827,6 +1025,11 @@ function injectClaimOverlayStyles() {
       stroke:#fff;
       stroke-width:.02;
     }
+    svg.claims-active .region.pinned-node {
+      stroke:#5eead4;
+      stroke-width:.021;
+      opacity:1;
+    }
     svg.claims-active .region:hover,
     svg.claims-active .region.hovered {
       filter:none;
@@ -836,6 +1039,16 @@ function injectClaimOverlayStyles() {
       mix-blend-mode:normal;
       filter:none;
       opacity:1;
+    }
+    .claim-fill-group {
+      pointer-events:none;
+      stroke:none;
+      mix-blend-mode:normal;
+      filter:none;
+      opacity:1;
+    }
+    .claim-fill-group.gated {
+      opacity:.72;
     }
     svg.claims-active .claim-overlay.gated {
       opacity:1;
@@ -1058,13 +1271,59 @@ function addCapitalMarkerNation(markers, nation, {selected=false} = {}) {
     });
   }
 }
+function appendCapitalMarkerGroup(frag, region, {
+  nation = '',
+  selected = false,
+  copyContext = defaultWorldCopyContext(),
+  className = '',
+  ariaLabel = '',
+  dataset = {},
+  starClassName = '',
+  starDataset = {},
+} = {}) {
+  const lab = labelPosition(region);
+  if (!lab) return null;
+  const copyData = worldCopyDataset(copyContext);
+  const group = createSvgElement('g', {
+    class: `capital-marker${selected ? ' is-selected' : ' is-idle'}${className ? ` ${className}` : ''}`,
+    'aria-label': ariaLabel || `${t('nationInfo.kv.capitalRegion')}: ${localizedRegionName(region)}`,
+  }, {
+    region: region.regionName,
+    nation,
+    ...dataset,
+    ...copyData,
+  });
+  const points = starPoints(lab.x, lab.y);
+  group.appendChild(createSvgElement('polygon', {
+    class: 'capital-star-shadow',
+    points,
+    'aria-hidden': 'true',
+  }));
+  group.appendChild(createSvgElement('polygon', {
+    class: `capital-star${starClassName ? ` ${starClassName}` : ''}`,
+    points,
+  }, {...starDataset, ...copyData}));
+  frag.appendChild(group);
+  return group;
+}
+function isPinnedCapitalRegionForNation(nation) {
+  if (!nation) return false;
+  return [...getPinnedRegionIds()].some(rn => isCapitalRegionForNation(nation, rn));
+}
+function isActiveCapitalMarkerSelected(nation) {
+  return [...selectedRegionIds].some(rn => isCapitalRegionForNation(nation, rn))
+    || isCapitalRegionForNation(nation, getHoveredRegionName())
+    || isPinnedCapitalRegionForNation(nation);
+}
+function shouldSuppressHoveredOwnerCapitalMarker(region) {
+  const claimant = resolveSecondaryCapitalPreviewNation(region);
+  return !!claimant && claimant !== region?.nationTag;
+}
 function collectCapitalMarkers() {
   const markers = new Map();
   const pinnedNation = getLockedNation() || getActiveNation();
   if (pinnedNation) {
-    const selected = [...selectedRegionIds].some(rn => isCapitalRegionForNation(pinnedNation, rn))
-      || isCapitalRegionForNation(pinnedNation, getHoveredRegionName());
-    addCapitalMarkerNation(markers, pinnedNation, {selected});
+    addCapitalMarkerNation(markers, pinnedNation, {selected:isActiveCapitalMarkerSelected(pinnedNation)});
   }
 
   for (const rn of selectedRegionIds) {
@@ -1075,9 +1334,11 @@ function collectCapitalMarkers() {
   const hovered = getHoveredRegionName() ? regionByName[getHoveredRegionName()] : null;
   if (hovered) {
     if (getActiveNation() && visibleNationRegionNames.has(hovered.regionName)) {
-      addCapitalMarkerNation(markers, getActiveNation(), {selected:isCapitalRegionForNation(getActiveNation(), hovered.regionName)});
+      addCapitalMarkerNation(markers, getActiveNation(), {selected:isActiveCapitalMarkerSelected(getActiveNation())});
     }
-    addCapitalMarkerNation(markers, hovered.nationTag, {selected:isCapitalRegionForNation(hovered.nationTag, hovered.regionName)});
+    if (!shouldSuppressHoveredOwnerCapitalMarker(hovered)) {
+      addCapitalMarkerNation(markers, hovered.nationTag, {selected:isCapitalRegionForNation(hovered.nationTag, hovered.regionName)});
+    }
   }
 
   if (!markers.size) addCapitalMarkerNation(markers, getHoverNation());
@@ -1097,31 +1358,12 @@ function renderCapitalMarkers({force=false, copyContexts=worldCopyContexts} = {}
     const frag = document.createDocumentFragment();
     for (const markerInfo of markers) {
       const region = regionByName[markerInfo.regionName];
-      const lab = labelPosition(region);
-      if (!lab) continue;
-      const group = createSvgElement('g', {
-        class: `capital-marker${markerInfo.selected ? ' is-selected' : ' is-idle'}`,
-        'aria-label': `${t('nationInfo.kv.capitalRegion')}: ${localizedRegionName(region)}`,
-      }, {
-        region: markerInfo.regionName,
+      if (!region) continue;
+      appendCapitalMarkerGroup(frag, region, {
         nation: markerInfo.nation,
-        ...worldCopyDataset(copyContext),
+        selected: markerInfo.selected,
+        copyContext,
       });
-
-      const points = starPoints(lab.x, lab.y);
-      const shadow = createSvgElement('polygon', {
-        class: 'capital-star-shadow',
-        points,
-        'aria-hidden': 'true',
-      });
-      group.appendChild(shadow);
-
-      const star = createSvgElement('polygon', {
-        class: 'capital-star',
-        points,
-      });
-      group.appendChild(star);
-      frag.appendChild(group);
     }
     return frag;
   }));
@@ -1434,6 +1676,7 @@ function clearHoverPreview() {
   if (useHoverDelta) applyMapVisualStateForRegions([previousRegionName]);
   else applyMapVisualState();
   renderHoverOutlines();
+  syncReachableCapitalCandidateHoverState();
   if (getLockedNation()) {
     setHoverNationState();
     renderCapitalMarkers();
@@ -1547,6 +1790,99 @@ function selectedRegionSummary() {
   }
   return t('selected.regions', {count: names.length});
 }
+function pinnedCapitalClaimants(regionName) {
+  return [...new Set(derivedIndices.capitalNationsByRegion?.get?.(regionName) || [])].filter(Boolean);
+}
+function pinnedExpansionClaimants(regionName) {
+  const claimants = pinnedCapitalClaimants(regionName);
+  const preferredClaimant = getPinnedCapitalClaimant(regionName);
+  if (preferredClaimant && claimants.includes(preferredClaimant)) return [preferredClaimant];
+  return claimants;
+}
+function pinnedRegionCapitalSummary(regionName) {
+  const claimants = pinnedExpansionClaimants(regionName);
+  if (!claimants.length) return t('expansionNodes.noCapitalClaimant');
+  const names = claimants.map(nation => nationDisplayName(nation));
+  if (claimants.length === 1) return t('expansionNodes.capitalClaimant', {nation: names[0]});
+  return t('expansionNodes.capitalClaimants', {
+    count: formatNumber(claimants.length),
+    nations: names.slice(0, 3).join(', ') + (names.length > 3 ? `, +${names.length - 3}` : ''),
+  });
+}
+function pinnedRegionOwnerSummary(region) {
+  return region?.nationTag ? t('expansionNodes.owner', {nation: nationDisplayName(region.nationTag)}) : '';
+}
+function pinnedRegionRow(regionName) {
+  const region = regionByName[regionName];
+  const label = localizedRegionName(region || regionName);
+  const owner = pinnedRegionOwnerSummary(region);
+  const capital = pinnedRegionCapitalSummary(regionName);
+  const meta = [owner, capital].filter(Boolean).join(' · ');
+  return `
+    <div class="pinnedRegionRow" data-pinned-region="${escapeHtml(regionName)}">
+      <button type="button" class="pinnedRegionFocus" data-pinned-focus="${escapeHtml(regionName)}" aria-label="${escapeHtml(t('expansionNodes.focusRegion', {region: label}))}">
+        <span class="pinnedRegionMain">
+          <b>${escapeHtml(label)}</b>
+          <span>${escapeHtml(meta)}</span>
+        </span>
+        <span class="pinnedRegionFocusText">${escapeHtml(t('expansionNodes.focus'))}</span>
+      </button>
+      <button type="button" class="pinnedRegionUnpin" data-pinned-unpin="${escapeHtml(regionName)}" title="${escapeHtml(t('expansionNodes.unpinRegion', {region: label}))}" aria-label="${escapeHtml(t('expansionNodes.unpinRegion', {region: label}))}">×</button>
+    </div>
+  `;
+}
+function focusPinnedRegion(regionName) {
+  const region = regionByName[regionName];
+  if (!region) return;
+  if (getLockedNation() || getActiveNation()) {
+    focusRegions([regionName], {selectSingle: true, preserveNation: true, refreshOverlay: true});
+    return;
+  }
+  selectRegion(region);
+}
+function bindPinnedRegionsPanelEvents() {
+  if (!pinnedRegionsPanel) return;
+  pinnedRegionsPanel.querySelectorAll('[data-pinned-focus]').forEach(button => {
+    button.addEventListener('click', () => focusPinnedRegion(button.dataset.pinnedFocus));
+  });
+  pinnedRegionsPanel.querySelectorAll('[data-pinned-unpin]').forEach(button => {
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      unpinPinnedRegionState(button.dataset.pinnedUnpin);
+    });
+  });
+  pinnedRegionsPanel.querySelector('[data-pinned-clear]')?.addEventListener('click', event => {
+    event.stopPropagation();
+    clearPinnedRegionState();
+  });
+}
+function renderPinnedRegionsPanel() {
+  if (!pinnedRegionsPanel) return;
+  const pinned = [...getPinnedRegionIds()].filter(regionName => regionByName[regionName]);
+  if (!pinned.length) {
+    pinnedRegionsPanel.innerHTML = `<div class="pinnedRegionEmpty small">${escapeHtml(t('expansionNodes.empty'))}</div>`;
+    return;
+  }
+  const rows = pinned.map(pinnedRegionRow).join('');
+  pinnedRegionsPanel.innerHTML = `
+    <div class="pinnedRegionToolbar">
+      <span class="pinnedRegionCount">${escapeHtml(t('expansionNodes.count', {count: formatNumber(pinned.length)}))}</span>
+      <button type="button" class="pinnedRegionClear" data-pinned-clear>${escapeHtml(t('expansionNodes.clear'))}</button>
+    </div>
+    <div class="pinnedRegionList">${rows}</div>
+  `;
+  bindPinnedRegionsPanelEvents();
+}
+function refreshPinnedRegionOutputs(changedRegionIds = []) {
+  const changed = [...new Set((changedRegionIds || []).filter(Boolean))];
+  syncPinnedVisualState();
+  if (changed.length) applyMapVisualStateForRegions(changed);
+  else applyMapVisualState();
+  renderPinnedRegionsPanel();
+  renderPinnedRegionMarkers();
+  renderManualEnvelopeOverlay(currentOverlayModel);
+  refreshReachableCapitalCandidateOutputs(currentOverlayModel);
+}
 function appendRegionHighlight(frag, r, classPrefix, copyContext = defaultWorldCopyContext()) {
   for (const suffix of ['fill', 'outline-glow', 'outline']) {
     const p = createRegionPath(r, {class: `${classPrefix}-${suffix}`}, {
@@ -1557,44 +1893,118 @@ function appendRegionHighlight(frag, r, classPrefix, copyContext = defaultWorldC
     frag.appendChild(p);
   }
 }
-function appendSelectedRegionMarker(frag, r, {showDot=true, copyContext=defaultWorldCopyContext()} = {}) {
+function appendSelectedRegionMarker(frag, r, {
+  showDot = true,
+  showLabel = true,
+  copyContext = defaultWorldCopyContext(),
+  dotClassName = '',
+  labelClassName = '',
+} = {}) {
   const lab = labelPosition(r);
   if (!lab) return;
   const copyData = worldCopyDataset(copyContext);
   if (showDot) {
     const dot = createSvgElement('circle', {
-      class: 'selection-dot',
+      class: `selection-dot${dotClassName ? ` ${dotClassName}` : ''}`,
       cx: lab.x,
       cy: lab.y,
       r: '.032',
     }, {region: r.regionName, ...copyData});
     frag.appendChild(dot);
   }
+  if (!showLabel) return;
   const text = createSvgElement('text', {
-    class: 'selection-label',
+    class: `selection-label${labelClassName ? ` ${labelClassName}` : ''}`,
     x: lab.x,
     y: lab.y - 0.052,
     textContent: localizedRegionName(r),
   }, {region: r.regionName, ...copyData});
   frag.appendChild(text);
 }
+function pinnedRegionMarkerRenderKey(pinned, {copyContexts = worldCopyContexts, selectedPinnedRegions = []} = {}) {
+  if (!pinned.length) return PINNED_REGION_MARKERS_EMPTY_RENDER_KEY;
+  return JSON.stringify({
+    kind: 'pinned-region-markers',
+    copyPlan: copyContextRenderKey(copyContexts),
+    language: currentLanguage,
+    selectedPinnedRegions,
+    pinned,
+  });
+}
+function appendPinnedRegionMarker(frag, region, index, {copyContext = defaultWorldCopyContext(), showLabel = true} = {}) {
+  const lab = labelPosition(region);
+  if (!lab) return;
+  const label = localizedRegionName(region);
+  const isCapital = pinnedExpansionClaimants(region.regionName).length > 0;
+  const group = createSvgElement('g', {
+    class: `pinned-node-marker-group${isCapital ? ' capital-marker is-selected' : ''}`,
+    'aria-label': t('expansionNodes.marker', {index: formatNumber(index), region: label}),
+  }, {
+    region: region.regionName,
+    pinIndex: index,
+    ...worldCopyDataset(copyContext),
+  });
+  if (isCapital) {
+    const points = starPoints(lab.x, lab.y);
+    group.appendChild(createSvgElement('polygon', {
+      class: 'capital-star-shadow',
+      points,
+      'aria-hidden': 'true',
+    }));
+    group.appendChild(createSvgElement('polygon', {
+      class: 'capital-star',
+      points,
+    }));
+  }
+  appendSelectedRegionMarker(group, region, {
+    showDot: !isCapital,
+    showLabel,
+    copyContext,
+    dotClassName: 'pinned-node-dot',
+    labelClassName: 'pinned-node-label',
+  });
+  frag.appendChild(group);
+}
+function createPinnedRegionMarkerFragment(pinned, {copyContexts=worldCopyContexts, selectedPinnedRegions=[]} = {}) {
+  const selectedPinnedRegionSet = new Set(selectedPinnedRegions);
+  return createProjectedCopyFragment(copyContexts, 'pinned-region-marker-copy', copyContext => {
+    const frag = document.createDocumentFragment();
+    pinned.forEach((regionName, index) => {
+      const region = regionByName[regionName];
+      if (!region) return;
+      appendRegionHighlight(frag, region, 'pinned', copyContext);
+      appendPinnedRegionMarker(frag, region, index + 1, {
+        copyContext,
+        showLabel: !selectedPinnedRegionSet.has(regionName),
+      });
+    });
+    return frag;
+  });
+}
+function renderPinnedRegionMarkers({copyContexts=worldCopyContexts} = {}) {
+  if (!gPinnedRegionMarkers) return;
+  const pinned = [...getPinnedRegionIds()].filter(regionName => regionByName[regionName]);
+  const selectedPinnedRegions = pinned.filter(regionName => selectedRegionIds.has(regionName));
+  replaceLayerChildrenForRenderKey(
+    gPinnedRegionMarkers,
+    pinnedRegionMarkerLayerRenderKeys,
+    pinnedRegionMarkerRenderKey(pinned, {copyContexts, selectedPinnedRegions}),
+    () => createPinnedRegionMarkerFragment(pinned, {copyContexts, selectedPinnedRegions}),
+    'pinnedRegionMarkerRebuilds'
+  );
+}
 function shouldShowForeignHoverNationOverlay(region) {
   if (!region?.nationTag) return false;
   const pinnedNation = getLockedNation() || getActiveNation();
   if (!pinnedNation) return false;
-  if (visibleNationRegionNames.has(region.regionName)) return false;
+  const scope = buildActiveExpansionScope(currentOverlayModel);
+  if (scope.regionSet?.has?.(region.regionName)) return false;
   return region.nationTag !== pinnedNation;
 }
 function resolveSecondaryCapitalPreviewNation(region) {
-  const selectedNation = getLockedNation();
-  if (!selectedNation || !region?.regionName) return '';
-  return resolveSecondaryCapitalPreview({
-    activeData,
-    indices: derivedIndices,
-    selectedNationId: selectedNation,
-    hoveredRegionId: region.regionName,
-    selectedOverlayModel: currentOverlayModel,
-  }) || '';
+  const selectedNation = getLockedNation() || getActiveNation();
+  if (!selectedNation || !region?.regionName || !currentOverlayModel?.hasClaimOverlay) return '';
+  return resolveCapitalClaimantForRegion(region.regionName, buildActiveExpansionScope(currentOverlayModel));
 }
 function updateSecondaryCapitalPreview(region) {
   const nextNation = resolveSecondaryCapitalPreviewNation(region);
@@ -1719,7 +2129,7 @@ function hoverClaimPreviewRenderKey(model, descriptorSet, copyContexts = worldCo
   });
 }
 function markHoverClaimPreviewFragment(fragment, nation = hoverClaimPreviewNation) {
-  for (const el of fragment.querySelectorAll?.('.claim-overlay') || []) {
+  for (const el of fragment.querySelectorAll?.('.claim-overlay, .claim-fill-group') || []) {
     el.dataset.preview = 'hover-claim';
     if (nation) el.dataset.nation = nation;
   }
@@ -1797,11 +2207,13 @@ function renderSelectionOutlines({copyContexts=worldCopyContexts} = {}) {
     return frag;
   }));
 }
-function updateSelectedRegions() {
+function updateSelectedRegions({bounded = false, changedRegionIds: changed = []} = {}) {
   syncSelectedVisualState();
-  applyMapVisualState();
+  if (bounded && changed.length) applyMapVisualStateForRegions(changed);
+  else applyMapVisualState();
   renderHoverOutlines();
   renderSelectionOutlines();
+  renderPinnedRegionMarkers();
   renderCapitalMarkers();
   const label = selectedRegionSummary();
   if (selectedPill) {
@@ -1831,7 +2243,7 @@ function renderRegionList(regionNames, claims={}, prefix='targets', regionSource
       meta: meta ? ` · ${meta}` : '',
       source: source ? ` · ${source}` : '',
     });
-    return `<button type="button" class="legendRegionItem${active ? ' active' : ''}" data-region-name="${escapeHtml(rn)}"><b>${escapeHtml(localizedRegionName(region || rn))}</b><span>${escapeHtml(detail)}</span></button>`;
+    return `<div class="legendRegionRow"><button type="button" class="legendRegionItem${active ? ' active' : ''}" data-region-name="${escapeHtml(rn)}"><b>${escapeHtml(localizedRegionName(region || rn))}</b><span>${escapeHtml(detail)}</span></button></div>`;
   }).join('');
   return `<div class="legendRegionList">${rows}</div>`;
 }
@@ -1842,6 +2254,7 @@ function focusRegions(regionNames, {selectSingle=false, preserveNation=false, re
     if (region) {
       if (preserveNation && getActiveNation()) {
         setSelectedRegionIds([region.regionName]);
+        setFocusedRegionState(region.regionName);
         updateSelectedRegions();
         // TODO: Future mapView pan/zoom support should keep this focused region visible.
         if (refreshOverlay) updateNationOverlay(getActiveNation());
@@ -1852,16 +2265,20 @@ function focusRegions(regionNames, {selectSingle=false, preserveNation=false, re
     }
   }
   setSelectedRegionIds(names);
+  setFocusedRegionState(names.length === 1 ? names[0] : '');
   // TODO: Future mapView pan/zoom support should keep these focused regions visible.
   updateSelectedRegions();
   if (refreshOverlay && getActiveNation()) updateNationOverlay(getActiveNation());
 }
 function clearSelection({clearSearch=true} = {}) {
+  const clearedPins = [...getPinnedRegionIds()];
   clearSelectionState(appState);
+  updateReachableCapitalsButtonState();
   setActiveNationState();
   setHoverNationState();
   setSecondaryHoverNationState();
   setHoveredRegionState();
+  setFocusedRegionState();
   setHoverVisualState();
   setLockedNationState();
   setSelectedRegionIds();
@@ -1875,12 +2292,23 @@ function clearSelection({clearSearch=true} = {}) {
     search.value = '';
     search.dataset.selectedNation = '';
   }
-  setOnlyClaimsState(false);
-  updateOnlyClaimsButtonLabel();
   setHoverPill();
   updateNationOverlay('', {renderDetails: true, updateFilters: false, updateSelected: false});
   applyFilters(true);
   updateSelectedRegions();
+  refreshPinnedRegionOutputs(clearedPins);
+}
+function clearPinsOrSelection() {
+  clearSelection();
+}
+function unpinClickedPinnedRegion(region) {
+  const regionName = region?.regionName || '';
+  if (!regionName || !getPinnedRegionIds().has(regionName)) return false;
+  unpinPinnedRegionState(regionName);
+  refreshSecondaryCapitalPreviewForHoveredRegion();
+  renderHoverOutlines();
+  renderCapitalMarkers();
+  return true;
 }
 function focusNation(nation, {fillSearch=true} = {}) {
   if (!nation) { clearSelection({clearSearch:fillSearch}); return; }
@@ -1936,40 +2364,45 @@ function renderClaimSection(title, items, emptyText, kind) {
 
 
 function renderGrid(renderContext = {}) {
+  const start = debugRenderStats ? performance.now() : 0;
   renderGridLayer({
     layer: gGrid,
     mapView: renderContext.mapView || mapView,
     copyContexts: renderContext.copyContexts || worldCopyContexts,
   });
+  if (debugRenderStats) {
+    recordRenderTiming('gridRenderMs', performance.now() - start);
+    if (renderContext.isPan) recordRenderStat('gridRebuildsDuringPan');
+  }
 }
 function renderNormalRegionColors(renderContext = {}) {
   if (!gNormalRegionColors) return;
   const copyContexts = normalizeWorldCopyContexts(renderContext.copyContexts || worldCopyContexts);
-  normalRegionColorElements.length = 0;
-  const frag = document.createDocumentFragment();
-  for (const copyContext of copyContexts) {
-    appendWorldCopyFragment(frag, copyContext, copyContexts.length, 'normal-region-color-copy', () => {
-      const copyFrag = document.createDocumentFragment();
-      for (const region of REGIONS) {
-        const path = createRegionPath(region, {
-          class: 'normal-region-color',
-          fill: colorFor(region),
-        }, worldCopyDataset(copyContext));
-        normalRegionColorElements.push(path);
-        copyFrag.appendChild(path);
-      }
-      return copyFrag;
+  const baseMode = baseModeSel.value || 'nation';
+  const descriptors = REGIONS
+    .filter(region => !mapVisualState.hiddenRegionIds.has(region.regionName))
+    .map(region => {
+      const fill = colorFor(region);
+      const fillKey = `base:${baseMode}:${fill}`;
+      return {
+        path: region.path,
+        className: 'normal-region-color visual-fill-group',
+        fill,
+        groupKey: fillKey,
+        dataset: {fillKey},
+      };
     });
-  }
+  normalRegionColorElements.length = 0;
+  const frag = createGroupedVisualFillFragment({
+    descriptors,
+    copyContexts,
+    copyGroupClassName: 'normal-region-color-copy',
+  });
+  normalRegionColorElements.push(...frag.querySelectorAll?.('.normal-region-color') || []);
   replaceLayerChildren(gNormalRegionColors, frag);
-  syncNormalRegionColorVisibility();
 }
 function syncNormalRegionColorVisibility() {
-  if (!normalRegionColorElements.length) return;
-  for (const path of normalRegionColorElements) {
-    const regionName = path.dataset.region;
-    path.classList.toggle('hidden', !!regionName && mapVisualState.hiddenRegionIds.has(regionName));
-  }
+  renderNormalRegionColors();
 }
 function renderRegions(renderContext = {}) {
   renderRegionLayers({
@@ -2081,16 +2514,38 @@ function onMapWheel(e) {
   const scale = e.deltaY < 0 ? 1 / MAP_WHEEL_ZOOM_FACTOR : MAP_WHEEL_ZOOM_FACTOR;
   zoomMapAt(scale, anchor);
 }
-function applyMapViewToSvg() {
-  if (svg) svg.setAttribute('viewBox', formatViewBoxForMapView(mapView));
-  renderGrid({mapView});
+function applyMapViewToSvg(renderContext = {}) {
+  const isPan = !!renderContext.isPan;
+  const scheduledAt = Number(renderContext.scheduledAt);
+  const start = debugRenderStats ? performance.now() : 0;
+  if (svg) {
+    svg.setAttribute('viewBox', formatViewBoxForMapView(mapView));
+    if (isPan) recordRenderStat('panViewBoxApplyCount');
+  }
+  if (debugRenderStats) {
+    const finishedAt = performance.now();
+    recordRenderTiming('mapViewApplyMs', finishedAt - start);
+    if (isPan && Number.isFinite(scheduledAt)) {
+      recordRenderTiming('panFrameMs', finishedAt - scheduledAt);
+    }
+  }
   invalidateTooltipLayout();
 }
-function scheduleMapViewRender() {
+function scheduleMapViewRender(renderContext = {}) {
+  if (renderContext.isPan) {
+    pendingMapViewRenderContext = {
+      isPan: true,
+      scheduledAt: Number.isFinite(Number(renderContext.scheduledAt)) ? Number(renderContext.scheduledAt) : performance.now(),
+    };
+  } else if (!pendingMapViewRenderContext) {
+    pendingMapViewRenderContext = renderContext;
+  }
   if (mapViewFrame) return;
   mapViewFrame = window.requestAnimationFrame(() => {
+    const context = pendingMapViewRenderContext || {};
+    pendingMapViewRenderContext = null;
     mapViewFrame = 0;
-    applyMapViewToSvg();
+    applyMapViewToSvg(context);
   });
 }
 function invalidateTooltipLayout() {
@@ -2157,47 +2612,11 @@ function resolveRelatedHitRegion(event, indices = derivedIndices) {
   const regionName = hitTarget.dataset.regionId || hitTarget.dataset.region;
   return indices.regionByName[regionName] || null;
 }
-function hoverRegionAffectsCapitalSelection(region) {
-  if (!region?.regionName) return true;
-  const pinnedNation = getLockedNation() || getActiveNation();
-  return !!(
-    (pinnedNation && isCapitalRegionForNation(pinnedNation, region.regionName)) ||
-    isCapitalRegionForNation(region.nationTag, region.regionName)
-  );
-}
-function regionHasSimpleHoverDeltaHazard(regionName) {
-  const region = regionName ? regionByName[regionName] : null;
-  if (!region) return true;
-  if (selectedRegionIds.has(regionName)) return true;
-  if (mapVisualState.hiddenRegionIds.has(regionName)) return true;
-  if (shouldShowForeignHoverNationOverlay(region)) return true;
-  if (hoverRegionAffectsCapitalSelection(region)) return true;
-  return false;
-}
-function canUseSimpleHoverVisualDelta(previousRegionName, nextRegion, {force=false, regionChanged=false} = {}) {
-  if (force || !regionChanged || !previousRegionName || !nextRegion?.regionName) return false;
-  const previousRegion = regionByName[previousRegionName];
-  if (!previousRegion) return false;
-  const lockedNation = getLockedNation();
-  const stableUnlockedNation = !lockedNation
-    && !hoverPreviewFrame
-    && !pendingHoverNation
-    && previousRegion.nationTag === nextRegion.nationTag
-    && getHoverNation() === nextRegion.nationTag
-    && (getActiveNation() === nextRegion.nationTag || !getActiveNation());
-  const lightweightUnlockedPreview = !lockedNation
-    && !hoverPreviewFrame
-    && !pendingHoverNation
-    && !getActiveNation()
-    && !!getHoverNation();
-  if (!lockedNation && !stableUnlockedNation && !lightweightUnlockedPreview) return false;
-  if (regionHasSimpleHoverDeltaHazard(previousRegionName)) return false;
-  if (regionHasSimpleHoverDeltaHazard(nextRegion.regionName)) return false;
-  return true;
+function canUseSimpleHoverVisualDelta(previousRegionName, nextRegion, {regionChanged=false} = {}) {
+  return !!(regionChanged && nextRegion?.regionName);
 }
 function canUseSimpleHoverClearDelta(previousRegionName) {
-  if (!previousRegionName || !getLockedNation()) return false;
-  return !regionHasSimpleHoverDeltaHazard(previousRegionName);
+  return !!previousRegionName;
 }
 
 let hoverFullVisualPassFrame = 0;
@@ -2219,7 +2638,7 @@ function updateHoveredRegion(r, {force=false} = {}) {
   setHoverVisualState(r.regionName);
   updateSecondaryCapitalPreview(r);
   if (useHoverDelta) {
-    applyMapVisualStateForRegions([previousRegionName, r.regionName]);
+    applyMapVisualStateForRegions([previousRegionName, r.regionName].filter(Boolean));
   } else {
     scheduleHoverFullVisualPass();
   }
@@ -2227,6 +2646,7 @@ function updateHoveredRegion(r, {force=false} = {}) {
   else setHoverNationState(r.nationTag);
   renderHoverOutlines();
   renderCapitalMarkers();
+  syncReachableCapitalCandidateHoverState();
   setHoverPill(r);
 }
 function onRegionEnter(e, r, {force=true} = {}) {
@@ -2244,6 +2664,7 @@ function onRegionLeave(e) {
   clearHoverPreview();
 }
 function onHitLayerPointerOver(e) {
+  if (shouldSuppressHitLayerPointerEvent(e)) return;
   const region = resolveHitRegion(e);
   if (!region) return;
   const previousRegion = resolveRelatedHitRegion(e);
@@ -2251,10 +2672,12 @@ function onHitLayerPointerOver(e) {
   onRegionEnter(e, region, {force: !previousRegion});
 }
 function onHitLayerPointerMove(e) {
+  if (shouldSuppressHitLayerPointerEvent(e)) return;
   const region = resolveHitRegion(e);
   if (region) onRegionMove(e, region);
 }
 function onHitLayerPointerOut(e) {
+  if (shouldSuppressHitLayerPointerEvent(e)) return;
   const region = resolveHitRegion(e);
   if (!region) return;
   if (resolveRelatedHitRegion(e)) return;
@@ -2265,6 +2688,8 @@ function onHitLayerClick(e) {
   const region = resolveHitRegion(e);
   if (!region) return;
   e.stopPropagation();
+  if (unpinClickedPinnedRegion(region)) return;
+  if (selectReachableCapitalCandidateRegion(region.regionName)) return;
   selectRegion(region);
 }
 function hitRegionElementFromClientPoint(clientX, clientY) {
@@ -2300,12 +2725,25 @@ function schedulePanHoverRefresh(clientX, clientY) {
     refreshPanHoverFromClientPoint(point.clientX, point.clientY);
   });
 }
-function viewDeltaFromPointerDelta(deltaX, deltaY) {
-  const rect = svg?.getBoundingClientRect();
-  if (!rect?.width || !rect?.height) return {dx: 0, dy: 0};
+function shouldSuppressHitLayerPointerEvent(e) {
+  if (!mapPanState || e.pointerId !== mapPanState.pointerId) return false;
+  if (mapPanState.dragging) return true;
+  return Math.hypot(e.clientX - mapPanState.startX, e.clientY - mapPanState.startY) >= MAP_PAN_DRAG_THRESHOLD_PX;
+}
+function measurePanViewportRect() {
+  recordRenderStat('panSvgRectReads');
+  return svg?.getBoundingClientRect();
+}
+function samplePanSvgNodeCount() {
+  if (!debugRenderStats || !svg) return;
+  setRenderStat('visibleSvgNodeCount', svg.querySelectorAll('*').length);
+}
+function viewDeltaFromPointerDelta(deltaX, deltaY, rect = null) {
+  const viewportRect = rect || measurePanViewportRect();
+  if (!viewportRect?.width || !viewportRect?.height) return {dx: 0, dy: 0};
   return {
-    dx: -(deltaX * mapView.width) / rect.width,
-    dy: -(deltaY * mapView.height) / rect.height,
+    dx: -(deltaX * mapView.width) / viewportRect.width,
+    dy: -(deltaY * mapView.height) / viewportRect.height,
   };
 }
 function markSuppressNextMapClick() {
@@ -2325,12 +2763,17 @@ function finishMapPan({cancel=false} = {}) {
   if (!mapPanState) return;
   const wasDragging = mapPanState.dragging;
   const pointerId = mapPanState.pointerId;
+  const finalClientX = mapPanState.lastX;
+  const finalClientY = mapPanState.lastY;
   mapPanState = null;
   svg?.classList.remove('is-panning-ready', 'is-panning');
   try {
     if (svg?.hasPointerCapture?.(pointerId)) svg.releasePointerCapture(pointerId);
   } catch {}
-  if (!cancel && wasDragging) markSuppressNextMapClick();
+  if (!cancel && wasDragging) {
+    markSuppressNextMapClick();
+    schedulePanHoverRefresh(finalClientX, finalClientY);
+  }
 }
 function onMapPointerDown(e) {
   if (e.button !== 0 || mapPanState) return;
@@ -2341,6 +2784,7 @@ function onMapPointerDown(e) {
     lastX: e.clientX,
     lastY: e.clientY,
     dragging: false,
+    viewportRect: null,
   };
   svg?.classList.add('is-panning-ready');
 }
@@ -2351,19 +2795,25 @@ function onMapPointerMove(e) {
   if (!mapPanState.dragging && Math.hypot(totalX, totalY) < MAP_PAN_DRAG_THRESHOLD_PX) return;
   if (!mapPanState.dragging) {
     mapPanState.dragging = true;
+    mapPanState.viewportRect = measurePanViewportRect();
+    samplePanSvgNodeCount();
     svg?.classList.add('is-panning');
     try {
       svg?.setPointerCapture?.(e.pointerId);
     } catch {}
-    clearHoverPreview();
   }
   e.preventDefault();
-  const {dx, dy} = viewDeltaFromPointerDelta(e.clientX - mapPanState.lastX, e.clientY - mapPanState.lastY);
+  recordRenderStat('panPointerMoveCount');
+  const scheduledAt = debugRenderStats ? performance.now() : 0;
+  const {dx, dy} = viewDeltaFromPointerDelta(
+    e.clientX - mapPanState.lastX,
+    e.clientY - mapPanState.lastY,
+    mapPanState.viewportRect
+  );
   panMapView(mapView, {dx, dy, normalizeX: worldWrapEnabled});
   mapPanState.lastX = e.clientX;
   mapPanState.lastY = e.clientY;
-  scheduleMapViewRender();
-  schedulePanHoverRefresh(e.clientX, e.clientY);
+  scheduleMapViewRender({isPan: true, scheduledAt});
 }
 function onMapPointerUp(e) {
   if (!mapPanState || e.pointerId !== mapPanState.pointerId) return;
@@ -2520,7 +2970,6 @@ function claimOverlayDescriptorCacheKey(model) {
   return JSON.stringify({
     kind: 'claim-overlay-path-descriptors',
     ...overlayModelRenderDataKey(model),
-    selectedRegions: selectedRegionOverlayKey(),
     options: model?.options?.cacheKey || '',
   });
 }
@@ -2528,7 +2977,6 @@ function claimLabelDescriptorCacheKey(model) {
   return JSON.stringify({
     kind: 'claim-label-descriptors',
     ...overlayModelRenderDataKey(model),
-    selectedRegions: selectedRegionOverlayKey(),
     options: model?.options?.cacheKey || '',
     language: currentLanguage,
   });
@@ -2595,6 +3043,8 @@ function claimOverlayPathDescriptors(model) {
       descriptors.push({
         region: rn,
         className: 'claim-overlay owned-territory',
+        fillClassName: 'claim-fill-group owned-territory',
+        fillKey: `owned:${BASE_TERRITORY_COLOR}`,
         fill: BASE_TERRITORY_COLOR,
         project: 'initial-territory',
       });
@@ -2608,9 +3058,14 @@ function claimOverlayPathDescriptors(model) {
     for (const rn of visibleClaimRegions) {
       if (!regionByName[rn]) continue;
       const claim = entry.claims?.[rn] || {};
+      const claimClassName = (entry.project ? 'research-claim ' : 'basic-claim ') + (claim.hostileClaim ? 'hostile' : 'peaceful') + (claim.capitalClaim ? ' capital' : '') + (claim.gatedClaim ? ' gated' : '');
+      const fillCategory = entry.project ? `research:${entry.project}` : 'basic';
       descriptors.push({
         region: rn,
-        className: 'claim-overlay ' + (entry.project ? 'research-claim ' : 'basic-claim ') + (claim.hostileClaim ? 'hostile' : 'peaceful') + (claim.capitalClaim ? ' capital' : '') + (claim.gatedClaim ? ' gated' : ''),
+        className: 'claim-overlay ' + claimClassName,
+        fillClassName: 'claim-fill-group ' + (entry.project ? 'research-claim' : 'basic-claim') + (claim.gatedClaim ? ' gated' : ''),
+        fillKey: `${fillCategory}:${color}:${claim.gatedClaim ? 'gated' : 'normal'}`,
+        fillOpacity: claim.gatedClaim ? 0.72 : '',
         fill: color,
         project: entry.project || 'base',
       });
@@ -2635,6 +3090,635 @@ function claimLabelDescriptors(model) {
     });
   });
   return descriptors;
+}
+function manualEnvelopeDepthColor(depth = 0) {
+  const index = Math.min(Math.max(Number(depth) || 0, 0), MANUAL_ENVELOPE_DEPTH_COLORS.length - 1);
+  return MANUAL_ENVELOPE_DEPTH_COLORS[index];
+}
+function manualEnvelopeOverlapColor(sourceCount = 2, alpha = 0.92) {
+  const t = Math.min(Math.max((Number(sourceCount) || 2) - 2, 0), 4) / 4;
+  const lightness = (0.84 - t * 0.12).toFixed(2);
+  const chroma = (0.15 + t * 0.04).toFixed(2);
+  const hue = (82 - t * 102 + 360) % 360;
+  return `oklch(${lightness} ${chroma} ${hue.toFixed(0)} / ${alpha})`;
+}
+function manualEnvelopeAnchorNation(anchorModel = currentOverlayModel) {
+  return anchorModel?.nation || getLockedNation() || getActiveNation() || regionByName[getFocusedRegionName()]?.nationTag || '';
+}
+function manualEnvelopePinnedSourceKey() {
+  return [...getPinnedRegionIds()]
+    .map((regionName, index) => `${index}:${regionName}:${getPinnedCapitalClaimant(regionName)}:${pinnedExpansionClaimants(regionName).join(',')}`)
+    .join('|');
+}
+function manualEnvelopeModelCacheKey(anchorModel = currentOverlayModel, {includeAnchorOnly = false} = {}) {
+  return JSON.stringify({
+    kind: 'manual-envelope-model',
+    scenario: appState.activeScenarioId || appData.defaultScenario || '',
+    data: overlayModelDataVersionKey(activeData, derivedIndices),
+    anchor: manualEnvelopeAnchorNation(anchorModel),
+    overlayNation: anchorModel?.nation || '',
+    includeAnchorOnly: !!includeAnchorOnly,
+    pins: manualEnvelopePinnedSourceKey(),
+    claimMode: claimModeSel.value || '',
+    claimKind: claimKindSel.value || '',
+    project: getProjectFilter(),
+  });
+}
+function compareManualEnvelopeSourceSpecs(anchorNation) {
+  return (a, b) => {
+    if (a.depth !== b.depth) return a.depth - b.depth;
+    const aFocused = a.claimant === anchorNation ? 0 : 1;
+    const bFocused = b.claimant === anchorNation ? 0 : 1;
+    if (aFocused !== bFocused) return aFocused - bFocused;
+    if (a.pinIndex !== b.pinIndex) return a.pinIndex - b.pinIndex;
+    return a.claimant.localeCompare(b.claimant);
+  };
+}
+function manualEnvelopeSourceSpecs(anchorNation) {
+  if (!anchorNation || claimModeSel.value === 'off') return [];
+  const specs = [{
+    claimant: anchorNation,
+    depth: 0,
+    parentClaimant: '',
+    viaCapitalRegion: '',
+    pinIndex: -1,
+  }];
+  const seenClaimants = new Set([anchorNation]);
+  [...getPinnedRegionIds()].forEach((regionName, pinIndex) => {
+    for (const claimant of pinnedExpansionClaimants(regionName)) {
+      if (!claimant || seenClaimants.has(claimant)) continue;
+      seenClaimants.add(claimant);
+      specs.push({
+        claimant,
+        depth: 1,
+        parentClaimant: anchorNation,
+        viaCapitalRegion: regionName,
+        pinIndex,
+      });
+    }
+  });
+  return specs.sort(compareManualEnvelopeSourceSpecs(anchorNation));
+}
+function buildManualEnvelopeSource(spec, sourceOrder) {
+  const data = CLAIMS_BY_NATION[spec.claimant] || {nation: spec.claimant, baseRegions: nationRegions.get(spec.claimant) || [], projects: []};
+  const baseSet = new Set(data.baseRegions || nationRegions.get(spec.claimant) || []);
+  const tierByProject = countryProjectTierMap(spec.claimant, baseSet);
+  const entries = getVisibleProjectEntries(spec.claimant);
+  return {
+    ...spec,
+    sourceOrder,
+    data,
+    baseSet,
+    tierByProject,
+    entries,
+  };
+}
+function compareManualEnvelopeContributions(a, b) {
+  if (a.depth !== b.depth) return a.depth - b.depth;
+  if (a.sourceOrder !== b.sourceOrder) return a.sourceOrder - b.sourceOrder;
+  if (a.kind !== b.kind) return a.kind === 'base' ? -1 : 1;
+  if (a.tier !== b.tier) return a.tier - b.tier;
+  const byProject = projectSortLabel(a.project).localeCompare(projectSortLabel(b.project));
+  if (byProject) return byProject;
+  return a.claimant.localeCompare(b.claimant);
+}
+function manualEnvelopeSourceKey(contribution) {
+  return `${contribution.depth}:${contribution.claimant}:${contribution.parentClaimant || ''}:${contribution.viaCapitalRegion || ''}`;
+}
+function manualEnvelopeKindLabel(contribution) {
+  if (contribution.kind === 'base') return t('manualEnvelope.kindBase');
+  return t('manualEnvelope.kindClaim', {
+    project: contribution.project ? projectDisplay(contribution.project) : t('claimCard.projectBaseline'),
+  });
+}
+function manualEnvelopeSourceLabel(contribution) {
+  return t('manualEnvelope.source', {
+    nation: nationDisplayName(contribution.claimant),
+    kind: manualEnvelopeKindLabel(contribution),
+  });
+}
+function manualEnvelopeRegionLabel(item) {
+  const source = manualEnvelopeSourceLabel(item.primary);
+  return t('manualEnvelope.region', {
+    region: localizedRegionName(regionByName[item.region] || item.region),
+    depth: formatNumber(item.primary.depth),
+    source,
+  });
+}
+function manualEnvelopeOverlapLabel(item) {
+  return t('manualEnvelope.overlap', {
+    region: localizedRegionName(regionByName[item.region] || item.region),
+    count: formatNumber(item.overlapSources.length),
+  });
+}
+function addManualEnvelopeContribution(regionContributions, source, regionName, contribution) {
+  if (!regionName || !regionByName[regionName]) return;
+  if (!regionContributions.has(regionName)) regionContributions.set(regionName, []);
+  regionContributions.get(regionName).push({
+    ...contribution,
+    region: regionName,
+    claimant: source.claimant,
+    depth: source.depth,
+    parentClaimant: source.parentClaimant,
+    viaCapitalRegion: source.viaCapitalRegion,
+    pinIndex: source.pinIndex,
+    sourceOrder: source.sourceOrder,
+  });
+}
+function buildManualEnvelopeModelUncached(anchorModel = currentOverlayModel, {includeAnchorOnly = false} = {}) {
+  recordRenderStat('manualEnvelopeModelBuilds');
+  const anchorNation = manualEnvelopeAnchorNation(anchorModel);
+  const specs = manualEnvelopeSourceSpecs(anchorNation);
+  if (specs.length <= 1 && !includeAnchorOnly) return null;
+  const sources = specs
+    .map((spec, sourceOrder) => buildManualEnvelopeSource(spec, sourceOrder))
+    .filter(source => source.baseSet.size || source.entries.length);
+  if (sources.length <= 1 && !includeAnchorOnly) return null;
+
+  const regionContributions = new Map();
+  for (const source of sources) {
+    for (const regionName of source.baseSet) {
+      addManualEnvelopeContribution(regionContributions, source, regionName, {
+        kind: 'base',
+        project: '',
+        tier: -1,
+        claim: {},
+      });
+    }
+    for (const entry of source.entries) {
+      const tier = countryProjectTier(entry, source.tierByProject);
+      for (const regionName of entry.regions || []) {
+        if (source.baseSet.has(regionName)) continue;
+        addManualEnvelopeContribution(regionContributions, source, regionName, {
+          kind: 'claim',
+          project: entry.project || '',
+          tier,
+          claim: entry.claims?.[regionName] || {},
+        });
+      }
+    }
+  }
+
+  const regionItems = [];
+  for (const [region, contributions] of regionContributions) {
+    const sorted = [...contributions].sort(compareManualEnvelopeContributions);
+    const primary = sorted[0];
+    const overlapSourceKeys = new Set();
+    const overlapSources = [];
+    for (const contribution of sorted) {
+      const key = manualEnvelopeSourceKey(contribution);
+      if (overlapSourceKeys.has(key)) continue;
+      overlapSourceKeys.add(key);
+      overlapSources.push(contribution);
+    }
+    regionItems.push({
+      region,
+      primary,
+      contributions: sorted,
+      overlapSources,
+    });
+  }
+  regionItems.sort((a, b) => (
+    a.primary.depth - b.primary.depth
+    || a.primary.sourceOrder - b.primary.sourceOrder
+    || a.region.localeCompare(b.region)
+  ));
+  return {
+    anchorNation,
+    sources,
+    regionItems,
+    sourceKey: sources.map(source => `${source.depth}:${source.claimant}:${source.parentClaimant || ''}:${source.viaCapitalRegion || ''}:${source.pinIndex}`).join('|'),
+    regionKey: regionItems.map(item => `${item.region}:${item.primary.depth}:${item.primary.claimant}:${item.primary.project || ''}:${item.overlapSources.length}`).join('|'),
+  };
+}
+function buildManualEnvelopeModel(anchorModel = currentOverlayModel, options = {}) {
+  const cacheKey = manualEnvelopeModelCacheKey(anchorModel, options);
+  const cached = getCachedLruValue(manualEnvelopeModelCache, cacheKey, 'manualEnvelopeModelCacheHits');
+  if (cached) return cached === EMPTY_MANUAL_ENVELOPE_MODEL_CACHE_VALUE ? null : cached;
+  const model = buildManualEnvelopeModelUncached(anchorModel, options);
+  setCachedLruValue(
+    manualEnvelopeModelCache,
+    cacheKey,
+    model || EMPTY_MANUAL_ENVELOPE_MODEL_CACHE_VALUE,
+    MANUAL_ENVELOPE_MODEL_CACHE_LIMIT
+  );
+  return model;
+}
+function manualEnvelopeRenderKey(model, copyContexts = worldCopyContexts) {
+  if (!model?.regionItems?.length) return MANUAL_ENVELOPE_EMPTY_RENDER_KEY;
+  return JSON.stringify({
+    kind: 'manual-envelope',
+    copyPlan: copyContextRenderKey(copyContexts),
+    data: overlayModelDataVersionKey(activeData, derivedIndices),
+    language: currentLanguage,
+    anchor: model.anchorNation,
+    sourceKey: model.sourceKey,
+    regionKey: model.regionKey,
+    claimMode: claimModeSel.value || '',
+    claimKind: claimKindSel.value || '',
+    project: getProjectFilter(),
+  });
+}
+function createManualEnvelopeFragment(model, {copyContexts=worldCopyContexts} = {}) {
+  const fillDescriptors = model.regionItems.map(item => {
+    const region = regionByName[item.region];
+    const depth = item.primary.depth;
+    const fill = manualEnvelopeDepthColor(depth);
+    return {
+      path: region.path,
+      className: `manual-envelope-fill manual-envelope-depth-${depth}`,
+      fill,
+      groupKey: `manual-envelope-depth:${depth}:${fill}`,
+      dataset: {
+        envelopeDepth: depth,
+        fillKey: `depth:${depth}`,
+      },
+    };
+  });
+  const fillGroups = buildVisualFillGroups(fillDescriptors);
+  return createProjectedCopyFragment(copyContexts, 'manual-envelope-copy', copyContext => {
+    const frag = document.createDocumentFragment();
+    const copyData = worldCopyDataset(copyContext);
+    for (const group of fillGroups) {
+      frag.appendChild(createSvgElement('path', {
+        d: group.paths.join(' '),
+        class: group.className,
+        fill: group.fill,
+        'aria-label': t('manualEnvelope.depth', {depth: group.dataset.envelopeDepth || '0'}),
+      }, {
+        ...group.dataset,
+        visualGroupSize: group.paths.length,
+        ...copyData,
+      }));
+    }
+    for (const item of model.regionItems) {
+      const region = regionByName[item.region];
+      const primary = item.primary;
+      const hasOverlap = item.overlapSources.length > 1;
+      const overlapColor = hasOverlap ? manualEnvelopeOverlapColor(item.overlapSources.length) : '';
+      frag.appendChild(createSvgElement('path', {
+        d: region.path,
+        class: `manual-envelope-region-outline manual-envelope-depth-${primary.depth}${hasOverlap ? ' has-overlap' : ''}`,
+        fill: 'none',
+        stroke: overlapColor || null,
+        'aria-label': manualEnvelopeRegionLabel(item),
+      }, {
+        region: item.region,
+        envelopeDepth: primary.depth,
+        envelopeClaimant: primary.claimant,
+        envelopeParent: primary.parentClaimant,
+        envelopeViaCapital: primary.viaCapitalRegion,
+        envelopeProject: primary.project,
+        envelopeTier: primary.tier,
+        envelopeKind: primary.kind,
+        envelopeSourceCount: item.overlapSources.length,
+        ...copyData,
+      }));
+      if (!hasOverlap) continue;
+      frag.appendChild(createSvgElement('path', {
+        d: region.path,
+        class: 'manual-envelope-overlap',
+        fill: 'none',
+        stroke: overlapColor,
+        'aria-label': manualEnvelopeOverlapLabel(item),
+      }, {
+        region: item.region,
+        envelopeOverlap: '1',
+        envelopeSourceCount: item.overlapSources.length,
+        ...copyData,
+      }));
+    }
+    return frag;
+  });
+}
+function renderManualEnvelopeOverlay(anchorModel = currentOverlayModel, {copyContexts=worldCopyContexts} = {}) {
+  if (!gManualEnvelopeOverlays) return;
+  const model = buildManualEnvelopeModel(anchorModel);
+  replaceLayerChildrenForRenderKey(
+    gManualEnvelopeOverlays,
+    manualEnvelopeLayerRenderKeys,
+    manualEnvelopeRenderKey(model, copyContexts),
+    () => (model ? createManualEnvelopeFragment(model, {copyContexts}) : document.createDocumentFragment()),
+    'manualEnvelopeRebuilds'
+  );
+}
+function clearManualEnvelopeOverlay() {
+  if (!gManualEnvelopeOverlays) return;
+  replaceLayerChildrenForRenderKey(
+    gManualEnvelopeOverlays,
+    manualEnvelopeLayerRenderKeys,
+    MANUAL_ENVELOPE_EMPTY_RENDER_KEY,
+    () => document.createDocumentFragment(),
+    'manualEnvelopeRebuilds'
+  );
+}
+function nationBaseRegionNames(nation) {
+  return [...new Set(CLAIMS_BY_NATION[nation]?.baseRegions || nationRegions.get(nation) || [])]
+    .filter(regionName => regionByName[regionName]);
+}
+function nationResultRegionNames(nation) {
+  const resultRegions = new Set(nationBaseRegionNames(nation));
+  for (const entry of getVisibleProjectEntries(nation)) {
+    for (const regionName of entry.regions || []) {
+      if (regionByName[regionName]) resultRegions.add(regionName);
+    }
+  }
+  return [...resultRegions];
+}
+function nationFullyIncludedInResult(nation, resultSet) {
+  const resultRegions = nationResultRegionNames(nation);
+  return !!resultRegions.length && resultRegions.every(regionName => resultSet?.has?.(regionName));
+}
+function reachableCapitalCandidateNations(regionName, anchorNation, resultSet = new Set()) {
+  return [...new Set(derivedIndices.capitalNationsByRegion?.get?.(regionName) || [])]
+    .filter(nation => nation
+      && nation !== anchorNation
+      && !nationFullyIncludedInResult(nation, resultSet));
+}
+function reachableCapitalCandidateDescriptorCacheKey(model) {
+  return JSON.stringify({
+    kind: 'reachable-capital-candidate-descriptors',
+    scenario: appState.activeScenarioId || appData.defaultScenario || '',
+    data: overlayModelDataVersionKey(activeData, derivedIndices),
+    anchor: model?.anchorNation || '',
+    sourceKey: model?.sourceKey || '',
+    regionKey: model?.regionKey || '',
+    pins: [...getPinnedRegionIds()].map(regionName => `${regionName}:${getPinnedCapitalClaimant(regionName)}`).join('|'),
+  });
+}
+function manualEnvelopeVisibleRegionSet(model) {
+  return new Set((model?.regionItems || [])
+    .map(item => item.region)
+    .filter(regionName => regionByName[regionName]));
+}
+function addRegionNamesToSet(target, regionNames) {
+  if (!regionNames) return target;
+  if (regionNames instanceof Set || Array.isArray(regionNames)) {
+    for (const regionName of regionNames) {
+      if (regionByName[regionName]) target.add(regionName);
+    }
+    return target;
+  }
+  if (typeof regionNames === 'object') {
+    Object.entries(regionNames).forEach(([regionName, included]) => {
+      if (included && regionByName[regionName]) target.add(regionName);
+    });
+  }
+  return target;
+}
+function activeClaimPreviewScopeCacheKey(anchorModel = currentOverlayModel) {
+  const pinnedKey = [...getPinnedRegionIds()]
+    .map(regionName => `${regionName}:${getPinnedCapitalClaimant(regionName)}`)
+    .join('|');
+  return JSON.stringify({
+    scenario: appState.activeScenarioId || appData.defaultScenario || '',
+    data: overlayModelDataVersionKey(activeData, derivedIndices),
+    anchor: manualEnvelopeAnchorNation(anchorModel),
+    overlayNation: anchorModel?.nation || '',
+    incoming: getActiveIncomingClaimKey(),
+    pins: pinnedKey,
+    claimMode: claimModeSel.value || '',
+    claimKind: claimKindSel.value || '',
+    project: getProjectFilter(),
+  });
+}
+function activeClaimPreviewRegionSet(anchorModel = currentOverlayModel) {
+  if (!anchorModel) return new Set();
+  const key = activeClaimPreviewScopeCacheKey(anchorModel);
+  if (key === activeClaimPreviewRegionScopeKey && activeClaimPreviewRegionScope) return activeClaimPreviewRegionScope;
+  const resultSet = new Set();
+  addRegionNamesToSet(resultSet, anchorModel.resultSet);
+  addRegionNamesToSet(
+    resultSet,
+    manualEnvelopeVisibleRegionSet(buildManualEnvelopeModel(anchorModel, {includeAnchorOnly: true}))
+  );
+  activeClaimPreviewRegionScopeKey = key;
+  activeClaimPreviewRegionScope = resultSet;
+  return resultSet;
+}
+function activeClaimPreviewContainsRegion(regionName, anchorModel = currentOverlayModel) {
+  return !!regionName && activeClaimPreviewRegionSet(anchorModel).has(regionName);
+}
+function buildActiveExpansionScope(anchorModel = currentOverlayModel) {
+  return {
+    anchorNation: manualEnvelopeAnchorNation(anchorModel),
+    regionSet: activeClaimPreviewRegionSet(anchorModel),
+  };
+}
+function resolveCapitalClaimantForRegion(regionName, scope = buildActiveExpansionScope()) {
+  if (!regionName || !scope?.regionSet?.has?.(regionName)) return '';
+  const override = getPinnedCapitalClaimant(regionName);
+  if (override && override !== scope.anchorNation) return override;
+  return reachableCapitalCandidateNations(regionName, scope.anchorNation, scope.regionSet)[0] || '';
+}
+function resolveReachableCapitalSelectionClaimant(region) {
+  if (!region?.regionName || !(getLockedNation() || getActiveNation())) return '';
+  return resolveCapitalClaimantForRegion(region.regionName, buildActiveExpansionScope(currentOverlayModel));
+}
+function reachableCapitalCandidateDescriptors(anchorModel = currentOverlayModel, {manualEnvelopeModel = null} = {}) {
+  const model = manualEnvelopeModel || buildManualEnvelopeModel(anchorModel, {includeAnchorOnly: true});
+  const cacheKey = reachableCapitalCandidateDescriptorCacheKey(model);
+  const cached = getCachedLruValue(
+    reachableCapitalCandidateDescriptorCache,
+    cacheKey,
+    'reachableCapitalCandidateDescriptorCacheHits'
+  );
+  if (cached) return cached;
+  recordRenderStat('reachableCapitalCandidateDescriptorBuilds');
+  if (!model?.regionItems?.length) {
+    return setCachedLruValue(
+      reachableCapitalCandidateDescriptorCache,
+      cacheKey,
+      [],
+      REACHABLE_CAPITAL_CANDIDATE_DESCRIPTOR_CACHE_LIMIT
+    );
+  }
+  const resultSet = manualEnvelopeVisibleRegionSet(model);
+  const pinned = getPinnedRegionIds();
+  const candidates = [];
+  for (const item of model.regionItems) {
+    if (pinned.has(item.region)) continue;
+    const nations = reachableCapitalCandidateNations(item.region, model.anchorNation, resultSet);
+    if (!nations.length) continue;
+    const region = regionByName[item.region];
+    const lab = labelPosition(region);
+    candidates.push({
+      region: item.region,
+      depth: item.primary.depth,
+      sourceCount: item.overlapSources.length,
+      primaryNation: nations[0],
+      nations,
+      x: lab?.x,
+      y: lab?.y,
+    });
+  }
+  return setCachedLruValue(
+    reachableCapitalCandidateDescriptorCache,
+    cacheKey,
+    candidates.sort((a, b) => (
+      a.depth - b.depth
+      || a.region.localeCompare(b.region)
+      || a.primaryNation.localeCompare(b.primaryNation)
+    )),
+    REACHABLE_CAPITAL_CANDIDATE_DESCRIPTOR_CACHE_LIMIT
+  );
+}
+function reachableCandidateNationsText(candidate) {
+  const names = candidate.nations.map(nation => nationDisplayName(nation));
+  return names.slice(0, 3).join(', ') + (names.length > 3 ? `, +${names.length - 3}` : '');
+}
+function reachableCandidateMarkerLabel(candidate) {
+  return t('reachableCandidates.marker', {
+    region: localizedRegionName(regionByName[candidate.region] || candidate.region),
+    nations: reachableCandidateNationsText(candidate),
+  });
+}
+function reachableCandidateRow(candidate) {
+  const label = localizedRegionName(regionByName[candidate.region] || candidate.region);
+  const depth = t('reachableCandidates.depth', {depth: formatNumber(candidate.depth)});
+  const nations = reachableCandidateNationsText(candidate);
+  return `
+    <div class="reachableCandidateRow" data-candidate-row="${escapeHtml(candidate.region)}">
+      <button type="button" class="reachableCandidateFocus" data-candidate-focus="${escapeHtml(candidate.region)}" data-candidate-nation="${escapeHtml(candidate.primaryNation)}" aria-label="${escapeHtml(t('reachableCandidates.focusRegion', {region: label}))}">
+        <span class="reachableCandidateMain">
+          <b>${escapeHtml(label)}</b>
+          <span>${escapeHtml(`${depth} · ${nations}`)}</span>
+        </span>
+        <span class="reachableCandidateFocusText">${escapeHtml(t('reachableCandidates.focus'))}</span>
+      </button>
+    </div>
+  `;
+}
+function commitReachableCapitalSelection(region, capitalClaimantId = '') {
+  const claimant = capitalClaimantId || resolveReachableCapitalSelectionClaimant(region);
+  if (!region?.regionName || !claimant) return false;
+  const shouldRefreshIncomingOverlay = !!getActiveIncomingClaimKey();
+  setHoveredRegionState(region.regionName, region.nationTag);
+  setFocusedRegionState(region.regionName);
+  const changedSelectionRegionIds = setSelectedRegionIds([region.regionName]);
+  pinRegionState(region.regionName, {capitalClaimant: claimant});
+  updateSecondaryCapitalPreview(region);
+  updateSelectedRegions({bounded: true, changedRegionIds: changedSelectionRegionIds});
+  if (getActiveNation()) {
+    updateNationOverlay(getActiveNation(), {
+      renderDetails: true,
+      updateFilters: false,
+      updateSelected: false,
+      renderMap: shouldRefreshIncomingOverlay,
+      updateManualExpansion: shouldRefreshIncomingOverlay,
+    });
+  }
+  return true;
+}
+function selectReachableCapitalCandidate(candidate) {
+  const region = regionByName[candidate?.region];
+  return commitReachableCapitalSelection(region, candidate?.primaryNation || '');
+}
+function reachableCapitalCandidateForRegion(regionName, anchorModel = currentOverlayModel) {
+  if (!getShowReachableCapitalCandidates() || !regionName) return null;
+  return reachableCapitalCandidateDescriptors(anchorModel)
+    .find(candidate => candidate.region === regionName) || null;
+}
+function selectReachableCapitalCandidateRegion(regionName, anchorModel = currentOverlayModel) {
+  const candidate = reachableCapitalCandidateForRegion(regionName, anchorModel);
+  return candidate ? selectReachableCapitalCandidate(candidate) : false;
+}
+function bindReachableCapitalCandidatePanelEvents() {
+  if (!reachableCandidatesPanel) return;
+  reachableCandidatesPanel.querySelectorAll('[data-candidate-focus]').forEach(button => {
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      const region = regionByName[button.dataset.candidateFocus];
+      commitReachableCapitalSelection(region, button.dataset.candidateNation || '');
+    });
+  });
+}
+function renderReachableCapitalCandidatesPanel(anchorModel = currentOverlayModel, {candidates} = {}) {
+  if (!reachableCandidatesPanel) return;
+  const checked = getShowReachableCapitalCandidates();
+  if (!checked) {
+    reachableCandidatesPanel.innerHTML = '';
+    return;
+  }
+  const resolvedCandidates = candidates ?? reachableCapitalCandidateDescriptors(anchorModel);
+  const body = resolvedCandidates.length
+    ? `<div class="reachableCandidateList">${resolvedCandidates.map(reachableCandidateRow).join('')}</div>`
+    : `<div class="reachableCandidateEmpty small">${escapeHtml(t('reachableCandidates.empty'))}</div>`;
+  reachableCandidatesPanel.innerHTML = `
+    <div class="reachableCandidateToolbar">
+      <span class="reachableCandidateCount">${escapeHtml(t('reachableCandidates.count', {count: formatNumber(resolvedCandidates.length)}))}</span>
+    </div>
+    ${body}
+  `;
+  bindReachableCapitalCandidatePanelEvents();
+}
+function reachableCapitalCandidateRenderKey(candidates, copyContexts = worldCopyContexts) {
+  if (!getShowReachableCapitalCandidates() || !candidates.length) return REACHABLE_CAPITAL_CANDIDATES_EMPTY_RENDER_KEY;
+  return JSON.stringify({
+    kind: 'reachable-capital-candidates',
+    copyPlan: copyContextRenderKey(copyContexts),
+    language: currentLanguage,
+    candidates: candidates.map(candidate => `${candidate.region}:${candidate.depth}:${candidate.sourceCount}:${candidate.primaryNation}:${candidate.nations.join(',')}`).join('|'),
+  });
+}
+function syncReachableCapitalCandidateHoverState() {
+  if (!gReachableCapitalCandidates) return;
+  const hoveredRegion = getHoveredRegionName();
+  gReachableCapitalCandidates.querySelectorAll('.reachable-capital-candidate[data-candidate-region]').forEach(marker => {
+    const active = !!hoveredRegion && marker.dataset.candidateRegion === hoveredRegion;
+    marker.classList.toggle('is-selected', active);
+    marker.classList.toggle('is-idle', !active);
+  });
+}
+function appendReachableCapitalCandidateMarker(frag, candidate, copyContext = defaultWorldCopyContext()) {
+  const region = regionByName[candidate.region];
+  if (!region) return;
+  appendCapitalMarkerGroup(frag, region, {
+    nation: candidate.primaryNation,
+    selected: candidate.region === getHoveredRegionName(),
+    copyContext,
+    className: 'reachable-capital-candidate',
+    ariaLabel: reachableCandidateMarkerLabel(candidate),
+    dataset: {
+      candidateRegion: candidate.region,
+      candidateNation: candidate.primaryNation,
+      candidateDepth: candidate.depth,
+      candidateSourceCount: candidate.sourceCount,
+    },
+    starClassName: 'reachable-capital-candidate-star',
+    starDataset: {
+      candidateFocus: candidate.region,
+      candidateNation: candidate.primaryNation,
+    },
+  });
+}
+function createReachableCapitalCandidateFragment(candidates, {copyContexts=worldCopyContexts} = {}) {
+  return createProjectedCopyFragment(copyContexts, 'reachable-capital-candidate-copy', copyContext => {
+    const frag = document.createDocumentFragment();
+    candidates.forEach(candidate => appendReachableCapitalCandidateMarker(frag, candidate, copyContext));
+    return frag;
+  });
+}
+function renderReachableCapitalCandidateMarkers(anchorModel = currentOverlayModel, {copyContexts=worldCopyContexts, candidates} = {}) {
+  if (!gReachableCapitalCandidates) return;
+  const resolvedCandidates = getShowReachableCapitalCandidates()
+    ? (candidates ?? reachableCapitalCandidateDescriptors(anchorModel))
+    : [];
+  replaceLayerChildrenForRenderKey(
+    gReachableCapitalCandidates,
+    reachableCapitalCandidateLayerRenderKeys,
+    reachableCapitalCandidateRenderKey(resolvedCandidates, copyContexts),
+    () => createReachableCapitalCandidateFragment(resolvedCandidates, {copyContexts}),
+    'reachableCapitalCandidateRebuilds'
+  );
+  syncReachableCapitalCandidateHoverState();
+}
+function refreshReachableCapitalCandidateOutputs(anchorModel = currentOverlayModel) {
+  const candidates = getShowReachableCapitalCandidates()
+    ? reachableCapitalCandidateDescriptors(anchorModel)
+    : [];
+  renderReachableCapitalCandidatesPanel(anchorModel, {candidates});
+  renderReachableCapitalCandidateMarkers(anchorModel, {candidates});
 }
 function getClaimOverlayDescriptorSet(model) {
   const cacheKey = claimOverlayDescriptorCacheKey(model);
@@ -2677,16 +3761,45 @@ function claimLabelRenderKey(model, descriptorSet, copyContexts = worldCopyConte
   });
 }
 function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyContexts} = {}) {
+  const fillDescriptors = [];
+  for (const descriptor of descriptors) {
+    const r = regionByName[descriptor.region];
+    if (!r) continue;
+    fillDescriptors.push({
+      path: r.path,
+      className: descriptor.fillClassName || 'claim-fill-group',
+      fill: descriptor.fill,
+      fillOpacity: descriptor.fillOpacity,
+      groupKey: descriptor.fillKey || `${descriptor.project || ''}:${descriptor.fill || ''}`,
+      dataset: {
+        fillKey: descriptor.fillKey || descriptor.project || descriptor.fill || '',
+        project: descriptor.project,
+      },
+    });
+  }
+  const fillGroups = buildVisualFillGroups(fillDescriptors);
   return createProjectedCopyFragment(copyContexts, 'claim-overlay-copy', copyContext => {
     const frag = document.createDocumentFragment();
     const copyData = worldCopyDataset(copyContext);
+    for (const group of fillGroups) {
+      frag.appendChild(createSvgElement('path', {
+        d: group.paths.join(' '),
+        class: group.className,
+        fill: group.fill,
+        'fill-opacity': group.fillOpacity === '' ? null : group.fillOpacity,
+      }, {
+        ...group.dataset,
+        visualGroupSize: group.paths.length,
+        ...copyData,
+      }));
+    }
     for (const descriptor of descriptors) {
       const r = regionByName[descriptor.region];
       if (!r) continue;
       frag.appendChild(createSvgElement('path', {
         d: r.path,
         class: descriptor.className,
-        fill: descriptor.fill,
+        fill: 'none',
       }, {
         region: descriptor.region,
         project: descriptor.project,
@@ -2976,7 +4089,10 @@ function bindNationOverlayPanelEvents(panelRoot, model) {
   panelRoot.querySelectorAll('.legendRegionItem[data-region-name]').forEach(el => el.addEventListener('click', e => {
     e.stopPropagation();
     const rn = el.dataset.regionName;
-    if (rn) focusRegions([rn], {selectSingle:true, preserveNation:true, refreshOverlay:true});
+    if (rn) {
+      focusRegions([rn], {selectSingle:true, preserveNation:true, refreshOverlay:true});
+      pinRegionState(rn);
+    }
   }));
 }
 function updateNationOverlay(
@@ -2985,6 +4101,8 @@ function updateNationOverlay(
     renderDetails = shouldRenderCommittedNationDetails(),
     updateFilters = renderDetails,
     updateSelected = renderDetails,
+    renderMap = true,
+    updateManualExpansion = renderMap,
   } = {}
 ) {
   setActiveNationState(nation);
@@ -2997,6 +4115,8 @@ function updateNationOverlay(
     applyMapVisualState();
     setSecondaryHoverNationState();
     clearClaimOverlayDom({claimOverlayLayer: gClaimOverlays, claimLabelLayer: gClaimLabels});
+    clearManualEnvelopeOverlay();
+    refreshReachableCapitalCandidateOutputs(null);
     renderHoverOutlines();
     if (renderDetails) nationInfo.textContent = t('nationInfo.empty');
     setClaimsPillEmpty();
@@ -3009,9 +4129,15 @@ function updateNationOverlay(
   setActiveIncomingClaimKeyState(overlayModel.activeIncomingClaimKey);
   currentOverlayModel = overlayModel;
   visibleNationRegionNames = new Set(overlayModel.resultSet);
-  renderMapOverlay(overlayModel, {claimOverlayLayer: gClaimOverlays, claimLabelLayer: gClaimLabels, mapView});
-  refreshSecondaryCapitalPreviewForHoveredRegion();
-  renderHoverOutlines();
+  if (renderMap) renderMapOverlay(overlayModel, {claimOverlayLayer: gClaimOverlays, claimLabelLayer: gClaimLabels, mapView});
+  if (updateManualExpansion) {
+    renderManualEnvelopeOverlay(overlayModel);
+    refreshReachableCapitalCandidateOutputs(overlayModel);
+  }
+  if (renderMap) {
+    refreshSecondaryCapitalPreviewForHoveredRegion();
+    renderHoverOutlines();
+  }
   renderClaimSummaryPill(overlayModel);
   if (renderDetails) {
     renderNationInfoPanel(nationInfo, overlayModel);
@@ -3031,24 +4157,21 @@ function updateProjectOptions(nation) {
   else projectSel.value = '';
 }
 function selectRegion(r) {
+  if (commitReachableCapitalSelection(r)) return;
   setHoveredRegionState(r.regionName, r.nationTag);
+  setFocusedRegionState(r.regionName);
   setSelectedRegionIds([r.regionName]);
   focusNation(r.nationTag);
+  pinRegionState(r.regionName);
 }
 function applyFilters(rerenderResults=true) {
   const q = searchFilterText();
-  const currentNation = getCurrentNation();
-  const entries = getVisibleProjectEntries(currentNation);
-  const claimSet = new Set();
-  entries.forEach(e => e.regions.forEach(r => claimSet.add(r)));
-  const baseSet = new Set((CLAIMS_BY_NATION[currentNation]?.baseRegions) || (nationRegions.get(currentNation) || []));
   let visible=0; const matches=[]; const hiddenRegionIds = new Set();
   regionPathElements.filter(p => p.dataset.wrapCanonical !== '0').forEach(p => {
     const r = REGIONS[Number(p.dataset.id)];
       const text = (r.name+' '+r.regionName+' '+localizedRegionName(r)+' '+(r.primaryCity || '')+' '+Object.values(r.displayName || {}).join(' ')+' '+r.nationTag).toLowerCase();
     const okQ = !q || text.includes(q);
-    const okClaims = !getOnlyClaims() || !currentNation || claimSet.has(r.regionName) || baseSet.has(r.regionName);
-    const ok = okQ && okClaims;
+    const ok = okQ;
     if (!ok) hiddenRegionIds.add(r.regionName);
     if (ok) { visible++; if (matches.length<90) matches.push(r); }
   });
@@ -3058,8 +4181,7 @@ function applyFilters(rerenderResults=true) {
   labelTextElements.forEach(t => {
     const r = REGIONS[Number(t.dataset.id)];
     const okQ = !q || (r.name+' '+r.regionName+' '+localizedRegionName(r)+' '+(r.primaryCity || '')+' '+Object.values(r.displayName || {}).join(' ')+' '+r.nationTag).toLowerCase().includes(q);
-    const okClaims = !getOnlyClaims() || !currentNation || claimSet.has(r.regionName) || baseSet.has(r.regionName);
-    t.style.display = okQ && okClaims ? '' : 'none';
+    t.style.display = okQ ? '' : 'none';
   });
   if (rerenderResults && results) {
     const nationMatches = q ? matchingNationChoices(q, 25) : [];
@@ -3093,6 +4215,10 @@ function refreshLanguage() {
   }
   applyFilters(true);
   updateSelectedRegions();
+  renderPinnedRegionsPanel();
+  renderPinnedRegionMarkers();
+  renderManualEnvelopeOverlay(currentOverlayModel);
+  refreshReachableCapitalCandidateOutputs(currentOverlayModel);
   const hoveredRegion = tooltipRegionId != null ? REGIONS[tooltipRegionId] : null;
   setHoverPill(hoveredRegion);
 }
@@ -3108,6 +4234,7 @@ search.addEventListener('input', () => {
     search.dataset.selectedNation = '';
     setLockedNationState();
     setSelectedRegionIds();
+    setFocusedRegionState();
     resetTransientClaimState();
     updateNationOverlay(getHoverNation() || '');
   }
@@ -3175,7 +4302,9 @@ projectSel.addEventListener('change', () => {
   updateNationOverlay(getCurrentNation());
 });
 document.getElementById('showLabels').addEventListener('click', () => { labelsVisible=!labelsVisible; renderLabels(); applyFilters(); });
-document.getElementById('onlyClaimsBtn').addEventListener('click', () => { setOnlyClaimsState(!getOnlyClaims()); updateOnlyClaimsButtonLabel(); applyFilters(); });
+document.getElementById('reachableCapitalsBtn')?.addEventListener('click', () => {
+  toggleReachableCapitalCandidatesState();
+});
 if (gHitRegions) {
   gHitRegions.addEventListener('pointerover', onHitLayerPointerOver);
   gHitRegions.addEventListener('pointermove', onHitLayerPointerMove);
@@ -3193,7 +4322,7 @@ svg.addEventListener('wheel', onMapWheel, {passive:false});
 svg.addEventListener('click', e => {
   if (consumeSuppressedMapClick(e)) return;
   const target = e.target;
-  if (target === svg || target === gGrid || target === gHitRegions || target.classList?.contains('graticule')) clearSelection();
+  if (target === svg || target === gGrid || target === gHitRegions || target.classList?.contains('graticule')) clearPinsOrSelection();
 });
 svg.addEventListener('mouseleave', onMapLeave);
 window.addEventListener('resize', invalidateTooltipLayout);
@@ -3203,14 +4332,19 @@ if ('ResizeObserver' in window) new ResizeObserver(invalidateTooltipLayout).obse
 setHoverPill();
 setClaimsPillEmpty();
 initMapViewControls();
-populate(); renderGrid({mapView}); renderRegions({mapView});
+renderPinnedRegionsPanel();
+refreshReachableCapitalCandidateOutputs();
+populate(); renderGrid({mapView}); renderRegions({mapView}); renderPinnedRegionMarkers();
+dismissLoadingScreen();
 }).catch((error) => {
   console.error(error);
   let language = 'ko';
-  try { language = String(window.localStorage?.getItem(LANGUAGE_STORAGE_KEY) || document.documentElement.lang || 'ko').toLowerCase().startsWith('en') ? 'en' : 'ko'; }
+  try { language = String(window.localStorage?.getItem('ti-map-language') || document.documentElement.lang || 'ko').toLowerCase().startsWith('en') ? 'en' : 'ko'; }
   catch (_) {}
   const message = language === 'en' ? 'Failed to load generated Terra Invicta map data.' : 'Terra Invicta 지도 데이터를 불러오지 못했습니다.';
-  document.body.innerHTML = `<pre style="white-space:pre-wrap;padding:24px;color:#f8fafc;background:#0b1020">${message}
+  if (!showLoadingFailure(message, error)) {
+    document.body.innerHTML = `<pre style="white-space:pre-wrap;padding:24px;color:#f8fafc;background:#0b1020">${message}
 
 ${String(error && error.stack || error)}</pre>`;
+  }
 });

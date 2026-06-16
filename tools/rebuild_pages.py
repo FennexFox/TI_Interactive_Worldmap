@@ -14,12 +14,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 GENERATED_PATHS = (
-    "data/nations.catalog.json",
-    "data/research.catalog.json",
+    "data/generated/nations.catalog.json",
+    "data/generated/research.catalog.json",
     "data/generated/region_map.generated.json",
     "data/generated/claim_map.generated.json",
-    "docs/data/nations.catalog.json",
-    "docs/data/research.catalog.json",
+    "docs/data/generated/nations.catalog.json",
+    "docs/data/generated/research.catalog.json",
     "docs/data/region_map.generated.json",
     "docs/data/claim_map.generated.json",
     "docs/assets/data.generated.js",
@@ -91,6 +91,7 @@ def build_pages(args: argparse.Namespace) -> None:
     if not templates_dir:
         templates_dir = infer_templates_dir(bilateral_template)
 
+    existing_region_map = ROOT / "data/generated/region_map.generated.json"
     if args.region_map_json:
         run([
             python,
@@ -100,7 +101,7 @@ def build_pages(args: argparse.Namespace) -> None:
             "--output",
             "data/generated/region_map.generated.json",
         ])
-    elif args.region_outlines:
+    elif args.region_outlines and (args.refresh_region_outlines or not existing_region_map.exists()):
         raw_output = "data/generated/region_outlines.raw.json"
         run([python, "tools/extract_region_outlines.py", "--asset", args.region_outlines, "--raw-output", raw_output])
         run([
@@ -111,7 +112,9 @@ def build_pages(args: argparse.Namespace) -> None:
             "--output",
             "data/generated/region_map.generated.json",
         ])
-    elif not Path("data/generated/region_map.generated.json").exists():
+    elif args.region_outlines:
+        print("Using existing data/generated/region_map.generated.json; pass --refresh-region-outlines to rebuild it from --region-outlines.")
+    elif not existing_region_map.exists():
         raise SystemExit("No region map data exists. Pass --region-outlines or --region-map-json.")
 
     if templates_dir and (templates_dir / "TIRegionTemplate.json").is_file():
@@ -145,7 +148,7 @@ def build_pages(args: argparse.Namespace) -> None:
             "--scenario-year",
             args.scenario_year,
             "--output",
-            "data/nations.catalog.json",
+            "data/generated/nations.catalog.json",
         ])
     if (
         templates_dir
@@ -164,7 +167,7 @@ def build_pages(args: argparse.Namespace) -> None:
             "--aliases",
             "data/manual/region_aliases.json",
             "--output",
-            "data/research.catalog.json",
+            "data/generated/research.catalog.json",
         ])
 
     claim_command = [
@@ -177,9 +180,9 @@ def build_pages(args: argparse.Namespace) -> None:
         "--aliases",
         "data/manual/region_aliases.json",
         "--nation-catalog",
-        "data/nations.catalog.json",
+        "data/generated/nations.catalog.json",
         "--research-catalog",
-        "data/research.catalog.json",
+        "data/generated/research.catalog.json",
         "--output",
         "data/generated/claim_map.generated.json",
     ]
@@ -242,6 +245,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--templates-dir", help="Path to TerraInvicta_Data/StreamingAssets/Templates.")
     parser.add_argument("--bilateral-template", help="Explicit path to TIBilateralTemplate.json.")
     parser.add_argument("--region-outlines", help="Path to Terra Invicta regionoutlines Unity asset bundle.")
+    parser.add_argument("--refresh-region-outlines", action="store_true", help="Rebuild region map data from --region-outlines instead of reusing existing generated region map data.")
     parser.add_argument("--region-map-json", help="Pre-extracted raw region outline JSON fixture.")
     parser.add_argument("--scenario-year", default="2026", choices=("2022", "2026", "2070"), help="Scenario start year used for template-derived region and nation metadata.")
     parser.add_argument("--catalog-languages", default="kor,en", help="Comma-separated localization languages for generated catalogs.")
@@ -251,7 +255,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--remote", default="origin", help="Git remote to push when changes are committed.")
     parser.add_argument("--branch", help="Branch to push. Defaults to the current branch.")
     parser.add_argument("--commit-message", help="Commit message for generated page updates.")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.refresh_region_outlines and not args.region_outlines:
+        parser.error("--refresh-region-outlines requires --region-outlines.")
+    return args
 
 
 def main() -> int:

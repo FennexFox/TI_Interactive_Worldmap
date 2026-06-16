@@ -4,7 +4,7 @@ Do not review generated or deployment artifacts unless the PR explicitly asks fo
 
 Treat these paths as generated:
 - docs/assets/data.generated.js
-- docs/data/*.json
+- docs/data/**
 - docs/assets/app.js
 - docs/assets/state/*.js
 - docs/assets/data/*.js
@@ -19,6 +19,5 @@ When these files change, review the generator scripts and source data instead:
 - tools/build_region_outline_data.py
 - tools/build_nation_catalog.py
 - tools/build_research_catalog.py
-- data/nations.catalog.json
-- data/research.catalog.json
+- data/manual/**
 - src/**

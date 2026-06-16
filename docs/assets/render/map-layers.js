@@ -79,6 +79,78 @@ export function createRegionPath(region, attrs = {}, dataset = {}) {
   });
 }
 
+function normalizeDataset(dataset = {}) {
+  return Object.fromEntries(
+    Object.entries(dataset || {})
+      .filter(([, value]) => value != null && value !== '')
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => [key, String(value)])
+  );
+}
+
+function datasetRenderKey(dataset = {}) {
+  return JSON.stringify(normalizeDataset(dataset));
+}
+
+export function buildVisualFillGroups(descriptors = []) {
+  const groups = new Map();
+  for (const descriptor of descriptors || []) {
+    const path = descriptor?.path || descriptor?.region?.path;
+    if (!path) continue;
+    const className = descriptor.className || 'visual-fill-group';
+    const fill = descriptor.fill || 'none';
+    const fillOpacity = descriptor.fillOpacity ?? '';
+    const dataset = normalizeDataset(descriptor.groupDataset || descriptor.dataset || {});
+    const groupKey = descriptor.groupKey || JSON.stringify({
+      className,
+      fill,
+      fillOpacity,
+      dataset: datasetRenderKey(dataset),
+    });
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, {
+        key: groupKey,
+        className,
+        fill,
+        fillOpacity,
+        dataset,
+        paths: [],
+      });
+    }
+    groups.get(groupKey).paths.push(path);
+  }
+  return [...groups.values()];
+}
+
+export function createGroupedVisualFillFragment({
+  descriptors = [],
+  copyContexts,
+  copyGroupClassName = 'visual-fill-copy',
+} = {}) {
+  const contexts = normalizeWorldCopyContexts(copyContexts);
+  const groups = buildVisualFillGroups(descriptors);
+  const frag = document.createDocumentFragment();
+  for (const copyContext of contexts) {
+    appendWorldCopyFragment(frag, copyContext, contexts.length, copyGroupClassName, () => {
+      const copyFrag = document.createDocumentFragment();
+      for (const group of groups) {
+        copyFrag.appendChild(createSvgElement('path', {
+          d: group.paths.join(' '),
+          class: group.className,
+          fill: group.fill,
+          'fill-opacity': group.fillOpacity === '' ? null : group.fillOpacity,
+        }, {
+          ...group.dataset,
+          visualGroupSize: group.paths.length,
+          ...worldCopyDataset(copyContext),
+        }));
+      }
+      return copyFrag;
+    });
+  }
+  return frag;
+}
+
 export function replaceLayerChildren(layer, children = []) {
   if (!layer) return;
   if (children instanceof DocumentFragment) {
@@ -95,7 +167,12 @@ export function setLayerVisible(layer, visible) {
 
 export function renderGrid({layer, mapView, copyContexts}) {
   const contexts = normalizeWorldCopyContexts(copyContexts);
-  const {x, y, width: w, height: h} = mapView;
+  const x = finiteNumber(mapView?.boundsX, finiteNumber(mapView?.x));
+  const y = finiteNumber(mapView?.boundsY, finiteNumber(mapView?.y));
+  const w = Math.abs(finiteNumber(mapView?.boundsWidth, finiteNumber(mapView?.width)));
+  const h = Math.abs(finiteNumber(mapView?.boundsHeight, finiteNumber(mapView?.height)));
+  const x2 = x + w;
+  const y2 = y + h;
   const frag = document.createDocumentFragment();
   for (const copyContext of contexts) {
     appendWorldCopyFragment(frag, copyContext, contexts.length, 'grid-copy', () => {
@@ -103,13 +180,13 @@ export function renderGrid({layer, mapView, copyContexts}) {
       for (let lon = -3; lon <= 3.01; lon += 0.5) {
         copyFrag.appendChild(createSvgElement('path', {
           class: 'graticule',
-          d: `M ${lon} ${y} L ${lon} ${y + h}`,
+          d: `M ${lon} ${y} L ${lon} ${y2}`,
         }, worldCopyDataset(copyContext)));
       }
       for (let lat = -1.25; lat <= 1.01; lat += 0.25) {
         copyFrag.appendChild(createSvgElement('path', {
           class: 'graticule',
-          d: `M ${x} ${lat} L ${x + w} ${lat}`,
+          d: `M ${x} ${lat} L ${x2} ${lat}`,
         }, worldCopyDataset(copyContext)));
       }
       return copyFrag;
