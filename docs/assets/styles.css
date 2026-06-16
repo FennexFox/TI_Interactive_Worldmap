@@ -88,12 +88,14 @@
   .region.dimmed { opacity:.18; }
   .region.owned-highlight { stroke:white; stroke-width:.016; filter:brightness(1.55); opacity:1; }
   .region.selected { stroke:#fff; stroke-width:.02; filter:brightness(1.75); }
+  .region.pinned-node { stroke:#5eead4; stroke-width:.018; }
   .region.hidden, .region-hit.hidden { display:none; }
   .region-hit { fill:transparent; stroke:none; pointer-events:fill; cursor:pointer; }
   svg.claims-active .region { opacity:1; filter:saturate(.42) brightness(.62); }
   svg.claims-active .region.dimmed { opacity:1; filter:saturate(.18) brightness(.38); }
   svg.claims-active .region.claim-target, svg.claims-active .region.owned-highlight { fill:transparent; opacity:.82; filter:none; }
   svg.claims-active .region.selected { opacity:1; filter:saturate(.55) brightness(.78); }
+  svg.claims-active .region.pinned-node { stroke:#5eead4; stroke-width:.021; opacity:1; }
   svg.claims-active .region:hover, svg.claims-active .region.hovered { filter:saturate(.6) brightness(.82); }
   .claim-overlay { pointer-events:none; stroke:rgba(255,255,255,.55); stroke-width:.012; vector-effect:non-scaling-stroke; mix-blend-mode:screen; }
   svg.claims-active .claim-overlay { mix-blend-mode:normal; filter: none; opacity: 1;}
@@ -140,6 +142,19 @@
   .selection-outline { pointer-events:none; fill:none; stroke:white; stroke-width:.034; vector-effect:non-scaling-stroke; }
   .selection-dot { pointer-events:none; fill:oklch(0.91 0.17 92 / .96); stroke:rgba(0,0,0,.8); stroke-width:.01; vector-effect:non-scaling-stroke; }
   .selection-label { pointer-events:none; font-size:.055px; font-weight:800; fill:#fff7b8; text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.82); stroke-width:.015; }
+  #manualEnvelopeOverlays { pointer-events:none; mix-blend-mode:normal; }
+  .manual-envelope-fill { pointer-events:none; stroke:none; mix-blend-mode:screen; }
+  .manual-envelope-region-outline { pointer-events:none; stroke:rgba(255,255,255,.50); stroke-width:.014; vector-effect:non-scaling-stroke; stroke-dasharray:.036 .026; }
+  .manual-envelope-region-outline.manual-envelope-depth-0 { stroke:oklch(0.90 0.10 170 / .80); }
+  .manual-envelope-region-outline.manual-envelope-depth-1 { stroke:oklch(0.84 0.13 220 / .82); }
+  .manual-envelope-region-outline.has-overlap { stroke-width:.019; }
+  .manual-envelope-overlap { pointer-events:none; stroke-width:.033; vector-effect:non-scaling-stroke; stroke-dasharray:.018 .014; }
+  #pinnedRegionMarkers { pointer-events:none; opacity:1; mix-blend-mode:normal; }
+  .pinned-fill { pointer-events:none; fill:oklch(0.78 0.13 185 / .20); stroke:none; mix-blend-mode:screen; }
+  .pinned-outline-glow { pointer-events:none; fill:none; stroke:oklch(0.82 0.17 185 / .86); stroke-width:.072; vector-effect:non-scaling-stroke; }
+  .pinned-outline { pointer-events:none; fill:none; stroke:#5eead4; stroke-width:.028; vector-effect:non-scaling-stroke; stroke-dasharray:.045 .022; }
+  .pinned-node-marker-group { pointer-events:none; }
+  #reachableCapitalCandidates { pointer-events:none; opacity:1; mix-blend-mode:normal; }
   .claim-label { pointer-events:none; font-size:.033px; fill:rgba(255,255,255,.88); text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.7); stroke-width:.008; }
   .label { pointer-events:none; font-size:.035px; fill:rgba(255,255,255,.78); text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.65); stroke-width:.008; }
   .tooltip { position:absolute; pointer-events:none; z-index:5; display:block; visibility:hidden; opacity:0; left:0; top:0; transform:translate3d(-9999px,-9999px,0); will-change:transform; contain:layout style paint; width:max-content; max-width:min(260px, calc(100% - 16px)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:rgba(8,13,24,.9); border:1px solid rgba(255,255,255,.12); border-radius:7px; padding:3px 7px; box-shadow:0 6px 18px rgba(0,0,0,.28); color:rgba(245,248,255,.92); font-size:12px; line-height:1.25; transition:opacity .06s ease; }
@@ -154,7 +169,37 @@
   .item:last-child { border-bottom:0; }
   .item:hover { background:rgba(255,255,255,.06); }
   .small { color:var(--muted); font-size:12px; }
+  .reachableCandidatesPanel { display:flex; flex-direction:column; gap:7px; padding-top:10px; }
+  .reachableCandidateToolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .reachableCandidateCount { flex:0 0 auto; color:#d9f99d; font-size:11.5px; font-weight:800; }
+  .reachableCandidateEmpty { padding:5px 2px; }
+  .reachableCandidateList { display:flex; flex-direction:column; gap:5px; }
+  .reachableCandidateRow { display:grid; grid-template-columns:minmax(0,1fr); gap:5px; align-items:stretch; }
+  .reachableCandidateFocus { min-width:0; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:7px; align-items:center; min-height:38px; padding:6px 7px; border-radius:8px; background:rgba(132,204,22,.07); border-color:rgba(190,242,100,.16); text-align:left; }
+  .reachableCandidateFocus:hover { background:rgba(132,204,22,.13); border-color:rgba(190,242,100,.34); }
+  .reachableCandidateMain { min-width:0; display:flex; flex-direction:column; gap:1px; }
+  .reachableCandidateMain b,
+  .reachableCandidateMain span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .reachableCandidateMain b { color:#ecfccb; font-size:12px; line-height:1.2; }
+  .reachableCandidateMain span { color:var(--muted); font-size:11px; line-height:1.25; }
+  .reachableCandidateFocusText { color:#d9f99d; font-size:10.5px; font-weight:800; }
+  .pinnedRegionsPanel { display:flex; flex-direction:column; gap:8px; padding-top:10px; }
+  .pinnedRegionEmpty { padding:8px 2px; }
+  .pinnedRegionToolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .pinnedRegionCount { color:#dbeafe; font-size:12px; font-weight:800; }
+  .pinnedRegionClear { width:auto; min-height:28px; padding:5px 9px; border-radius:8px; font-size:12px; font-weight:700; }
+  .pinnedRegionList { display:flex; flex-direction:column; gap:6px; }
+  .pinnedRegionRow { display:grid; grid-template-columns:minmax(0,1fr) 30px; gap:6px; align-items:stretch; }
+  .pinnedRegionFocus { min-width:0; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; align-items:center; min-height:44px; padding:7px 8px; border-radius:8px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); text-align:left; }
+  .pinnedRegionFocus:hover { background:rgba(145,183,255,.10); border-color:rgba(145,183,255,.28); }
+  .pinnedRegionMain { min-width:0; display:flex; flex-direction:column; gap:1px; }
+  .pinnedRegionMain b { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12.5px; line-height:1.2; }
+  .pinnedRegionMain span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font-size:11.5px; line-height:1.25; }
+  .pinnedRegionFocusText { color:#dbeafe; font-size:11px; font-weight:800; }
+  .pinnedRegionUnpin { width:30px; min-width:30px; min-height:44px; padding:0; border-radius:8px; color:#ffd6d2; background:rgba(255,87,87,.12); border-color:rgba(255,126,116,.30); font-size:18px; font-weight:800; line-height:1; }
+  .pinnedRegionUnpin:hover { background:rgba(255,87,87,.24); border-color:rgba(255,126,116,.58); }
   .legendRegionList { display:flex; flex-direction:column; gap:4px; margin-left:26px; padding-left:8px; border-left:1px solid rgba(255,255,255,.12); }
+  .legendRegionRow { display:grid; grid-template-columns:minmax(0,1fr); gap:5px; align-items:stretch; }
   .legendRegionItem { display:flex; flex-direction:column; align-items:flex-start; gap:1px; width:100%; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07); color:var(--text); font:inherit; text-align:left; cursor:pointer; }
   .legendRegionItem:hover { background:rgba(255,255,255,.075); border-color:rgba(255,255,255,.18); }
   .legendRegionItem.active { background:rgba(255,247,184,.12); border-color:rgba(255,247,184,.42); }
