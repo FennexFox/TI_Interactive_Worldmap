@@ -473,7 +473,7 @@ test('overlay model cache reuses unchanged inputs and misses changed filters', a
   expect(stats.overlayModelCacheHits).toBe(0);
 
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
-  await clickRegion(page, 'Amazonia');
+  await chooseNation(page, 'Brazil', 'BRA');
   await expect(page.locator('.claimListItem[data-claim-kind="incoming"]')).toHaveCount(4);
   stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.overlayModelCacheHits).toBeGreaterThan(0);
@@ -725,7 +725,7 @@ test('pinned expansion nodes update compact rows and map markers through clicks'
   await expect(page.locator('#regions .region[data-region="Amazonia"]')).not.toHaveClass(/pinned-node/);
 });
 
-test('map region clicks keep pinned expansion nodes until explicit removal', async ({ page }) => {
+test('map region clicks toggle pinned expansion nodes', async ({ page }) => {
   await page.goto('/?worldWrap=0&debugRenderStats=1');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
@@ -738,15 +738,10 @@ test('map region clicks keep pinned expansion nodes until explicit removal', asy
   await expect(page.locator('#regions .region[data-region="Amazonia"]')).toHaveClass(/pinned-node/);
 
   await clickRegion(page, 'Amazonia');
-  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="Amazonia"]')).toHaveCount(1);
-  await expect(page.locator('#pinnedRegionMarkers .pinned-node-marker-group[data-region="Amazonia"]')).toHaveCount(1);
-  await expect(page.locator('#regions .region[data-region="Amazonia"]')).toHaveClass(/pinned-node/);
-  await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveCount(1);
-
-  await page.locator('#pinnedRegionsPanel [data-pinned-unpin="Amazonia"]').click();
   await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="Amazonia"]')).toHaveCount(0);
   await expect(page.locator('#pinnedRegionMarkers .pinned-node-marker-group[data-region="Amazonia"]')).toHaveCount(0);
   await expect(page.locator('#regions .region[data-region="Amazonia"]')).not.toHaveClass(/pinned-node/);
+  await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveCount(1);
 });
 
 test('empty map clicks clear pinned regions and selection together', async ({ page }) => {
@@ -818,6 +813,24 @@ test('manual recursive envelope does not put overlap dots on Paris claims after 
   await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-overlap[data-region="Paris"]')).toHaveCount(1);
   await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-overlap-marker')).toHaveCount(0);
   await expect(page.locator('#manualEnvelopeOverlays .manual-envelope-overlap-dot')).toHaveCount(0);
+});
+
+test('formable capital hover does not show the current owner capital marker', async ({ page }) => {
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await clickRegion(page, 'Anatolia');
+  await expect(page.locator('#selectionOutlines .selection-label[data-region="Anatolia"]')).toHaveText('Ankara');
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region="Anatolia"]')).toHaveCount(1);
+  await expect(page.locator('#reachableCandidatesPanel [data-candidate-row="Novosibirsk"]')).toHaveCount(1);
+  await expect(page.locator('#reachableCapitalCandidates .reachable-capital-candidate[data-candidate-region="Novosibirsk"]')).toHaveCount(1);
+
+  await hoverRegion(page, 'Novosibirsk');
+  await waitForHoverPreviewFrame(page);
+  await expect(page.locator('#hoverPill')).toContainText('RUS');
+  await expect(page.locator('#secondaryHoverOverlays .secondary-capital-preview[data-preview="secondary-capital"][data-nation="SIB"]')).not.toHaveCount(0);
+  await expect(page.locator('#capitalMarkers .capital-marker[data-region="Anatolia"][data-nation="TUR"]')).toHaveCount(1);
+  await expect(page.locator('#capitalMarkers .capital-marker[data-region="Moskva"][data-nation="RUS"]')).toHaveCount(0);
 });
 
 test('reachable capital button shows capital markers that pin without plus buttons', async ({ page }) => {

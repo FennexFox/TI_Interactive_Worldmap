@@ -1248,6 +1248,10 @@ function isActiveCapitalMarkerSelected(nation) {
     || isCapitalRegionForNation(nation, getHoveredRegionName())
     || isPinnedCapitalRegionForNation(nation);
 }
+function shouldSuppressHoveredOwnerCapitalMarker(region) {
+  const claimant = resolveSecondaryCapitalPreviewNation(region);
+  return !!claimant && claimant !== region?.nationTag;
+}
 function collectCapitalMarkers() {
   const markers = new Map();
   const pinnedNation = getLockedNation() || getActiveNation();
@@ -1265,7 +1269,9 @@ function collectCapitalMarkers() {
     if (getActiveNation() && visibleNationRegionNames.has(hovered.regionName)) {
       addCapitalMarkerNation(markers, getActiveNation(), {selected:isActiveCapitalMarkerSelected(getActiveNation())});
     }
-    addCapitalMarkerNation(markers, hovered.nationTag, {selected:isCapitalRegionForNation(hovered.nationTag, hovered.regionName)});
+    if (!shouldSuppressHoveredOwnerCapitalMarker(hovered)) {
+      addCapitalMarkerNation(markers, hovered.nationTag, {selected:isCapitalRegionForNation(hovered.nationTag, hovered.regionName)});
+    }
   }
 
   if (!markers.size) addCapitalMarkerNation(markers, getHoverNation());
@@ -2227,6 +2233,15 @@ function clearSelection({clearSearch=true} = {}) {
 function clearPinsOrSelection() {
   clearSelection();
 }
+function unpinClickedPinnedRegion(region) {
+  const regionName = region?.regionName || '';
+  if (!regionName || !getPinnedRegionIds().has(regionName)) return false;
+  unpinPinnedRegionState(regionName);
+  refreshSecondaryCapitalPreviewForHoveredRegion();
+  renderHoverOutlines();
+  renderCapitalMarkers();
+  return true;
+}
 function focusNation(nation, {fillSearch=true} = {}) {
   if (!nation) { clearSelection({clearSearch:fillSearch}); return; }
   cancelPendingHoverPreview();
@@ -2613,6 +2628,7 @@ function onHitLayerClick(e) {
   const region = resolveHitRegion(e);
   if (!region) return;
   e.stopPropagation();
+  if (unpinClickedPinnedRegion(region)) return;
   if (selectReachableCapitalCandidateRegion(region.regionName)) return;
   selectRegion(region);
 }
