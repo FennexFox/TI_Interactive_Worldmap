@@ -5,6 +5,86 @@
   }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif; }
+  .app-loading-screen {
+    position:fixed;
+    inset:0;
+    z-index:9999;
+    display:grid;
+    place-items:center;
+    padding:28px;
+    background:
+      radial-gradient(circle at 50% 42%, rgba(145,183,255,.13), transparent 34%),
+      #070b16;
+    color:var(--text);
+    transition:opacity 180ms ease, visibility 180ms ease;
+  }
+  .app-loading-screen[data-loading-state="done"] {
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+  }
+  .app-loading-screen[data-loading-state="error"] .app-loading-progress {
+    display:none;
+  }
+  .app-loading-screen[data-loading-state="error"] .app-loading-detail {
+    color:#ffd0c8;
+  }
+  .app-loading-copy {
+    display:grid;
+    gap:10px;
+    max-width:420px;
+    text-align:center;
+  }
+  .app-loading-kicker {
+    color:var(--accent);
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+  }
+  .app-loading-title {
+    margin:0;
+    color:var(--text);
+    font-size:clamp(22px,4vw,34px);
+    line-height:1.05;
+    letter-spacing:-.04em;
+    text-transform:none;
+  }
+  .app-loading-detail {
+    margin:0;
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.5;
+  }
+  .app-loading-progress {
+    width:min(220px,60vw);
+    height:2px;
+    margin:10px auto 0;
+    overflow:hidden;
+    border-radius:999px;
+    background:rgba(152,166,189,.2);
+  }
+  .app-loading-progress::before {
+    content:"";
+    display:block;
+    width:42%;
+    height:100%;
+    border-radius:inherit;
+    background:var(--accent);
+    animation:app-loading-progress 1100ms ease-in-out infinite;
+  }
+  @keyframes app-loading-progress {
+    0% { transform:translateX(-120%); }
+    100% { transform:translateX(260%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .app-loading-screen,
+    .app-loading-progress::before {
+      transition:none;
+      animation:none;
+    }
+    .app-loading-progress::before { width:100%; }
+  }
   .app { display:grid; grid-template-columns: 372px 1fr; height:100vh; min-height:760px; }
   aside { background:linear-gradient(180deg,var(--panel),var(--panel2)); border-right:1px solid rgba(255,255,255,.08); padding:18px; overflow:auto; scrollbar-gutter:stable; }
   main { position:relative; overflow:hidden; display:flex; flex-direction:column; }

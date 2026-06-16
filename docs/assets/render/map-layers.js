@@ -167,7 +167,12 @@ export function setLayerVisible(layer, visible) {
 
 export function renderGrid({layer, mapView, copyContexts}) {
   const contexts = normalizeWorldCopyContexts(copyContexts);
-  const {x, y, width: w, height: h} = mapView;
+  const x = finiteNumber(mapView?.boundsX, finiteNumber(mapView?.x));
+  const y = finiteNumber(mapView?.boundsY, finiteNumber(mapView?.y));
+  const w = Math.abs(finiteNumber(mapView?.boundsWidth, finiteNumber(mapView?.width)));
+  const h = Math.abs(finiteNumber(mapView?.boundsHeight, finiteNumber(mapView?.height)));
+  const x2 = x + w;
+  const y2 = y + h;
   const frag = document.createDocumentFragment();
   for (const copyContext of contexts) {
     appendWorldCopyFragment(frag, copyContext, contexts.length, 'grid-copy', () => {
@@ -175,13 +180,13 @@ export function renderGrid({layer, mapView, copyContexts}) {
       for (let lon = -3; lon <= 3.01; lon += 0.5) {
         copyFrag.appendChild(createSvgElement('path', {
           class: 'graticule',
-          d: `M ${lon} ${y} L ${lon} ${y + h}`,
+          d: `M ${lon} ${y} L ${lon} ${y2}`,
         }, worldCopyDataset(copyContext)));
       }
       for (let lat = -1.25; lat <= 1.01; lat += 0.25) {
         copyFrag.appendChild(createSvgElement('path', {
           class: 'graticule',
-          d: `M ${x} ${lat} L ${x + w} ${lat}`,
+          d: `M ${x} ${lat} L ${x2} ${lat}`,
         }, worldCopyDataset(copyContext)));
       }
       return copyFrag;

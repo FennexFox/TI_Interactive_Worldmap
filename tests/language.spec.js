@@ -73,6 +73,13 @@ async function resetDebugRenderStats(page) {
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
 }
 
+async function zoomInMap(page, count = 7) {
+  for (let index = 0; index < count; index += 1) {
+    await page.locator('[data-map-view-action="zoomIn"]').click();
+    await waitForAnimationFrames(page, 1);
+  }
+}
+
 async function pinFirstReachableCapitalCandidate(page) {
   const candidate = page.locator('#reachableCandidatesPanel [data-candidate-focus]').first();
   await expect(candidate).toBeVisible();
@@ -965,7 +972,7 @@ test('pre-drag click hold still allows hit-layer hover updates', async ({ page }
 
   await expect(page.locator('#hoverPill')).toContainText('BOL');
   await expect(page.locator('#map')).toHaveClass(/is-panning-ready/);
-  await expect(page.locator('#map')).not.toHaveClass(/is-panning/);
+  await expect(page.locator('#map')).not.toHaveClass(/(^|\s)is-panning(\s|$)/);
 
   await page.locator('#map').dispatchEvent('pointerup', {
     bubbles: true,
@@ -977,10 +984,47 @@ test('pre-drag click hold still allows hit-layer hover updates', async ({ page }
   await expect(page.locator('#map')).not.toHaveClass(/is-panning-ready/);
 });
 
+test('zoomed plain map pan records counters without grid rebuilds', async ({ page }) => {
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
+
+  await zoomInMap(page);
+  await expect(page.locator('#grid .graticule')).toHaveCount(23);
+
+  const mapBox = await page.locator('#map').boundingBox();
+  expect(mapBox).toBeTruthy();
+  const start = await blankMapPoint(page);
+  const end = {x: Math.min(mapBox.x + mapBox.width - 20, start.x + 360), y: start.y + 18};
+  const beforeViewBox = await mapViewBox(page);
+
+  await page.mouse.move(start.x, start.y);
+  await waitForAnimationFrames(page, 2);
+  await resetDebugRenderStats(page);
+  await page.mouse.down();
+  await page.mouse.move(end.x, end.y, {steps: 12});
+  await waitForAnimationFrames(page, 3);
+
+  const duringStats = await debugRenderStats(page);
+  const duringViewBox = await mapViewBox(page);
+  expect(Math.abs(duringViewBox[0] - beforeViewBox[0])).toBeGreaterThan(0.01);
+  expect(duringStats.panPointerMoveCount).toBeGreaterThan(0);
+  expect(duringStats.panViewBoxApplyCount).toBeGreaterThan(0);
+  expect(duringStats.panFrameMsCount).toBeGreaterThan(0);
+  expect(duringStats.gridRebuildsDuringPan).toBe(0);
+  expect(duringStats.panSvgRectReads).toBeLessThanOrEqual(1);
+  expect(duringStats.visibleSvgNodeCount).toBeGreaterThan(0);
+  expect(duringStats.gridRenderMsCount).toBe(0);
+
+  await page.mouse.up();
+  await waitForAnimationFrames(page, 3);
+  await expect(page.locator('#grid .graticule')).toHaveCount(23);
+});
+
 test('map pan after multiple reachable capital pins avoids hover and marker churn during drag', async ({ page }) => {
   await page.goto('/?debugRenderStats=1');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
+  await zoomInMap(page);
   await chooseNation(page, 'China', 'CHN');
   await pinReachableCapitalCandidates(page, 3);
 
@@ -1000,6 +1044,13 @@ test('map pan after multiple reachable capital pins avoids hover and marker chur
   const duringStats = await debugRenderStats(page);
   const duringViewBox = await mapViewBox(page);
   expect(Math.abs(duringViewBox[0] - beforeViewBox[0])).toBeGreaterThan(0.01);
+  expect(duringStats.panPointerMoveCount).toBeGreaterThan(0);
+  expect(duringStats.panViewBoxApplyCount).toBeGreaterThan(0);
+  expect(duringStats.panFrameMsCount).toBeGreaterThan(0);
+  expect(duringStats.gridRebuildsDuringPan).toBe(0);
+  expect(duringStats.panSvgRectReads).toBeLessThanOrEqual(1);
+  expect(duringStats.visibleSvgNodeCount).toBeGreaterThan(0);
+  expect(duringStats.gridRenderMsCount).toBe(0);
   expect(duringStats.reachableCapitalCandidateRebuilds).toBe(0);
   expect(duringStats.capitalMarkerRebuilds).toBe(0);
   expect(duringStats.manualEnvelopeRebuilds).toBe(0);
