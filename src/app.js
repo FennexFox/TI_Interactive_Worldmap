@@ -186,6 +186,20 @@ function createDebugRenderStats() {
     'reachableCapitalCandidateRebuilds',
     'capitalMarkerRebuilds',
     'pinnedRegionMarkerRebuilds',
+    'panPointerMoveCount',
+    'panFrameMsCount',
+    'panFrameMsTotal',
+    'panFrameMsMax',
+    'mapViewApplyMsCount',
+    'mapViewApplyMsTotal',
+    'mapViewApplyMsMax',
+    'gridRenderMsCount',
+    'gridRenderMsTotal',
+    'gridRenderMsMax',
+    'panViewBoxApplyCount',
+    'gridRebuildsDuringPan',
+    'panSvgRectReads',
+    'visibleSvgNodeCount',
   ];
   const stats = {};
   for (const key of keys) stats[key] = 0;
@@ -203,6 +217,17 @@ if (debugRenderStats) window.__TI_DEBUG_RENDER_STATS__ = debugRenderStats;
 function recordRenderStat(key, amount = 1) {
   if (!debugRenderStats) return;
   debugRenderStats[key] = (debugRenderStats[key] || 0) + amount;
+}
+function setRenderStat(key, value) {
+  if (!debugRenderStats) return;
+  debugRenderStats[key] = Number.isFinite(Number(value)) ? Number(value) : 0;
+}
+function recordRenderTiming(key, value) {
+  if (!debugRenderStats) return;
+  const ms = Math.max(0, Number(value) || 0);
+  recordRenderStat(`${key}Count`);
+  recordRenderStat(`${key}Total`, ms);
+  debugRenderStats[`${key}Max`] = Math.max(debugRenderStats[`${key}Max`] || 0, ms);
 }
 
 const DEBUG_CLAIM_OVERLAY_DELAY_QUERY = 'debugClaimOverlayDelayFrames';
@@ -682,6 +707,7 @@ let secondaryHoverVisualKey = '';
 let hoverOutlineVisualKey = '';
 let capitalMarkersKey = '';
 let mapViewFrame = 0;
+let pendingMapViewRenderContext = null;
 let panHoverRefreshFrame = 0;
 let pendingPanHoverPoint = null;
 let mapPanState = null;
@@ -2312,11 +2338,16 @@ function renderClaimSection(title, items, emptyText, kind) {
 
 
 function renderGrid(renderContext = {}) {
+  const start = debugRenderStats ? performance.now() : 0;
   renderGridLayer({
     layer: gGrid,
     mapView: renderContext.mapView || mapView,
     copyContexts: renderContext.copyContexts || worldCopyContexts,
   });
+  if (debugRenderStats) {
+    recordRenderTiming('gridRenderMs', performance.now() - start);
+    if (renderContext.isPan) recordRenderStat('gridRebuildsDuringPan');
+  }
 }
 function renderNormalRegionColors(renderContext = {}) {
   if (!gNormalRegionColors) return;
@@ -2457,16 +2488,38 @@ function onMapWheel(e) {
   const scale = e.deltaY < 0 ? 1 / MAP_WHEEL_ZOOM_FACTOR : MAP_WHEEL_ZOOM_FACTOR;
   zoomMapAt(scale, anchor);
 }
-function applyMapViewToSvg() {
-  if (svg) svg.setAttribute('viewBox', formatViewBoxForMapView(mapView));
-  renderGrid({mapView});
+function applyMapViewToSvg(renderContext = {}) {
+  const isPan = !!renderContext.isPan;
+  const scheduledAt = Number(renderContext.scheduledAt);
+  const start = debugRenderStats ? performance.now() : 0;
+  if (svg) {
+    svg.setAttribute('viewBox', formatViewBoxForMapView(mapView));
+    if (isPan) recordRenderStat('panViewBoxApplyCount');
+  }
+  if (debugRenderStats) {
+    const finishedAt = performance.now();
+    recordRenderTiming('mapViewApplyMs', finishedAt - start);
+    if (isPan && Number.isFinite(scheduledAt)) {
+      recordRenderTiming('panFrameMs', finishedAt - scheduledAt);
+    }
+  }
   invalidateTooltipLayout();
 }
-function scheduleMapViewRender() {
+function scheduleMapViewRender(renderContext = {}) {
+  if (renderContext.isPan) {
+    pendingMapViewRenderContext = {
+      isPan: true,
+      scheduledAt: Number.isFinite(Number(renderContext.scheduledAt)) ? Number(renderContext.scheduledAt) : performance.now(),
+    };
+  } else if (!pendingMapViewRenderContext) {
+    pendingMapViewRenderContext = renderContext;
+  }
   if (mapViewFrame) return;
   mapViewFrame = window.requestAnimationFrame(() => {
+    const context = pendingMapViewRenderContext || {};
+    pendingMapViewRenderContext = null;
     mapViewFrame = 0;
-    applyMapViewToSvg();
+    applyMapViewToSvg(context);
   });
 }
 function invalidateTooltipLayout() {
@@ -2585,7 +2638,7 @@ function onRegionLeave(e) {
   clearHoverPreview();
 }
 function onHitLayerPointerOver(e) {
-  if (mapPanState?.dragging) return;
+  if (shouldSuppressHitLayerPointerEvent(e)) return;
   const region = resolveHitRegion(e);
   if (!region) return;
   const previousRegion = resolveRelatedHitRegion(e);
@@ -2593,12 +2646,12 @@ function onHitLayerPointerOver(e) {
   onRegionEnter(e, region, {force: !previousRegion});
 }
 function onHitLayerPointerMove(e) {
-  if (mapPanState?.dragging) return;
+  if (shouldSuppressHitLayerPointerEvent(e)) return;
   const region = resolveHitRegion(e);
   if (region) onRegionMove(e, region);
 }
 function onHitLayerPointerOut(e) {
-  if (mapPanState?.dragging) return;
+  if (shouldSuppressHitLayerPointerEvent(e)) return;
   const region = resolveHitRegion(e);
   if (!region) return;
   if (resolveRelatedHitRegion(e)) return;
@@ -2646,12 +2699,25 @@ function schedulePanHoverRefresh(clientX, clientY) {
     refreshPanHoverFromClientPoint(point.clientX, point.clientY);
   });
 }
-function viewDeltaFromPointerDelta(deltaX, deltaY) {
-  const rect = svg?.getBoundingClientRect();
-  if (!rect?.width || !rect?.height) return {dx: 0, dy: 0};
+function shouldSuppressHitLayerPointerEvent(e) {
+  if (!mapPanState || e.pointerId !== mapPanState.pointerId) return false;
+  if (mapPanState.dragging) return true;
+  return Math.hypot(e.clientX - mapPanState.startX, e.clientY - mapPanState.startY) >= MAP_PAN_DRAG_THRESHOLD_PX;
+}
+function measurePanViewportRect() {
+  recordRenderStat('panSvgRectReads');
+  return svg?.getBoundingClientRect();
+}
+function samplePanSvgNodeCount() {
+  if (!debugRenderStats || !svg) return;
+  setRenderStat('visibleSvgNodeCount', svg.querySelectorAll('*').length);
+}
+function viewDeltaFromPointerDelta(deltaX, deltaY, rect = null) {
+  const viewportRect = rect || measurePanViewportRect();
+  if (!viewportRect?.width || !viewportRect?.height) return {dx: 0, dy: 0};
   return {
-    dx: -(deltaX * mapView.width) / rect.width,
-    dy: -(deltaY * mapView.height) / rect.height,
+    dx: -(deltaX * mapView.width) / viewportRect.width,
+    dy: -(deltaY * mapView.height) / viewportRect.height,
   };
 }
 function markSuppressNextMapClick() {
@@ -2692,6 +2758,7 @@ function onMapPointerDown(e) {
     lastX: e.clientX,
     lastY: e.clientY,
     dragging: false,
+    viewportRect: null,
   };
   svg?.classList.add('is-panning-ready');
 }
@@ -2702,17 +2769,25 @@ function onMapPointerMove(e) {
   if (!mapPanState.dragging && Math.hypot(totalX, totalY) < MAP_PAN_DRAG_THRESHOLD_PX) return;
   if (!mapPanState.dragging) {
     mapPanState.dragging = true;
+    mapPanState.viewportRect = measurePanViewportRect();
+    samplePanSvgNodeCount();
     svg?.classList.add('is-panning');
     try {
       svg?.setPointerCapture?.(e.pointerId);
     } catch {}
   }
   e.preventDefault();
-  const {dx, dy} = viewDeltaFromPointerDelta(e.clientX - mapPanState.lastX, e.clientY - mapPanState.lastY);
+  recordRenderStat('panPointerMoveCount');
+  const scheduledAt = debugRenderStats ? performance.now() : 0;
+  const {dx, dy} = viewDeltaFromPointerDelta(
+    e.clientX - mapPanState.lastX,
+    e.clientY - mapPanState.lastY,
+    mapPanState.viewportRect
+  );
   panMapView(mapView, {dx, dy, normalizeX: worldWrapEnabled});
   mapPanState.lastX = e.clientX;
   mapPanState.lastY = e.clientY;
-  scheduleMapViewRender();
+  scheduleMapViewRender({isPan: true, scheduledAt});
 }
 function onMapPointerUp(e) {
   if (!mapPanState || e.pointerId !== mapPanState.pointerId) return;
