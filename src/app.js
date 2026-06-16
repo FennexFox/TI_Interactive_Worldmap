@@ -2212,6 +2212,23 @@ function clearSelection({clearSearch=true} = {}) {
 function clearPinsOrSelection() {
   clearSelection();
 }
+function unpinClickedPinnedRegion(region) {
+  const regionName = region?.regionName || '';
+  if (!regionName || !getPinnedRegionIds().has(regionName)) return false;
+  unpinPinnedRegionState(regionName);
+  if (selectedRegionIds.has(regionName)) {
+    const remainingSelected = [...selectedRegionIds].filter(name => name !== regionName);
+    setSelectedRegionIds(remainingSelected);
+    if (getFocusedRegionName() === regionName) {
+      setFocusedRegionState(remainingSelected.length === 1 ? remainingSelected[0] : '');
+    }
+    updateSelectedRegions();
+  }
+  refreshSecondaryCapitalPreviewForHoveredRegion();
+  renderHoverOutlines();
+  renderCapitalMarkers();
+  return true;
+}
 function focusNation(nation, {fillSearch=true} = {}) {
   if (!nation) { clearSelection({clearSearch:fillSearch}); return; }
   cancelPendingHoverPreview();
@@ -2597,6 +2614,7 @@ function onHitLayerClick(e) {
   const region = resolveHitRegion(e);
   if (!region) return;
   e.stopPropagation();
+  if (unpinClickedPinnedRegion(region)) return;
   if (selectReachableCapitalCandidateRegion(region.regionName)) return;
   selectRegion(region);
 }
