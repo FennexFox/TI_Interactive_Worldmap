@@ -43,16 +43,19 @@
 
 ## Validation commands
 
-- `npm run build`
-- `npm run verify`
-- `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/snap/bin/chromium npm run test:e2e`
-- `python /home/fennexfox/.codex/skills/phased-issue-implementation/scripts/phase_plan_helper.py phase-gate --file docs/plan/issue_44/02-optimization-loop-1.md --type performance`
-- `python /home/fennexfox/.codex/skills/phased-issue-implementation/scripts/phase_plan_helper.py phase-gate --file docs/plan/issue_44/03-verification-final-audit.md --type performance`
+- `npm run build` - passed; regenerated checked-in Pages output.
+- `npm run verify` - passed; Python/unit checks, JavaScript syntax checks, and generated-output verification passed.
+- `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/snap/bin/chromium npx playwright test tests/language.spec.js -g "map pan|zoomed plain map pan"` - passed; 2 tests.
+- `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/snap/bin/chromium npx playwright test tests/map-wrap.spec.js -g "panning|pan"` - passed; 7 tests.
+- `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/snap/bin/chromium npm run test:e2e` - passed; 63 tests.
+- `python /home/fennexfox/.codex/skills/phased-issue-implementation/scripts/phase_plan_helper.py phase-gate --file docs/plan/issue_44/02-optimization-loop-1.md --type performance` - passed.
+- `python /home/fennexfox/.codex/skills/phased-issue-implementation/scripts/phase_plan_helper.py phase-gate --file docs/plan/issue_44/03-verification-final-audit.md --type performance` - pending final audit update.
 
 ## Manual smoke tests
 
-- Plain map: zoom in to a detailed regional view, pan continuously for several seconds, and record whether movement feels prompt and whether flicker/full-map repaint is visible.
-- Heavy map: select China, pin reachable-capital candidates to create dynamic overlays, zoom in to a detailed regional view, pan continuously for several seconds, and record the same observations.
+- Plain map: captured and manually inspected a sampled frame strip during zoomed continuous pan; map position advanced continuously with no blank frame, full-map flash, or obvious repaint flicker in sampled frames.
+- Heavy map: repeated with China selected and reachable-capital/manual-envelope overlays present; sampled frames retained the dynamic layers and showed continuous movement with no blank frame, full-map flash, or obvious repaint flicker.
+- Responsiveness: same-host pan frame timing improved in both scenarios, and no sampled frame suggested obvious sluggishness. This is headless visual smoke rather than a live headed browser drag.
 
 ## Rollback risks
 
@@ -61,21 +64,44 @@
 
 ## Evidence
 
-- Baseline: Phase 01 records same-scenario before values.
-- After: Pending Phase 2 implementation.
-- Delta: Pending Phase 2 implementation.
-- Interpretation: Pending final audit.
-- Commit: Pending Phase 3 commit or final commit audit.
+- Baseline: Plain zoomed pan recorded `panPointerMoveCount=150`, `panViewBoxApplyCount=150`, `gridRebuildsDuringPan=150`, `panSvgRectReads=150`, `panFrameMs avg=0.255ms`, `panFrameMs max=4.8ms`.
+- Baseline: Heavy zoomed pan with China claims/reachable capitals recorded `panPointerMoveCount=150`, `panViewBoxApplyCount=150`, `gridRebuildsDuringPan=150`, `panSvgRectReads=150`, `panFrameMs avg=0.258ms`, `panFrameMs max=5.7ms`.
+- After: Plain zoomed pan recorded `panPointerMoveCount=150`, `panViewBoxApplyCount=150`, `gridRebuildsDuringPan=0`, `panSvgRectReads=1`, `panFrameMs avg=0.223ms`, `panFrameMs max=2.7ms`.
+- After: Heavy zoomed pan recorded `panPointerMoveCount=150`, `panViewBoxApplyCount=150`, `gridRebuildsDuringPan=0`, `panSvgRectReads=1`, `panFrameMs avg=0.210ms`, `panFrameMs max=3.1ms`.
+- Delta: Grid DOM rebuilds during pan improved 150 -> 0 in both scenarios, SVG rect reads improved 150 -> 1 in both scenarios, and max sampled pan frame timing improved in both scenarios.
+- Interpretation: The implementation directly removes the measured grid rebuild and repeated layout-read hot spots from zoomed pan, preserves viewBox movement, and the visual frame strips do not show full-map flicker. A transform-based pan preview is not justified by this loop's evidence.
+- Commit: Final audit committed as a separate audit phase.
 - Commit blocker: None known.
 
 ## Progress
 
-- Pending Phase 2 implementation evidence.
+- Re-ran same-scenario after measurements.
+- Inspected plain and heavy visual frame strips.
+- Ran build, verify, targeted Playwright, and full e2e validation.
+- Audited commits and generated-file handling.
 
 ## Decision log
 
 - The final audit must classify the work as incomplete or needing follow-up if manual smoke still observes obvious sluggishness or flicker.
+- Final audit classifies the work as Complete because both target symptoms were directly evaluated and improved after loop 1.
 
 ## Outcomes / Retrospective
 
-- Pending final audit.
+- Complete. No second optimization loop is needed for issue #44 based on the recorded evidence.
+
+## Final Audit
+
+- Completion classification: Complete.
+- Completed: Added pan-specific counters/timing, stopped grid DOM replacement during pan frames, cached one SVG viewport rect per drag, suppressed threshold-crossing hit-layer hover churn, added regression tests for plain and heavy zoomed pan, and rebuilt generated Pages output from source.
+- Not completed: Transform-based pan preview, viewport culling, and renderer rewrites were intentionally not implemented because loop 1 removed the measured hot spots and visual smoke did not show obvious flicker.
+- Validation: `npm run build`, `npm run verify`, targeted language/map-wrap pan tests, full `npm run test:e2e` with system Chromium, and Phase 2 gate all passed.
+- Manual smoke tests: Plain and heavy sampled frame strips were manually inspected; both showed continuous pan movement with no blank or full-flash frames. Live headed-browser subjective smoothness was not run on this host.
+- Generated-file policy: `docs/assets/app.js`, `docs/assets/render/map-layers.js`, and `docs/assets/data.generated.js` were produced by `npm run build`; no generated file was hand-edited.
+- Commit audit:
+  - Phase-sized commits made: yes, `45d6cf2` for plan/baseline and `9c2fe5b` for implementation/validation.
+  - Plan / baseline committed before source implementation: yes.
+  - Generated artifacts policy followed: yes; generated Pages assets were rebuilt and committed with the implementation phase.
+  - Unrelated changes excluded: yes; unrelated unstaged deletions under `docs/plan/issue_41/**` were not staged or committed.
+  - Commit-flow classification: compliant; final-audit changes are committed as a separate audit phase.
+- Known risks: Headless frame-strip smoke is not identical to a live headed manual drag; timing values are host-dependent.
+- Follow-up recommendation: None for issue #44. If a user still reports visible repaint after this change, open a separate measured follow-up for transform-based pan preview or viewport culling.
