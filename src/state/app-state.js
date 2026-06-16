@@ -63,14 +63,15 @@ export function setPinnedRegions(state, regionIds = []) {
   return state;
 }
 
-export function pinRegion(state, regionId = '', {capitalClaimant} = {}) {
+export function pinRegion(state, regionId = '', {capitalClaimant, capitalClaimantId} = {}) {
   const normalized = normalizeId(regionId);
   if (!normalized) return state;
   if (!state.pinnedRegionIds) state.pinnedRegionIds = new Set();
   if (!state.pinnedCapitalClaimants) state.pinnedCapitalClaimants = new Map();
   state.pinnedRegionIds.add(normalized);
-  if (capitalClaimant !== undefined) {
-    const claimant = normalizeId(capitalClaimant);
+  const hasClaimantOverride = capitalClaimant !== undefined || capitalClaimantId !== undefined;
+  if (hasClaimantOverride) {
+    const claimant = normalizeId(capitalClaimantId ?? capitalClaimant);
     if (claimant) state.pinnedCapitalClaimants.set(normalized, claimant);
     else state.pinnedCapitalClaimants.delete(normalized);
   }

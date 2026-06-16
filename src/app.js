@@ -1204,6 +1204,38 @@ function addCapitalMarkerNation(markers, nation, {selected=false} = {}) {
     });
   }
 }
+function appendCapitalMarkerGroup(frag, region, {
+  nation = '',
+  selected = false,
+  copyContext = defaultWorldCopyContext(),
+  className = '',
+  ariaLabel = '',
+  dataset = {},
+} = {}) {
+  const lab = labelPosition(region);
+  if (!lab) return null;
+  const group = createSvgElement('g', {
+    class: `capital-marker${selected ? ' is-selected' : ' is-idle'}${className ? ` ${className}` : ''}`,
+    'aria-label': ariaLabel || `${t('nationInfo.kv.capitalRegion')}: ${localizedRegionName(region)}`,
+  }, {
+    region: region.regionName,
+    nation,
+    ...dataset,
+    ...worldCopyDataset(copyContext),
+  });
+  const points = starPoints(lab.x, lab.y);
+  group.appendChild(createSvgElement('polygon', {
+    class: 'capital-star-shadow',
+    points,
+    'aria-hidden': 'true',
+  }));
+  group.appendChild(createSvgElement('polygon', {
+    class: 'capital-star',
+    points,
+  }));
+  frag.appendChild(group);
+  return group;
+}
 function isPinnedCapitalRegionForNation(nation) {
   if (!nation) return false;
   return [...getPinnedRegionIds()].some(rn => isCapitalRegionForNation(nation, rn));
@@ -1250,31 +1282,12 @@ function renderCapitalMarkers({force=false, copyContexts=worldCopyContexts} = {}
     const frag = document.createDocumentFragment();
     for (const markerInfo of markers) {
       const region = regionByName[markerInfo.regionName];
-      const lab = labelPosition(region);
-      if (!lab) continue;
-      const group = createSvgElement('g', {
-        class: `capital-marker${markerInfo.selected ? ' is-selected' : ' is-idle'}`,
-        'aria-label': `${t('nationInfo.kv.capitalRegion')}: ${localizedRegionName(region)}`,
-      }, {
-        region: markerInfo.regionName,
+      if (!region) continue;
+      appendCapitalMarkerGroup(frag, region, {
         nation: markerInfo.nation,
-        ...worldCopyDataset(copyContext),
+        selected: markerInfo.selected,
+        copyContext,
       });
-
-      const points = starPoints(lab.x, lab.y);
-      const shadow = createSvgElement('polygon', {
-        class: 'capital-star-shadow',
-        points,
-        'aria-hidden': 'true',
-      });
-      group.appendChild(shadow);
-
-      const star = createSvgElement('polygon', {
-        class: 'capital-star',
-        points,
-      });
-      group.appendChild(star);
-      frag.appendChild(group);
     }
     return frag;
   }));
@@ -1896,15 +1909,14 @@ function shouldShowForeignHoverNationOverlay(region) {
   if (!region?.nationTag) return false;
   const pinnedNation = getLockedNation() || getActiveNation();
   if (!pinnedNation) return false;
-  if (activeClaimPreviewContainsRegion(region.regionName)) return false;
+  const scope = buildActiveExpansionScope(currentOverlayModel);
+  if (scope.regionSet?.has?.(region.regionName)) return false;
   return region.nationTag !== pinnedNation;
 }
 function resolveSecondaryCapitalPreviewNation(region) {
-  const selectedNation = getLockedNation();
+  const selectedNation = getLockedNation() || getActiveNation();
   if (!selectedNation || !region?.regionName || !currentOverlayModel?.hasClaimOverlay) return '';
-  const resultSet = activeClaimPreviewRegionSet(currentOverlayModel);
-  if (!resultSet.has(region.regionName)) return '';
-  return reachableCapitalCandidateNations(region.regionName, selectedNation, resultSet)[0] || '';
+  return resolveCapitalClaimantForRegion(region.regionName, buildActiveExpansionScope(currentOverlayModel));
 }
 function updateSecondaryCapitalPreview(region) {
   const nextNation = resolveSecondaryCapitalPreviewNation(region);
@@ -3328,6 +3340,22 @@ function activeClaimPreviewRegionSet(anchorModel = currentOverlayModel) {
 function activeClaimPreviewContainsRegion(regionName, anchorModel = currentOverlayModel) {
   return !!regionName && activeClaimPreviewRegionSet(anchorModel).has(regionName);
 }
+function buildActiveExpansionScope(anchorModel = currentOverlayModel) {
+  return {
+    anchorNation: manualEnvelopeAnchorNation(anchorModel),
+    regionSet: activeClaimPreviewRegionSet(anchorModel),
+  };
+}
+function resolveCapitalClaimantForRegion(regionName, scope = buildActiveExpansionScope()) {
+  if (!regionName || !scope?.regionSet?.has?.(regionName)) return '';
+  const override = getPinnedCapitalClaimant(regionName);
+  if (override && override !== scope.anchorNation) return override;
+  return reachableCapitalCandidateNations(regionName, scope.anchorNation, scope.regionSet)[0] || '';
+}
+function resolveReachableCapitalSelectionClaimant(region) {
+  if (!region?.regionName || !(getLockedNation() || getActiveNation())) return '';
+  return resolveCapitalClaimantForRegion(region.regionName, buildActiveExpansionScope(currentOverlayModel));
+}
 function reachableCapitalCandidateDescriptors(anchorModel = currentOverlayModel) {
   const model = buildManualEnvelopeModel(anchorModel, {includeAnchorOnly: true});
   if (!model?.regionItems?.length) return [];
@@ -3372,7 +3400,7 @@ function reachableCandidateRow(candidate) {
   const nations = reachableCandidateNationsText(candidate);
   return `
     <div class="reachableCandidateRow" data-candidate-row="${escapeHtml(candidate.region)}">
-      <button type="button" class="reachableCandidateFocus" data-candidate-focus="${escapeHtml(candidate.region)}" aria-label="${escapeHtml(t('reachableCandidates.focusRegion', {region: label}))}">
+      <button type="button" class="reachableCandidateFocus" data-candidate-focus="${escapeHtml(candidate.region)}" data-candidate-nation="${escapeHtml(candidate.primaryNation)}" aria-label="${escapeHtml(t('reachableCandidates.focusRegion', {region: label}))}">
         <span class="reachableCandidateMain">
           <b>${escapeHtml(label)}</b>
           <span>${escapeHtml(`${depth} · ${nations}`)}</span>
@@ -3382,12 +3410,20 @@ function reachableCandidateRow(candidate) {
     </div>
   `;
 }
+function commitReachableCapitalSelection(region, capitalClaimantId = '') {
+  const claimant = capitalClaimantId || resolveReachableCapitalSelectionClaimant(region);
+  if (!region?.regionName || !claimant) return false;
+  setHoveredRegionState(region.regionName, region.nationTag);
+  setFocusedRegionState(region.regionName);
+  setSelectedRegionIds([region.regionName]);
+  pinRegionState(region.regionName, {capitalClaimant: claimant});
+  updateSelectedRegions();
+  if (getActiveNation()) updateNationOverlay(getActiveNation(), {renderDetails: true, updateFilters: true, updateSelected: false});
+  return true;
+}
 function selectReachableCapitalCandidate(candidate) {
   const region = regionByName[candidate?.region];
-  if (!region) return false;
-  focusRegions([region.regionName], {selectSingle: true, preserveNation: true, refreshOverlay: true});
-  pinRegionState(region.regionName, {capitalClaimant: candidate.primaryNation});
-  return true;
+  return commitReachableCapitalSelection(region, candidate?.primaryNation || '');
 }
 function reachableCapitalCandidateForRegion(regionName, anchorModel = currentOverlayModel) {
   if (!getShowReachableCapitalCandidates() || !regionName) return null;
@@ -3403,7 +3439,8 @@ function bindReachableCapitalCandidatePanelEvents() {
   reachableCandidatesPanel.querySelectorAll('[data-candidate-focus]').forEach(button => {
     button.addEventListener('click', event => {
       event.stopPropagation();
-      selectReachableCapitalCandidateRegion(button.dataset.candidateFocus);
+      const region = regionByName[button.dataset.candidateFocus];
+      commitReachableCapitalSelection(region, button.dataset.candidateNation || '');
     });
   });
 }
@@ -3436,29 +3473,21 @@ function reachableCapitalCandidateRenderKey(candidates, copyContexts = worldCopy
   });
 }
 function appendReachableCapitalCandidateMarker(frag, candidate, copyContext = defaultWorldCopyContext()) {
-  if (!Number.isFinite(candidate.x) || !Number.isFinite(candidate.y)) return;
-  const copyData = worldCopyDataset(copyContext);
-  const group = createSvgElement('g', {
-    class: 'capital-marker is-idle reachable-capital-candidate',
-    'aria-label': reachableCandidateMarkerLabel(candidate),
-  }, {
-    candidateRegion: candidate.region,
-    candidateNation: candidate.primaryNation,
-    candidateDepth: candidate.depth,
-    candidateSourceCount: candidate.sourceCount,
-    ...copyData,
+  const region = regionByName[candidate.region];
+  if (!region) return;
+  appendCapitalMarkerGroup(frag, region, {
+    nation: candidate.primaryNation,
+    selected: false,
+    copyContext,
+    className: 'reachable-capital-candidate',
+    ariaLabel: reachableCandidateMarkerLabel(candidate),
+    dataset: {
+      candidateRegion: candidate.region,
+      candidateNation: candidate.primaryNation,
+      candidateDepth: candidate.depth,
+      candidateSourceCount: candidate.sourceCount,
+    },
   });
-  const points = starPoints(candidate.x, candidate.y);
-  group.appendChild(createSvgElement('polygon', {
-    class: 'capital-star-shadow',
-    points,
-    'aria-hidden': 'true',
-  }));
-  group.appendChild(createSvgElement('polygon', {
-    class: 'capital-star',
-    points,
-  }));
-  frag.appendChild(group);
 }
 function createReachableCapitalCandidateFragment(candidates, {copyContexts=worldCopyContexts} = {}) {
   return createProjectedCopyFragment(copyContexts, 'reachable-capital-candidate-copy', copyContext => {
@@ -3915,6 +3944,7 @@ function updateProjectOptions(nation) {
   else projectSel.value = '';
 }
 function selectRegion(r) {
+  if (commitReachableCapitalSelection(r)) return;
   setHoveredRegionState(r.regionName, r.nationTag);
   setFocusedRegionState(r.regionName);
   setSelectedRegionIds([r.regionName]);
