@@ -7,6 +7,14 @@
 <link rel="stylesheet" href="assets/styles.css" />
 </head>
 <body>
+<div id="appLoading" class="app-loading-screen" role="status" aria-live="polite">
+  <div class="app-loading-copy">
+    <div class="app-loading-kicker">Terra Invicta</div>
+    <h2 class="app-loading-title">Interactive World Map</h2>
+    <p id="appLoadingDetail" class="app-loading-detail">Loading map data and building the claim view…</p>
+    <div id="appLoadingProgress" class="app-loading-progress" aria-hidden="true"></div>
+  </div>
+</div>
 <div class="app">
   <aside>
     <h1 data-i18n="app.title">Terra Invicta Claim / Unification Map</h1>

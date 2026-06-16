@@ -52,7 +52,33 @@ import {
   worldCopyDataset,
 } from './render/map-layers.js';
 
-window.TI_DATA_PROMISE.then(({regionMap, claimMap, catalogs = {}}) => {
+const appLoading = document.getElementById('appLoading');
+const appLoadingDetail = document.getElementById('appLoadingDetail');
+
+function dismissLoadingScreen() {
+  if (!appLoading) return;
+  window.requestAnimationFrame(() => {
+    appLoading.dataset.loadingState = 'done';
+    appLoading.setAttribute('aria-hidden', 'true');
+    window.setTimeout(() => appLoading.remove(), 240);
+  });
+}
+
+function showLoadingFailure(message, error) {
+  if (!appLoading) return false;
+  appLoading.dataset.loadingState = 'error';
+  appLoading.setAttribute('role', 'alert');
+  appLoading.removeAttribute('aria-hidden');
+  if (appLoadingDetail) {
+    const suffix = error?.message ? ` ${error.message}` : '';
+    appLoadingDetail.textContent = `${message}${suffix}`;
+  }
+  return true;
+}
+
+const tiDataPromise = window.TI_DATA_PROMISE || Promise.reject(new Error('Generated Terra Invicta map data promise is unavailable.'));
+
+tiDataPromise.then(({regionMap, claimMap, catalogs = {}}) => {
 const appData = createAppData({regionMap, claimMap, catalogs});
 function shouldEnableWorldWrap() {
   try {
@@ -4309,13 +4335,16 @@ initMapViewControls();
 renderPinnedRegionsPanel();
 refreshReachableCapitalCandidateOutputs();
 populate(); renderGrid({mapView}); renderRegions({mapView}); renderPinnedRegionMarkers();
+dismissLoadingScreen();
 }).catch((error) => {
   console.error(error);
   let language = 'ko';
-  try { language = String(window.localStorage?.getItem(LANGUAGE_STORAGE_KEY) || document.documentElement.lang || 'ko').toLowerCase().startsWith('en') ? 'en' : 'ko'; }
+  try { language = String(window.localStorage?.getItem('ti-map-language') || document.documentElement.lang || 'ko').toLowerCase().startsWith('en') ? 'en' : 'ko'; }
   catch (_) {}
   const message = language === 'en' ? 'Failed to load generated Terra Invicta map data.' : 'Terra Invicta 지도 데이터를 불러오지 못했습니다.';
-  document.body.innerHTML = `<pre style="white-space:pre-wrap;padding:24px;color:#f8fafc;background:#0b1020">${message}
+  if (!showLoadingFailure(message, error)) {
+    document.body.innerHTML = `<pre style="white-space:pre-wrap;padding:24px;color:#f8fafc;background:#0b1020">${message}
 
 ${String(error && error.stack || error)}</pre>`;
+  }
 });
