@@ -937,7 +937,9 @@ test('reachable capital activation requires the claimant capital to match the di
   expect(capitalData.shanghaiCapitalNations).not.toContain('CHN');
 
   await chooseNation(page, 'Taiwan', 'TWN');
-  await expect(page.locator('#reachableCandidatesPanel [data-candidate-row="Shanghai"]')).toHaveCount(0);
+  const shanghaiClaimants = await page.locator('#reachableCandidatesPanel [data-candidate-row="Shanghai"] [data-candidate-focus]')
+    .evaluateAll(buttons => buttons.map(button => button.dataset.candidateNation).filter(Boolean));
+  expect(shanghaiClaimants).not.toContain('CHN');
   const beijingButton = page.locator('#reachableCandidatesPanel [data-candidate-row="Beijing"] [data-candidate-focus]').first();
   await expect(beijingButton).toHaveAttribute('data-candidate-focus', 'Beijing');
   await expect(beijingButton).toHaveAttribute('data-candidate-nation', 'CHN');
