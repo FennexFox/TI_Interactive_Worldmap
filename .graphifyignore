@@ -1,0 +1,32 @@
+# .graphifyignore for TI_Interactive_Worldmap
+# Goal: keep Graphify focused on editable source, build scripts, tests, and planning docs.
+# Exclude generated GitHub Pages output and bulky generated data.
+
+# VCS / dependencies / local env
+.git/
+node_modules/
+.venv*/
+__pycache__/
+.pytest_cache/
+.cache/
+
+# GitHub Pages build output
+/docs/
+
+# Large generated game/map data
+/data/generated/
+
+# Runtime/test artifacts
+playwright-report/
+test-results/
+coverage/
+
+# Archives / local transfer artifacts
+*.tar.gz
+*.zip
+*.7z
+*.log
+
+# Graphify output/cache if stored in repo
+graphify-out/
+.graphify/
