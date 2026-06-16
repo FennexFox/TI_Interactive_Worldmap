@@ -31,7 +31,7 @@
 
 ## Acceptance criteria
 
-- The repo has a #41 phased plan with no generic TODOs.
+- The repo has a #41 phased plan with no generic placeholders.
 - Debug stats distinguish model/descriptor computation from SVG layer replacement.
 - The reachable-capital selection path has a deterministic counter-based guardrail.
 
@@ -53,6 +53,13 @@
 
 - Counter-only changes should be low risk, but tests can become brittle if they assert implementation details that later phases intentionally improve.
 
+## Evidence
+
+- Baseline: Phase 1 added deterministic counters but did not capture the later requested multi-pin hover/pan baseline.
+- After: Not applicable; this phase was diagnostic preparation.
+- Delta: No demonstrated user-visible hover/pan improvement from this phase alone.
+- Interpretation: Preparation / instrumentation only for the current remaining #41 objective.
+
 ## Progress
 
 - Completed source review of `src/app.js` manual envelope, reachable capital, overlay descriptor, and selection/pin refresh paths.
@@ -65,4 +72,4 @@
 
 ## Outcomes / Retrospective
 
-- Completed. The issue now has deterministic diagnostics for the expensive model/descriptor paths that were previously hidden behind DOM replacement counters.
+- Completed as preparation. The issue now has deterministic diagnostics for model/descriptor paths, but this phase did not prove the remaining multi-pin hover/pan performance issue fixed.

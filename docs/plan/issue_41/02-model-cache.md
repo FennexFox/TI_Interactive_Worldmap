@@ -54,6 +54,13 @@
 - Cache keys that omit a state input could show stale candidates or manual envelopes.
 - Cache keys that include too much state could preserve correctness but miss the performance goal.
 
+## Evidence
+
+- Baseline: Pre-cache duplicate computation was inferred from source review and counter guardrails, not from the later multi-pin hover/pan baseline.
+- After: Cache counters showed repeated manual envelope and reachable candidate requests for the same state can hit caches.
+- Delta: Improved repeated model/descriptor computation, but did not prove hover-only marker DOM or pan work was eliminated.
+- Interpretation: Useful PR #42 preparation, not final #41 performance completion.
+
 ## Progress
 
 - Completed local LRU caching for manual envelope models.
@@ -67,4 +74,4 @@
 
 ## Outcomes / Retrospective
 
-- Completed. Repeated manual envelope and reachable candidate requests for the same state now hit caches, while cache keys still include active scenario/data version, anchor, pins, and claim filters.
+- Completed as preparation. Repeated manual envelope and reachable candidate requests for the same state now hit caches, while cache keys still include active scenario/data version, anchor, pins, and claim filters; remaining hover/pan work is addressed in later phases.

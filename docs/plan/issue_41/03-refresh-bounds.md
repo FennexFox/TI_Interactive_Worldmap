@@ -49,6 +49,13 @@
 
 - Over-narrowing refreshes can leave stale CSS classes, stale panels, or stale markers.
 
+## Evidence
+
+- Baseline: Candidate click path performed broader refresh work before this phase.
+- After: Candidate click path used bounded selected-region updates and avoided unchanged active-claim overlay rerenders.
+- Delta: Improved click/pin refresh bounds, but did not measure hover-only or pan-drag behavior after multiple pins.
+- Interpretation: Useful PR #42 preparation, not final #41 performance completion.
+
 ## Progress
 
 - Completed bounded selected-region updates for reachable-capital selection.
@@ -61,4 +68,4 @@
 
 ## Outcomes / Retrospective
 
-- Completed. The candidate click path now updates selected/pinned visuals, panels, manual envelopes, and candidate outputs without forcing the active claim overlay through another full map refresh.
+- Completed as preparation. The candidate click path now updates selected/pinned visuals, panels, manual envelopes, and candidate outputs without forcing the active claim overlay through another full map refresh; remaining hover/pan work is addressed in later phases.

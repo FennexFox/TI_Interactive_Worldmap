@@ -1624,7 +1624,7 @@ function clearHoverPreview() {
   if (useHoverDelta) applyMapVisualStateForRegions([previousRegionName]);
   else applyMapVisualState();
   renderHoverOutlines();
-  renderReachableCapitalCandidateMarkers(currentOverlayModel);
+  syncReachableCapitalCandidateHoverState();
   if (getLockedNation()) {
     setHoverNationState();
     renderCapitalMarkers();
@@ -2533,49 +2533,11 @@ function resolveRelatedHitRegion(event, indices = derivedIndices) {
   const regionName = hitTarget.dataset.regionId || hitTarget.dataset.region;
   return indices.regionByName[regionName] || null;
 }
-function hoverRegionAffectsCapitalSelection(region) {
-  if (!region?.regionName) return true;
-  const pinnedNation = getLockedNation() || getActiveNation();
-  return !!(
-    (pinnedNation && isCapitalRegionForNation(pinnedNation, region.regionName)) ||
-    isCapitalRegionForNation(region.nationTag, region.regionName)
-  );
-}
-function regionHasSimpleHoverDeltaHazard(regionName) {
-  const region = regionName ? regionByName[regionName] : null;
-  if (!region) return true;
-  if (selectedRegionIds.has(regionName)) return true;
-  if (getPinnedRegionIds().has(regionName)) return true;
-  if (mapVisualState.hiddenRegionIds.has(regionName)) return true;
-  if (resolveSecondaryCapitalPreviewNation(region)) return true;
-  if (shouldShowForeignHoverNationOverlay(region)) return true;
-  if (hoverRegionAffectsCapitalSelection(region)) return true;
-  return false;
-}
-function canUseSimpleHoverVisualDelta(previousRegionName, nextRegion, {force=false, regionChanged=false} = {}) {
-  if (force || !regionChanged || !previousRegionName || !nextRegion?.regionName) return false;
-  const previousRegion = regionByName[previousRegionName];
-  if (!previousRegion) return false;
-  const lockedNation = getLockedNation();
-  const stableUnlockedNation = !lockedNation
-    && !hoverPreviewFrame
-    && !pendingHoverNation
-    && previousRegion.nationTag === nextRegion.nationTag
-    && getHoverNation() === nextRegion.nationTag
-    && (getActiveNation() === nextRegion.nationTag || !getActiveNation());
-  const lightweightUnlockedPreview = !lockedNation
-    && !hoverPreviewFrame
-    && !pendingHoverNation
-    && !getActiveNation()
-    && !!getHoverNation();
-  if (!lockedNation && !stableUnlockedNation && !lightweightUnlockedPreview) return false;
-  if (regionHasSimpleHoverDeltaHazard(previousRegionName)) return false;
-  if (regionHasSimpleHoverDeltaHazard(nextRegion.regionName)) return false;
-  return true;
+function canUseSimpleHoverVisualDelta(previousRegionName, nextRegion, {regionChanged=false} = {}) {
+  return !!(regionChanged && nextRegion?.regionName);
 }
 function canUseSimpleHoverClearDelta(previousRegionName) {
-  if (!previousRegionName || !getLockedNation()) return false;
-  return !regionHasSimpleHoverDeltaHazard(previousRegionName);
+  return !!previousRegionName;
 }
 
 let hoverFullVisualPassFrame = 0;
@@ -2597,7 +2559,7 @@ function updateHoveredRegion(r, {force=false} = {}) {
   setHoverVisualState(r.regionName);
   updateSecondaryCapitalPreview(r);
   if (useHoverDelta) {
-    applyMapVisualStateForRegions([previousRegionName, r.regionName]);
+    applyMapVisualStateForRegions([previousRegionName, r.regionName].filter(Boolean));
   } else {
     scheduleHoverFullVisualPass();
   }
@@ -2605,7 +2567,7 @@ function updateHoveredRegion(r, {force=false} = {}) {
   else setHoverNationState(r.nationTag);
   renderHoverOutlines();
   renderCapitalMarkers();
-  renderReachableCapitalCandidateMarkers(currentOverlayModel);
+  syncReachableCapitalCandidateHoverState();
   setHoverPill(r);
 }
 function onRegionEnter(e, r, {force=true} = {}) {
@@ -2623,6 +2585,7 @@ function onRegionLeave(e) {
   clearHoverPreview();
 }
 function onHitLayerPointerOver(e) {
+  if (mapPanState) return;
   const region = resolveHitRegion(e);
   if (!region) return;
   const previousRegion = resolveRelatedHitRegion(e);
@@ -2630,10 +2593,12 @@ function onHitLayerPointerOver(e) {
   onRegionEnter(e, region, {force: !previousRegion});
 }
 function onHitLayerPointerMove(e) {
+  if (mapPanState) return;
   const region = resolveHitRegion(e);
   if (region) onRegionMove(e, region);
 }
 function onHitLayerPointerOut(e) {
+  if (mapPanState) return;
   const region = resolveHitRegion(e);
   if (!region) return;
   if (resolveRelatedHitRegion(e)) return;
@@ -2706,12 +2671,17 @@ function finishMapPan({cancel=false} = {}) {
   if (!mapPanState) return;
   const wasDragging = mapPanState.dragging;
   const pointerId = mapPanState.pointerId;
+  const finalClientX = mapPanState.lastX;
+  const finalClientY = mapPanState.lastY;
   mapPanState = null;
   svg?.classList.remove('is-panning-ready', 'is-panning');
   try {
     if (svg?.hasPointerCapture?.(pointerId)) svg.releasePointerCapture(pointerId);
   } catch {}
-  if (!cancel && wasDragging) markSuppressNextMapClick();
+  if (!cancel && wasDragging) {
+    markSuppressNextMapClick();
+    schedulePanHoverRefresh(finalClientX, finalClientY);
+  }
 }
 function onMapPointerDown(e) {
   if (e.button !== 0 || mapPanState) return;
@@ -2736,7 +2706,6 @@ function onMapPointerMove(e) {
     try {
       svg?.setPointerCapture?.(e.pointerId);
     } catch {}
-    clearHoverPreview();
   }
   e.preventDefault();
   const {dx, dy} = viewDeltaFromPointerDelta(e.clientX - mapPanState.lastX, e.clientY - mapPanState.lastY);
@@ -2744,7 +2713,6 @@ function onMapPointerMove(e) {
   mapPanState.lastX = e.clientX;
   mapPanState.lastY = e.clientY;
   scheduleMapViewRender();
-  schedulePanHoverRefresh(e.clientX, e.clientY);
 }
 function onMapPointerUp(e) {
   if (!mapPanState || e.pointerId !== mapPanState.pointerId) return;
@@ -3588,8 +3556,16 @@ function reachableCapitalCandidateRenderKey(candidates, copyContexts = worldCopy
     kind: 'reachable-capital-candidates',
     copyPlan: copyContextRenderKey(copyContexts),
     language: currentLanguage,
-    hoveredRegion: getHoveredRegionName(),
     candidates: candidates.map(candidate => `${candidate.region}:${candidate.depth}:${candidate.sourceCount}:${candidate.primaryNation}:${candidate.nations.join(',')}`).join('|'),
+  });
+}
+function syncReachableCapitalCandidateHoverState() {
+  if (!gReachableCapitalCandidates) return;
+  const hoveredRegion = getHoveredRegionName();
+  gReachableCapitalCandidates.querySelectorAll('.reachable-capital-candidate[data-candidate-region]').forEach(marker => {
+    const active = !!hoveredRegion && marker.dataset.candidateRegion === hoveredRegion;
+    marker.classList.toggle('is-selected', active);
+    marker.classList.toggle('is-idle', !active);
   });
 }
 function appendReachableCapitalCandidateMarker(frag, candidate, copyContext = defaultWorldCopyContext()) {
@@ -3633,6 +3609,7 @@ function renderReachableCapitalCandidateMarkers(anchorModel = currentOverlayMode
     () => createReachableCapitalCandidateFragment(resolvedCandidates, {copyContexts}),
     'reachableCapitalCandidateRebuilds'
   );
+  syncReachableCapitalCandidateHoverState();
 }
 function refreshReachableCapitalCandidateOutputs(anchorModel = currentOverlayModel) {
   const candidates = getShowReachableCapitalCandidates()
