@@ -52,8 +52,8 @@ There are three build levels:
 1. **Checked-in/UI build**: rebuilds `docs/` from source files and committed generated
    data. It does not read the Terra Invicta install.
 2. **Local game data rebuild**: reads Terra Invicta `Templates` to refresh nation,
-   research, claim, and metadata catalogs while reusing the committed
-   `data/generated/region_map.generated.json` geometry.
+   research, claim, and metadata catalogs for all supported start scenarios while
+   reusing the committed `data/generated/region_map.generated.json` geometry.
 3. **Region outline refresh**: explicitly re-extracts the Unity `regionoutlines` asset
    before rebuilding catalogs and pages. This is only needed when the game's region
    geometry changes or when validating the outline extractor.
@@ -62,6 +62,11 @@ The default local-game workflow intentionally reuses the checked-in region geome
 because Unity asset extraction is slower and more fragile than template/catalog rebuilds.
 Use `--refresh-region-outlines` only when you intend to update
 `data/generated/region_map.generated.json` from the Unity asset.
+
+Generated scenario data is checked in as `data/generated/scenario_bundle.generated.json`
+with schema version 2. It contains duplicated per-scenario `regionMap`, `claimMap`, and
+catalog data for `2022`, `2026`, and `2070`; `2026` remains the default scenario and is
+also copied to the legacy top-level generated files for compatibility.
 
 ## Windows workflows
 
@@ -100,9 +105,9 @@ python .\tools\rebuild_pages.py `
   --no-commit
 ```
 
-Template-derived region ownership and display names default to the `2026` scenario. Pass
-`--scenario-year 2022` or `--scenario-year 2070` to rebuild against another supported
-start year.
+Template-derived region ownership, nation status, research claim grants, and claim rows
+are rebuilt for `2022`, `2026`, and `2070` in one pass. The `--scenario-year` option is
+deprecated; `2026` remains the default and legacy top-level output.
 
 For development fixtures, use:
 
@@ -155,7 +160,6 @@ Unity region geometry as well:
 Useful WSL options:
 
 ```bash
-./scripts/build-wsl.sh --from-game --scenario-year 2070
 ./scripts/build-wsl.sh --from-game --languages kor,en
 ./scripts/build-wsl.sh --from-game --skip-verify
 ./scripts/build-wsl.sh --e2e
@@ -177,10 +181,13 @@ The deploy helper only stages generated paths:
 - `data/generated/research.catalog.json`
 - `data/generated/region_map.generated.json`
 - `data/generated/claim_map.generated.json`
+- `data/generated/scenario_bundle.generated.json`
+- `data/generated/scenarios/**`
 - `docs/data/generated/nations.catalog.json`
 - `docs/data/generated/research.catalog.json`
 - `docs/data/region_map.generated.json`
 - `docs/data/claim_map.generated.json`
+- `docs/data/scenario_bundle.generated.json`
 - `docs/assets/data.generated.js`
 - `docs/assets/app.js`
 - `docs/assets/state/*.js`

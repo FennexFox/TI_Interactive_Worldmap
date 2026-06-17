@@ -2213,7 +2213,7 @@
       "existsAtStart": true,
       "initialRegionCount": 2,
       "isClaimIssuer": true,
-      "claimRegionCount": 10,
+      "claimRegionCount": 9,
       "isBreakaway": false,
       "breakawayFrom": "",
       "source": {

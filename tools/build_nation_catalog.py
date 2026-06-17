@@ -17,6 +17,7 @@ from catalog_utils import (
     unique_strings,
     write_json_output,
 )
+from scenario_rows import filter_bilateral_rows_for_scenario
 
 
 SCHEMA_VERSION = 1
@@ -152,7 +153,12 @@ def build_catalog(
     templates = load_nation_templates(templates_dir, scenario_year)
     localizations = load_nation_localizations(templates_dir, languages)
     initial_regions = initial_regions_by_nation(region_map)
-    claim_regions, breakaway_from = bilateral_nation_flags(bilateral_rows)
+    scenario_bilateral_rows = filter_bilateral_rows_for_scenario(
+        bilateral_rows or [],
+        scenario_year,
+        relation_types=("Claim", "Breakaway"),
+    )
+    claim_regions, breakaway_from = bilateral_nation_flags(scenario_bilateral_rows)
     all_tags = sorted(
         set(templates)
         | set(localizations)

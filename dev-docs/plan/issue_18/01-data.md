@@ -69,13 +69,23 @@
 
 ## Evidence
 
-- TODO
-- Commit: TODO
-- Commit blocker: TODO
+- Implemented scenario-aware bilateral-row filtering before ID normalization in nation, research, and claim builders.
+- Added schema v2 `scenario_bundle.generated.json` assembly with duplicated per-scenario maps/catalogs for 2022, 2026, and 2070.
+- Updated local-game rebuild orchestration to generate all scenarios and keep 2026 as the top-level compatibility/default output.
+- Updated checked-in Pages packaging so `docs/data/scenario_bundle.generated.json` and compressed `docs/assets/data.generated.js` contain the scenario bundle.
+- Updated verifier to check bundle/default/docs/JS payload consistency, required scenario summaries, resolved claim regions/current owners/projects, zero unmatched claim rows, and absence of app-facing prefixed ids.
+- Rebuilt generated data from local Templates path `/mnt/c/Program Files (x86)/Steam/steamapps/common/Terra Invicta/TerraInvicta_Data/StreamingAssets/Templates`.
+- Scenario summary after rebuild: 2022 has 363 regions, 305 nations, 2225 normalized claim rows, 57 projects, 0 unmatched; 2026 has 363 regions, 305 nations, 2225 normalized claim rows, 57 projects, 0 unmatched; 2070 has 363 regions, 305 nations, 2223 normalized claim rows, 49 projects, 0 unmatched.
+- Size note: `data/generated/scenario_bundle.generated.json` is 8,301,227 bytes; `docs/assets/data.generated.js` is 3,217,161 bytes.
+- Validation: `python -m unittest discover -s tests -p "test_*.py"` passed, 11 tests.
+- Validation: `npm run build` passed.
+- Validation: `npm run verify` passed.
+- Commit: phase commit created after this gate.
+- Commit blocker: none.
 
 ## Progress
 
-- Not started.
+- Implemented and validated.
 
 ## Decision log
 
@@ -83,4 +93,4 @@
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- Phase 1 is implemented. The 2026 claim row count changed from the previous combined-row output because scenario-prefixed bilateral rows are now filtered before normalization; this appears to be the schema bug #18 warned about rather than an intentional claim semantics change.

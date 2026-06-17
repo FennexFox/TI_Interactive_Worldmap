@@ -33,7 +33,6 @@ Refresh Unity region geometry explicitly when the game's regionoutlines asset ch
 Common examples:
   ./scripts/build-wsl.sh --e2e
   ./scripts/build-wsl.sh --skip-install
-  ./scripts/build-wsl.sh --from-game --scenario-year 2070
   ./scripts/build-wsl.sh --from-game \
     --templates-dir '/mnt/c/Program Files (x86)/Steam/steamapps/common/Terra Invicta/TerraInvicta_Data/StreamingAssets/Templates' \
     --region-outlines '/mnt/c/Program Files (x86)/Steam/steamapps/common/Terra Invicta/TerraInvicta_Data/StreamingAssets/AssetBundles/regionoutlines'
@@ -42,7 +41,7 @@ Environment variables:
   TI_TEMPLATES_DIR      Terra Invicta StreamingAssets/Templates path.
   TI_REGION_OUTLINES   Terra Invicta StreamingAssets/AssetBundles/regionoutlines path.
   TI_REGION_MAP_JSON   Pre-extracted raw region outline JSON fixture.
-  SCENARIO_YEAR        2022, 2026, or 2070. Defaults to 2026.
+  SCENARIO_YEAR        Deprecated compatibility setting. All supported scenarios are rebuilt.
   CATALOG_LANGUAGES    Comma-separated catalog languages. Defaults to kor,en.
   VENV_DIR             Python virtualenv directory. Defaults to .venv-wsl.
   SHIM_DIR             Temporary local command shim directory. Defaults to .wsl-build-bin.
@@ -58,7 +57,7 @@ Options:
   --refresh-region-outlines
                        Re-extract region geometry from --region-outlines instead of
                        reusing data/generated/region_map.generated.json.
-  --scenario-year YEAR 2022, 2026, or 2070.
+  --scenario-year YEAR Deprecated compatibility option. All supported scenarios are rebuilt.
   --languages LIST     Comma-separated catalog languages.
   --e2e                Run Playwright end-to-end tests after verify.
   --skip-install       Do not install Python/Node dependencies.
@@ -280,10 +279,13 @@ run_from_game_build() {
   local args=(
     tools/rebuild_pages.py
     --templates-dir "$templates"
-    --scenario-year "$SCENARIO_YEAR"
     --catalog-languages "$CATALOG_LANGUAGES"
     --no-commit
   )
+
+  if [[ "$SCENARIO_YEAR" != "2026" ]]; then
+    echo "warning: --scenario-year/SCENARIO_YEAR is deprecated; rebuilding 2022, 2026, and 2070 with 2026 as default" >&2
+  fi
 
   if [[ "$SKIP_VERIFY" -eq 1 ]]; then
     args+=(--skip-verify)

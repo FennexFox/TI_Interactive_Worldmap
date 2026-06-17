@@ -14,6 +14,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from scenario_rows import DEFAULT_SCENARIO, SUPPORTED_SCENARIOS, filter_bilateral_rows_for_scenario
+
 
 def load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -87,7 +89,13 @@ def build_claim_data(
     aliases: dict[str, str],
     project_template_meta: dict[str, dict[str, Any]] | None,
     nation_template_meta: dict[str, dict[str, Any]] | None = None,
+    scenario_year: str | None = None,
 ) -> dict[str, Any]:
+    bilateral_rows = filter_bilateral_rows_for_scenario(
+        bilateral_rows,
+        scenario_year,
+        relation_types=("Claim", "Breakaway"),
+    )
     regions = region_map["regions"]
     summary = dict(region_map["summary"])
 
@@ -304,6 +312,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--aliases", default="data/manual/region_aliases.json")
     parser.add_argument("--nation-catalog", default="data/generated/nations.catalog.json")
     parser.add_argument("--research-catalog", default="data/generated/research.catalog.json")
+    parser.add_argument("--scenario-year", default=DEFAULT_SCENARIO, choices=SUPPORTED_SCENARIOS)
     parser.add_argument("--output", default="data/generated/claim_map.generated.json")
     return parser.parse_args()
 
@@ -323,6 +332,7 @@ def main() -> int:
         aliases=aliases,
         project_template_meta=project_template_meta,
         nation_template_meta=nation_template_meta,
+        scenario_year=args.scenario_year,
     )
     write_json(Path(args.output), data, compact=True)
     print(f"Wrote {args.output}")
