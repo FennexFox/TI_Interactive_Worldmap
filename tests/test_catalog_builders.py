@@ -348,6 +348,33 @@ class CatalogBuilderTests(unittest.TestCase):
             self.assertEqual(row["displayName"]["en"], "Jakarta")
             self.assertEqual(row["ownerName"], "Indonesia")
 
+    def test_manual_nation_display_override_replaces_template_display_name(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            templates_dir = root / "Templates"
+            write_json(
+                templates_dir / "TINationTemplate.json",
+                [{"dataName": "IDN", "friendlyName": "Java"}],
+            )
+            write_text(
+                root / "Localization" / "en" / "TINationTemplate.en",
+                "TINationTemplate.displayName.IDN=Java\n",
+            )
+            override = {
+                "IDN": {
+                    "displayName": {"en": "Indonesia"},
+                    "aliases": ["Indonesia"],
+                }
+            }
+
+            catalog = nc.build_catalog(templates_dir, ["en"], nation_display_overrides=override)
+            display_names = ro.load_nation_display_names(templates_dir, ["en"], "2026", override)
+
+            self.assertEqual(catalog["nations"]["IDN"]["displayName"]["en"], "Indonesia")
+            self.assertEqual(display_names["IDN"], "Indonesia")
+            self.assertIn("Indonesia", catalog["nations"]["IDN"]["aliases"])
+            self.assertNotIn("Java", catalog["nations"]["IDN"]["aliases"])
+
     def test_research_catalog_records_claim_granting_projects(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

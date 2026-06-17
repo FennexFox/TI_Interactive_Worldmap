@@ -3388,15 +3388,14 @@
     "IDN": {
       "tag": "IDN",
       "displayName": {
-        "en": "Java",
-        "kor": "자바"
+        "en": "Indonesia",
+        "kor": "인도네시아"
       },
       "friendlyName": "Indonesia",
       "aliases": [
         "IDN",
-        "Java",
-        "자바",
-        "Indonesia"
+        "Indonesia",
+        "인도네시아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 8,
@@ -3407,7 +3406,8 @@
       "source": {
         "template": "TINationTemplate.json",
         "localizationKeys": [
-          "TINationTemplate.displayName.IDN"
+          "TINationTemplate.displayName.IDN",
+          "data/manual/nation_display_overrides.json"
         ],
         "includedBecause": [
           "template",
