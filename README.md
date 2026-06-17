@@ -12,6 +12,7 @@ The generated Pages site lives in `docs/index.html`.
 - Build direct claim profiles from `TIBilateralTemplate.json`.
 - Include projectless/basic claims as well as project-unlocked claims.
 - Distinguish hostile claims from peaceful claims.
+- Switch the visible map between the supported `2022`, `2026`, and `2070` start scenarios.
 - Treat Taiwan-style cases as `breakaway_gated_existing` instead of pure formables.
 - Keep the first pass static and save-file independent.
 - Leave recursive megastate absorption closure for a later issue.
@@ -66,7 +67,8 @@ Use `--refresh-region-outlines` only when you intend to update
 Generated scenario data is checked in as `data/generated/scenario_bundle.generated.json`
 with schema version 2. It contains duplicated per-scenario `regionMap`, `claimMap`, and
 catalog data for `2022`, `2026`, and `2070`; `2026` remains the default scenario and is
-also copied to the legacy top-level generated files for compatibility.
+also copied to the legacy top-level generated files for compatibility. The static app
+loads the bundle and exposes those three scenarios through the sidebar selector.
 
 ## Windows workflows
 

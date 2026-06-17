@@ -169,6 +169,8 @@ const tip = document.getElementById('tip');
 const search = document.getElementById('search');
 const nationDropdown = document.getElementById('nationDropdown');
 const nationSearchCombo = document.getElementById('nationSearchCombo');
+const scenarioSel = document.getElementById('scenarioSel');
+const scenarioSummary = document.getElementById('scenarioSummary');
 const pinnedRegionsPanel = document.getElementById('pinnedRegionsPanel');
 const reachableCandidatesPanel = document.getElementById('reachableCandidatesPanel');
 const baseModeSel = document.getElementById('baseMode');
@@ -294,6 +296,8 @@ const I18N = {
     'document.title': 'Terra Invicta 영유권 / 통합 지도',
     'app.title': 'Terra Invicta 영유권 / 통합 지도',
     'section.explore': '탐색 및 선택',
+    'scenario.label': '시작 시나리오',
+    'scenario.summary': '{scenario} · 지역 {regions}개 · 국가 {nations}개 · 영유권 행 {claims}개 · 프로젝트 {projects}개',
     'search.label': '국가/지역 검색 및 선택',
     'search.placeholder': '국가 태그, 지역명, 프로젝트명 입력: CHN, Korea, Greater India...',
     'search.help': '입력창을 클릭하면 국가 목록이 열립니다. 입력하면 국가, 지역, 영유권 프로젝트 목록이 필터링되고, 항목을 클릭하면 선택됩니다. 빈 지도 공간을 클릭하면 고정된 확장 노드와 선택이 함께 해제됩니다.',
@@ -427,6 +431,8 @@ const I18N = {
     'document.title': 'Terra Invicta Claim / Unification Map',
     'app.title': 'Terra Invicta Claim / Unification Map',
     'section.explore': 'Explore and Select',
+    'scenario.label': 'Start scenario',
+    'scenario.summary': '{scenario} · {regions} regions · {nations} nations · {claims} claim rows · {projects} projects',
     'search.label': 'Search and select nation/region',
     'search.placeholder': 'Enter a nation tag, region, or project: CHN, Korea, Greater India...',
     'search.help': 'Click the field to open the nation list. Typing filters nations, regions, and claim projects; click an item to select it. Click empty map space to clear the selection and pinned expansion nodes together.',
@@ -686,6 +692,35 @@ function claimTierCountText(count) { return currentLanguage === 'ko' ? t('count.
 function claimTierCountShortText(count) { return currentLanguage === 'ko' ? t('count.claimTiersShort', {count: formatNumber(count)}) : `${formatNumber(count)} ${Number(count) === 1 ? 'tier' : 'tiers'}`; }
 function claimGroupCountText(count) { return currentLanguage === 'ko' ? t('count.claimGroups', {count: formatNumber(count)}) : englishCount(count, 'claim group'); }
 function claimModeLabel(value) { return t(`claimMode.${value || 'all'}`); }
+function activeScenarioSummary() {
+  const entry = appData.scenarios[activeScenarioId()] || activeData || {};
+  const summary = entry.summary || activeData?.summary || {};
+  return {
+    regions: summary.regionCount ?? entry.regionMap?.regions?.length ?? activeData?.regionMap?.regions?.length ?? 0,
+    nations: summary.nationCount ?? Object.keys(entry.catalogs?.nations?.nations || activeData?.catalogs?.nations?.nations || {}).length,
+    claims: summary.claimRowsNormalized ?? activeData?.claimMap?.summary?.claimRowsNormalized ?? 0,
+    projects: summary.claimGrantingProjectCount ?? summary.projectCount ?? Object.keys(activeData?.catalogs?.research?.projects || {}).length,
+  };
+}
+function renderScenarioOptions() {
+  if (!scenarioSel) return;
+  const scenarioIds = getScenarioIds(appData);
+  const html = scenarioIds.map(id => `<option value="${escapeHtml(id)}">${escapeHtml(id)}</option>`).join('');
+  if (scenarioSel.innerHTML !== html) scenarioSel.innerHTML = html;
+  scenarioSel.value = activeScenarioId();
+}
+function syncScenarioControls() {
+  renderScenarioOptions();
+  if (!scenarioSummary) return;
+  const summary = activeScenarioSummary();
+  scenarioSummary.textContent = t('scenario.summary', {
+    scenario: activeScenarioId(),
+    regions: formatNumber(summary.regions),
+    nations: formatNumber(summary.nations),
+    claims: formatNumber(summary.claims),
+    projects: formatNumber(summary.projects),
+  });
+}
 function setHoverPill(region=null) {
   const el = document.getElementById('hoverPill');
   if (!el) return;
@@ -713,6 +748,7 @@ function applyStaticTranslations() {
   document.querySelectorAll('[data-i18n-title]').forEach(el => { el.setAttribute('title', t(el.dataset.i18nTitle)); });
   document.querySelectorAll('[data-i18n-aria-label]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAriaLabel)); });
   if (languageSel) languageSel.value = currentLanguage;
+  syncScenarioControls();
   updateReachableCapitalsButtonState();
   updateAsideCardControls();
 }
@@ -910,6 +946,7 @@ function setActiveScenario(nextScenarioId, {force = false} = {}) {
   buildIncomingClaimIndex();
   reconcileStateForActiveScenario();
   renderActiveScenario();
+  syncScenarioControls();
   return true;
 }
 
@@ -4461,6 +4498,11 @@ if (languageSel) {
     currentLanguage = normalizeLanguage(languageSel.value);
     saveLanguage(currentLanguage);
     refreshLanguage();
+  });
+}
+if (scenarioSel) {
+  scenarioSel.addEventListener('change', () => {
+    if (!setActiveScenario(scenarioSel.value)) syncScenarioControls();
   });
 }
 document.addEventListener('click', e => {
