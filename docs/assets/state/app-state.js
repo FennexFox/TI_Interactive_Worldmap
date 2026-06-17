@@ -164,3 +164,45 @@ export function clearTransientClaimState(state) {
   setClaimFilters(state, {projectId: ''});
   return state;
 }
+
+export function reconcileScenarioState(
+  state,
+  {
+    regionIds = [],
+    nationIds = [],
+    projectIds = [],
+    incomingClaimKeys = [],
+  } = {},
+) {
+  const regionSet = new Set(normalizeIds(regionIds));
+  const nationSet = new Set(normalizeIds(nationIds));
+  const projectSet = new Set(normalizeIds(projectIds));
+  const incomingClaimKeySet = new Set(normalizeIds(incomingClaimKeys));
+
+  setHoveredRegion(state);
+  setHoveredNation(state);
+  setSecondaryHoverNation(state);
+
+  if (state.focusedRegionId && !regionSet.has(state.focusedRegionId)) setFocusedRegion(state);
+  setSelectedRegions(state, [...(state.selectedRegionIds || [])].filter(regionId => regionSet.has(regionId)));
+
+  if (!state.pinnedRegionIds) state.pinnedRegionIds = new Set();
+  if (!state.pinnedCapitalClaimants) state.pinnedCapitalClaimants = new Map();
+  for (const regionId of [...state.pinnedRegionIds]) {
+    if (!regionSet.has(regionId)) {
+      state.pinnedRegionIds.delete(regionId);
+      state.pinnedCapitalClaimants.delete(regionId);
+    }
+  }
+  for (const [regionId, claimantId] of [...state.pinnedCapitalClaimants.entries()]) {
+    if (!regionSet.has(regionId) || !nationSet.has(claimantId)) state.pinnedCapitalClaimants.delete(regionId);
+  }
+
+  if (state.lockedNationId && !nationSet.has(state.lockedNationId)) setLockedNation(state);
+  if (state.selectedNationId && !nationSet.has(state.selectedNationId)) setSelectedNation(state);
+  if (state.activeIncomingClaimKey && !incomingClaimKeySet.has(state.activeIncomingClaimKey)) setActiveIncomingClaim(state);
+  if (state.filters?.projectId && state.filters.projectId !== '__base__' && !projectSet.has(state.filters.projectId)) {
+    setClaimFilters(state, {projectId: ''});
+  }
+  return state;
+}

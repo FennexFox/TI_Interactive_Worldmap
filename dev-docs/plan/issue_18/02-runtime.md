@@ -73,13 +73,22 @@
 
 ## Evidence
 
-- TODO
-- Commit: TODO
-- Commit blocker: TODO
+- Normalized schema v2 scenario bundles and legacy single-scenario payloads in `src/data/active-data.js`.
+- Added supported-scenario id exposure and default-scenario fallback behavior for runtime consumers.
+- Added `reconcileScenarioState` to clear stale hover, focused/selected/pinned region, selected/locked nation, active incoming claim, and invalid project-filter state after a scenario change.
+- Converted scenario-sensitive frontend data aliases in `src/app.js` from one-time constants to a rebuilt active runtime context.
+- Added one owned `setActiveScenario` lifecycle that resolves the target scenario, rebuilds active data and derived indices, clears scenario-sensitive caches/render keys, rebuilds search/incoming-claim indices, reconciles state, and rerenders map/panel/search outputs.
+- Added a temporary `window.__TI_SCENARIO_API__` hook for focused browser coverage before the visible selector phase.
+- Added boundary tests for scenario bundle normalization, state reconciliation, and an app smoke test switching 2026 to 2070 and back without stale map/search state.
+- Validation: `npm run build` passed.
+- Validation: `npm run test:e2e -- tests/state-data-boundaries.spec.js` passed, 7 tests.
+- Validation: `npm run verify` passed.
+- Commit: phase commit will be created after this gate.
+- Commit blocker: none.
 
 ## Progress
 
-- Not started.
+- Implemented and validated.
 
 ## Decision log
 
@@ -87,4 +96,4 @@
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- Phase 2 is implemented. The switch lifecycle stays inside `src/app.js` for now because the render callbacks it coordinates are still local to that module; the UI phase can call the single lifecycle instead of duplicating scenario-switch behavior.

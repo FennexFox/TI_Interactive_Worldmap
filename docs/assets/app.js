@@ -4,6 +4,7 @@ import {
   clearTransientClaimState as clearTransientClaimAppState,
   createAppState,
   pinRegion,
+  reconcileScenarioState,
   setActiveIncomingClaim,
   setActiveScenarioId,
   setClaimFilters,
@@ -35,7 +36,7 @@ import {
   panMapView,
   zoomMapView,
 } from './state/map-view-state.js';
-import {createAppData, getActiveData} from './data/active-data.js';
+import {createAppData, getActiveData, getScenarioIds} from './data/active-data.js';
 import {buildDerivedIndices} from './data/derived-indices.js';
 import {
   appendWorldCopyFragment,
@@ -78,8 +79,8 @@ function showLoadingFailure(message, error) {
 
 const tiDataPromise = window.TI_DATA_PROMISE || Promise.reject(new Error('Generated Terra Invicta map data promise is unavailable.'));
 
-tiDataPromise.then(({regionMap, claimMap, catalogs = {}}) => {
-const appData = createAppData({regionMap, claimMap, catalogs});
+tiDataPromise.then((generatedData) => {
+const appData = createAppData(generatedData || {});
 function shouldEnableWorldWrap() {
   try {
     const value = new URLSearchParams(window.location.search).get('worldWrap');
@@ -102,7 +103,7 @@ function createWorldCopyContexts(mapView, {enabled = false} = {}) {
 const appState = createAppState({activeScenarioId: appData.defaultScenario});
 setActiveScenarioId(appState, appData.defaultScenario);
 const mapVisualState = createMapVisualState();
-const activeData = getActiveData(appData, appState.activeScenarioId);
+let activeData = getActiveData(appData, appState.activeScenarioId);
 const mapView = initializeMapView(activeData);
 const worldWrapEnabled = shouldEnableWorldWrap();
 const worldCopyContexts = createWorldCopyContexts(mapView, {enabled: worldWrapEnabled});
@@ -119,16 +120,31 @@ function createProjectedCopyFragment(copyContexts, groupClassName, buildChildren
   }
   return frag;
 }
-const derivedIndices = buildDerivedIndices(activeData);
-const REGIONS = derivedIndices.regions;
-const SUMMARY = derivedIndices.summary;
-const NATION_COLOR_PALETTE = derivedIndices.nationColorPalette;
-const NATION_COLOR_INDEXES = derivedIndices.nationColorIndexes;
-const CLAIMS_BY_NATION = derivedIndices.claimsByNation;
-const PROJECT_META = derivedIndices.projectMeta;
-const CLAIM_STATS = derivedIndices.claimStats;
-const NATION_CATALOG = derivedIndices.nationCatalog;
-const NATION_META = derivedIndices.nationMeta;
+let derivedIndices = buildDerivedIndices(activeData);
+let REGIONS = derivedIndices.regions;
+let SUMMARY = derivedIndices.summary;
+let NATION_COLOR_PALETTE = derivedIndices.nationColorPalette;
+let NATION_COLOR_INDEXES = derivedIndices.nationColorIndexes;
+let CLAIMS_BY_NATION = derivedIndices.claimsByNation;
+let PROJECT_META = derivedIndices.projectMeta;
+let CLAIM_STATS = derivedIndices.claimStats;
+let NATION_CATALOG = derivedIndices.nationCatalog;
+let NATION_META = derivedIndices.nationMeta;
+
+function syncRuntimeDataAliases() {
+  REGIONS = derivedIndices.regions;
+  SUMMARY = derivedIndices.summary;
+  NATION_COLOR_PALETTE = derivedIndices.nationColorPalette;
+  NATION_COLOR_INDEXES = derivedIndices.nationColorIndexes;
+  CLAIMS_BY_NATION = derivedIndices.claimsByNation;
+  PROJECT_META = derivedIndices.projectMeta;
+  CLAIM_STATS = derivedIndices.claimStats;
+  NATION_CATALOG = derivedIndices.nationCatalog;
+  NATION_META = derivedIndices.nationMeta;
+  regionByName = derivedIndices.regionByName;
+  nationRegions = derivedIndices.nationRegions;
+  incomingClaimsByRegion = derivedIndices.incomingClaimsByRegion;
+}
 
 const svg = document.getElementById('map');
 if (svg) svg.setAttribute('viewBox', formatViewBoxForMapView(mapView));
@@ -701,13 +717,13 @@ function applyStaticTranslations() {
   updateAsideCardControls();
 }
 
-const regionByName = derivedIndices.regionByName;
+let regionByName = derivedIndices.regionByName;
 const pathByRegion = new Map();
 const pathInstancesByRegion = new Map();
 const normalRegionColorElements = [];
 const hitPathByRegion = new Map();
 const hitPathInstancesByRegion = new Map();
-const nationRegions = derivedIndices.nationRegions;
+let nationRegions = derivedIndices.nationRegions;
 let labelsVisible = false;
 const selectedRegionIds = appState.selectedRegionIds;
 let nationChoices = derivedIndices.nationChoices;
@@ -739,7 +755,7 @@ let pendingPanHoverPoint = null;
 let mapPanState = null;
 let suppressMapClick = false;
 const nationChoiceByValue = new Map();
-const incomingClaimsByRegion = derivedIndices.incomingClaimsByRegion;
+let incomingClaimsByRegion = derivedIndices.incomingClaimsByRegion;
 const regionCenterCache = new Map();
 const OVERLAY_MODEL_CACHE_LIMIT = 256;
 const OVERLAY_DESCRIPTOR_CACHE_LIMIT = 256;
@@ -772,6 +788,136 @@ const claimLabelBufferStates = new WeakMap();
 const MAP_PAN_DRAG_THRESHOLD_PX = 4;
 const MAP_ZOOM_BUTTON_FACTOR = 1.25;
 const MAP_WHEEL_ZOOM_FACTOR = 1.18;
+
+function activeScenarioId() {
+  return appState.activeScenarioId || appData.defaultScenario || '';
+}
+
+function resolveScenarioId(scenarioId = '') {
+  const requested = String(scenarioId || appData.defaultScenario || '').trim();
+  return appData.scenarios[requested] ? requested : appData.defaultScenario;
+}
+
+function availableRuntimeNationIds() {
+  return [
+    ...new Set([
+      ...Object.keys(NATION_META || {}),
+      ...Object.keys(CLAIMS_BY_NATION || {}),
+      ...[...(nationRegions?.keys?.() || [])],
+      ...REGIONS.map(region => region.nationTag).filter(Boolean),
+    ]),
+  ];
+}
+
+function activeIncomingClaimKeysForState() {
+  const nation = getLockedNation() || getActiveNation();
+  if (!nation || !CLAIMS_BY_NATION[nation]) return [];
+  const data = CLAIMS_BY_NATION[nation];
+  const baseSet = new Set(data.baseRegions || nationRegions.get(nation) || []);
+  return incomingClaimsForTarget(nation, data, baseSet).map(incomingClaimKey);
+}
+
+function applyRuntimeScenarioData(scenarioId) {
+  activeData = getActiveData(appData, scenarioId);
+  derivedIndices = buildDerivedIndices(activeData);
+  syncRuntimeDataAliases();
+}
+
+function clearScenarioSensitiveCaches() {
+  regionCenterCache.clear();
+  overlayModelCache.clear();
+  claimOverlayDescriptorCache.clear();
+  claimLabelDescriptorCache.clear();
+  foreignHoverDescriptorCache.clear();
+  manualEnvelopeModelCache.clear();
+  reachableCapitalCandidateDescriptorCache.clear();
+  activeClaimPreviewRegionScopeKey = '';
+  activeClaimPreviewRegionScope = null;
+}
+
+function resetScenarioRenderKeys() {
+  foreignHoverVisualKey = '';
+  hoverClaimPreviewVisualKey = '';
+  secondaryHoverVisualKey = '';
+  hoverOutlineVisualKey = '';
+  capitalMarkersKey = '';
+}
+
+function reconcileStateForActiveScenario() {
+  reconcileScenarioState(appState, {
+    regionIds: Object.keys(regionByName || {}),
+    nationIds: availableRuntimeNationIds(),
+    projectIds: Object.keys(PROJECT_META || {}),
+    incomingClaimKeys: activeIncomingClaimKeysForState(),
+  });
+  syncSelectedVisualState();
+  syncPinnedVisualState();
+  if (search.dataset.selectedNation && !availableRuntimeNationIds().includes(search.dataset.selectedNation)) {
+    search.dataset.selectedNation = '';
+    search.value = '';
+  }
+  const selectedNation = search.dataset.selectedNation || '';
+  if (selectedNation) search.value = humanizeNationLabel(selectedNation);
+  if (projectSel && ![...projectSel.options].some(option => option.value === getProjectFilter())) projectSel.value = '';
+  if (claimModeSel.value === 'project' && !getProjectFilter()) claimModeSel.value = 'all';
+}
+
+function resetTransientScenarioInteractionState() {
+  cancelPendingHoverPreview();
+  hideRegionTooltip();
+  hoverClaimPreviewNation = '';
+  pendingHoverNation = '';
+  visibleNationRegionNames = new Set();
+  setHoverVisualState();
+  setHoverPill();
+}
+
+function renderActiveScenario() {
+  populate();
+  clearOverlayVisualState();
+  renderGrid({mapView});
+  renderRegions({mapView});
+  renderLabels({mapView});
+  renderSelectionOutlines();
+  renderPinnedRegionsPanel();
+  renderPinnedRegionMarkers();
+  renderCapitalMarkers({force: true});
+  updateNationOverlay(getLockedNation() || getActiveNation(), {
+    renderDetails: true,
+    updateFilters: false,
+    updateSelected: false,
+    renderMap: true,
+    updateManualExpansion: true,
+  });
+  applyFilters(true);
+  updateSelectedRegions();
+  renderNationDropdown();
+  refreshReachableCapitalCandidateOutputs(currentOverlayModel);
+  setHoverPill();
+  if (!getLockedNation() && !getActiveNation()) setClaimsPillEmpty();
+}
+
+function setActiveScenario(nextScenarioId, {force = false} = {}) {
+  const scenarioId = resolveScenarioId(nextScenarioId);
+  if (!scenarioId) return false;
+  if (!force && scenarioId === activeScenarioId()) return false;
+  setActiveScenarioId(appState, scenarioId);
+  applyRuntimeScenarioData(scenarioId);
+  resetTransientScenarioInteractionState();
+  clearScenarioSensitiveCaches();
+  resetScenarioRenderKeys();
+  buildNationChoices();
+  buildIncomingClaimIndex();
+  reconcileStateForActiveScenario();
+  renderActiveScenario();
+  return true;
+}
+
+window.__TI_SCENARIO_API__ = {
+  scenarios: getScenarioIds(appData),
+  get activeScenario() { return activeScenarioId(); },
+  setActiveScenario,
+};
 
 function pruneLruCache(cache, limit) {
   while (cache.size > limit) {
@@ -4229,7 +4375,8 @@ function populate() {
   buildNationChoices();
   buildIncomingClaimIndex();
   const warn = document.getElementById('warnPill');
-  if (CLAIM_STATS.regionsUnmatched) { warn.style.display=''; warn.textContent = t('warn.unmatchedClaimRows', {count: CLAIM_STATS.regionsUnmatched}); }
+  if (warn && CLAIM_STATS.regionsUnmatched) { warn.style.display=''; warn.textContent = t('warn.unmatchedClaimRows', {count: CLAIM_STATS.regionsUnmatched}); }
+  else if (warn) { warn.style.display='none'; warn.textContent = ''; }
 }
 function refreshLanguage() {
   applyStaticTranslations();
