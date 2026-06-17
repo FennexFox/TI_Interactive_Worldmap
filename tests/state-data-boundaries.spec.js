@@ -4,6 +4,7 @@ import {
   clearSelectionState,
   createAppState,
   pinRegion,
+  reconcileScenarioState,
   setActiveIncomingClaim,
   setActiveScenarioId,
   setClaimFilters,
@@ -16,7 +17,7 @@ import {
   setSelectedRegions,
   unpinPinnedRegion,
 } from '../src/state/app-state.js';
-import {createAppData, getActiveData} from '../src/data/active-data.js';
+import {createAppData, getActiveData, getScenarioIds} from '../src/data/active-data.js';
 import {buildDerivedIndices, resolveSecondaryCapitalPreview} from '../src/data/derived-indices.js';
 import {
   applyMapVisualState,
@@ -166,6 +167,53 @@ test('app state keeps scenario independent while selection and pin state transit
   expect(state.filters.projectId).toBe('Project_Test');
 });
 
+test('scenario reconciliation clears invalid state and preserves valid local ids', () => {
+  const state = createAppState({activeScenarioId: '2026'});
+  setSelectedNation(state, 'AAA', {locked: true});
+  setSelectedRegions(state, ['Alpha', 'MissingRegion']);
+  setFocusedRegion(state, 'MissingRegion');
+  setHoveredRegion(state, 'Beta', 'BBB');
+  setSecondaryHoverNation(state, 'CCC');
+  setActiveIncomingClaim(state, 'BBB|Project_Test');
+  setClaimFilters(state, {projectId: 'Project_Test'});
+  pinRegion(state, 'Alpha', {capitalClaimant: 'AAA'});
+  pinRegion(state, 'MissingRegion', {capitalClaimant: 'CCC'});
+
+  reconcileScenarioState(state, {
+    regionIds: ['Alpha', 'Beta'],
+    nationIds: ['AAA', 'BBB'],
+    projectIds: ['Project_Test'],
+    incomingClaimKeys: ['BBB|Project_Test'],
+  });
+
+  expect(state.selectedNationId).toBe('AAA');
+  expect(state.lockedNationId).toBe('AAA');
+  expect(sortedValues(state.selectedRegionIds)).toEqual(['Alpha']);
+  expect(sortedValues(state.pinnedRegionIds)).toEqual(['Alpha']);
+  expect(state.pinnedCapitalClaimants.get('Alpha')).toBe('AAA');
+  expect(state.focusedRegionId).toBe('');
+  expect(state.hoveredRegionId).toBe('');
+  expect(state.hoveredNationId).toBe('');
+  expect(state.interaction.secondaryHoverNationId).toBe('');
+  expect(state.activeIncomingClaimKey).toBe('BBB|Project_Test');
+  expect(state.filters.projectId).toBe('Project_Test');
+
+  reconcileScenarioState(state, {
+    regionIds: ['Beta'],
+    nationIds: ['BBB'],
+    projectIds: [],
+    incomingClaimKeys: [],
+  });
+
+  expect(state.selectedNationId).toBe('');
+  expect(state.lockedNationId).toBe('');
+  expect(sortedValues(state.selectedRegionIds)).toEqual([]);
+  expect(sortedValues(state.pinnedRegionIds)).toEqual([]);
+  expect([...state.pinnedCapitalClaimants]).toEqual([]);
+  expect(state.activeIncomingClaimKey).toBe('');
+  expect(state.filters.projectId).toBe('');
+});
+
 test('active data records default scenario and resolves explicit scenario entries', () => {
   const regionMap = {summary: {scenarioYear: '2026'}, regions: []};
   const claimMap = {claimsByNation: {}};
@@ -179,9 +227,48 @@ test('active data records default scenario and resolves explicit scenario entrie
   appData.scenarios['2070'] = futureScenario;
 
   expect(appData.defaultScenario).toBe('2026');
-  expect(getActiveData(appData, '2026')).toEqual({regionMap, claimMap, catalogs});
+  expect(getActiveData(appData, '2026').regionMap).toBe(regionMap);
+  expect(getActiveData(appData, '2026').claimMap).toBe(claimMap);
+  expect(getActiveData(appData, '2026').catalogs.nations).toBe(catalogs.nations);
   expect(getActiveData(appData, '2070')).toBe(futureScenario);
-  expect(getActiveData(appData, 'missing')).toEqual({regionMap, claimMap, catalogs});
+  expect(getActiveData(appData, 'missing').regionMap).toBe(regionMap);
+});
+
+test('active data normalizes generated scenario bundle payloads', () => {
+  const appData = createAppData({
+    schemaVersion: 2,
+    defaultScenario: '2026',
+    scenarios: {
+      2022: {
+        label: '2022',
+        regionMap: {summary: {scenarioYear: '2022'}, regions: [{regionName: 'Past', nationTag: 'PST'}]},
+        claimMap: {summary: {scenarioYear: '2022'}, claimsByNation: {PST: {baseRegions: ['Past']}}},
+        catalogs: {nations: {nations: {PST: {tag: 'PST'}}}, research: {nodes: []}},
+        summary: {claimRowsNormalized: 1},
+      },
+      2026: {
+        label: '2026',
+        regionMap: {summary: {scenarioYear: '2026'}, regions: [{regionName: 'Now', nationTag: 'NOW'}]},
+        claimMap: {summary: {scenarioYear: '2026'}, claimsByNation: {NOW: {baseRegions: ['Now']}}},
+        catalogs: {nations: {nations: {NOW: {tag: 'NOW'}}}, research: {nodes: []}},
+        summary: {claimRowsNormalized: 2},
+      },
+      2070: {
+        label: '2070',
+        regionMap: {summary: {scenarioYear: '2070'}, regions: [{regionName: 'Future', nationTag: 'FTR'}]},
+        claimMap: {summary: {scenarioYear: '2070'}, claimsByNation: {FTR: {baseRegions: ['Future']}}},
+        catalogs: {nations: {nations: {FTR: {tag: 'FTR'}}}, research: {nodes: []}},
+        summary: {claimRowsNormalized: 3},
+      },
+    },
+  });
+
+  expect(appData.schemaVersion).toBe(2);
+  expect(appData.defaultScenario).toBe('2026');
+  expect(getScenarioIds(appData)).toEqual(['2022', '2026', '2070']);
+  expect(getActiveData(appData, '2022').regionMap.regions[0].regionName).toBe('Past');
+  expect(getActiveData(appData, '2070').summary.claimRowsNormalized).toBe(3);
+  expect(getActiveData(appData, 'missing').regionMap.regions[0].regionName).toBe('Now');
 });
 
 test('derived indices merge active data and resolve secondary capital previews deterministically', () => {
@@ -323,4 +410,39 @@ test('map visual state applies explicit classes and bounded updates to copied re
   expect(beta.classList.values()).toEqual(['pinned-node']);
   expect(betaHit.classList.values()).toEqual([]);
   expect(gamma.classList.values()).toEqual(['selected']);
+});
+
+test('app runtime scenario API rebuilds active scenario context without stale map data', async ({page}) => {
+  await page.goto('/');
+  await page.waitForFunction(() => window.__TI_SCENARIO_API__?.activeScenario === '2026');
+
+  const initial = await page.evaluate(() => ({
+    scenarios: window.__TI_SCENARIO_API__.scenarios,
+    activeScenario: window.__TI_SCENARIO_API__.activeScenario,
+    canonicalRegions: document.querySelectorAll('#hitRegions .region-hit[data-wrap-canonical="1"]').length,
+  }));
+  expect(initial.scenarios).toEqual(['2022', '2026', '2070']);
+  expect(initial.activeScenario).toBe('2026');
+  expect(initial.canonicalRegions).toBeGreaterThan(300);
+
+  await page.locator('#search').fill('Canada');
+  await expect(page.locator('#nationDropdown')).toContainText('Canada');
+  await page.evaluate(() => window.__TI_SCENARIO_API__.setActiveScenario('2070'));
+  await page.waitForFunction(() => window.__TI_SCENARIO_API__?.activeScenario === '2070');
+
+  const switched = await page.evaluate(() => ({
+    activeScenario: window.__TI_SCENARIO_API__.activeScenario,
+    canonicalRegions: document.querySelectorAll('#hitRegions .region-hit[data-wrap-canonical="1"]').length,
+    claimsActive: document.querySelector('#map')?.classList.contains('claims-active') || false,
+    selectedPill: document.querySelector('#selectedPill')?.textContent || '',
+  }));
+  expect(switched.activeScenario).toBe('2070');
+  expect(switched.canonicalRegions).toBe(initial.canonicalRegions);
+  expect(switched.claimsActive).toBe(false);
+  expect(switched.selectedPill).toBe('');
+  await expect(page.locator('#nationDropdown')).toContainText('Canada');
+
+  await page.evaluate(() => window.__TI_SCENARIO_API__.setActiveScenario('2026'));
+  await page.waitForFunction(() => window.__TI_SCENARIO_API__?.activeScenario === '2026');
+  await expect(page.locator('#nationDropdown')).toContainText('Canada');
 });

@@ -510,14 +510,14 @@ test('overlay model cache reuses unchanged inputs and misses changed filters', a
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
   await clickRegion(page, 'Amazonia');
   await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveText('Manaus');
-  await expect(page.locator('.claimListItem[data-claim-kind="incoming"]')).toHaveCount(4);
+  await expect(page.locator('.claimListItem[data-claim-kind="incoming"]')).toHaveCount(3);
   stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.overlayModelBuilds).toBeGreaterThan(0);
   expect(stats.overlayModelCacheHits).toBe(0);
 
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
   await chooseNation(page, 'Brazil', 'BRA');
-  await expect(page.locator('.claimListItem[data-claim-kind="incoming"]')).toHaveCount(4);
+  await expect(page.locator('.claimListItem[data-claim-kind="incoming"]')).toHaveCount(3);
   stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.overlayModelCacheHits).toBeGreaterThan(0);
   expect(stats.overlayModelBuilds).toBe(0);
@@ -1159,7 +1159,7 @@ test('claim cards synchronize map overlays, panel state, and empty map clear', a
   await chooseNation(page, 'Brazil', 'BRA');
   await clickRegion(page, 'Amazonia');
   await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveText('Manaus');
-  await expect(page.locator('.claimListItem[data-claim-kind="incoming"]')).toHaveCount(4);
+  await expect(page.locator('.claimListItem[data-claim-kind="incoming"]')).toHaveCount(3);
 
   await page.locator('.claimListItem[data-claim-kind="outgoing"]').first().click();
   await expect(page.locator('#claimMode')).toHaveValue('project');
@@ -1171,8 +1171,8 @@ test('claim cards synchronize map overlays, panel state, and empty map clear', a
   await page.locator('.claimListItem[data-claim-kind="incoming"]').first().click();
   await expect(page.locator('#search')).toHaveValue(/Bolivia/);
   await expect(page.locator('#claimMode')).toHaveValue('project');
-  await expect(page.locator('#projectSel')).toHaveValue('');
-  await expect(page.locator('#claimPill')).toHaveText('Bolivia: territory 1, claims 25, research tiers 0');
+  await expect(page.locator('#projectSel')).toHaveValue('Project_SouthAmericanUnion');
+  await expect(page.locator('#claimPill')).toHaveText('Bolivia: territory 1, claims 25, research tiers 1');
   await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
   await expect(page.locator('.claimListItem.active[data-claim-kind="outgoing"]')).toHaveCount(1);
 

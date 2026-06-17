@@ -8,20 +8,27 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+SCENARIO_YEARS = ("2022", "2026", "2070")
+DEFAULT_SCENARIO_YEAR = "2026"
+SCENARIO_OUTPUT_ROOT = Path("data/generated/scenarios")
 GENERATED_PATHS = (
     "data/generated/nations.catalog.json",
     "data/generated/research.catalog.json",
     "data/generated/region_map.generated.json",
     "data/generated/claim_map.generated.json",
+    "data/generated/scenario_bundle.generated.json",
+    "data/generated/scenarios",
     "docs/data/generated/nations.catalog.json",
     "docs/data/generated/research.catalog.json",
     "docs/data/region_map.generated.json",
     "docs/data/claim_map.generated.json",
+    "docs/data/scenario_bundle.generated.json",
     "docs/assets/data.generated.js",
     "docs/assets/app.js",
     "docs/assets/state",
@@ -58,6 +65,8 @@ def default_templates_dir() -> Path | None:
     candidates = [
         Path.home() / ".steam/steam/steamapps/common/Terra Invicta/TerraInvicta_Data/StreamingAssets/Templates",
         Path.home() / ".local/share/Steam/steamapps/common/Terra Invicta/TerraInvicta_Data/StreamingAssets/Templates",
+        Path("/mnt/c/Program Files (x86)/Steam/steamapps/common/Terra Invicta/TerraInvicta_Data/StreamingAssets/Templates"),
+        Path("/mnt/c/SteamLibrary/steamapps/common/Terra Invicta/TerraInvicta_Data/StreamingAssets/Templates"),
         Path("C:/Program Files (x86)/Steam/steamapps/common/Terra Invicta/TerraInvicta_Data/StreamingAssets/Templates"),
     ]
     return first_existing(candidates)
@@ -79,6 +88,130 @@ def infer_templates_dir(path: Path | None) -> Path | None:
     return None
 
 
+def prepare_region_geometry(args: argparse.Namespace) -> str:
+    existing_region_map = ROOT / "data/generated/region_map.generated.json"
+    if args.region_map_json:
+        return args.region_map_json
+    if args.region_outlines and (args.refresh_region_outlines or not existing_region_map.exists()):
+        raw_output = "data/generated/region_outlines.raw.json"
+        run([sys.executable, "tools/extract_region_outlines.py", "--asset", args.region_outlines, "--raw-output", raw_output])
+        return raw_output
+    if args.region_outlines:
+        print("Using existing data/generated/region_map.generated.json; pass --refresh-region-outlines to rebuild it from --region-outlines.")
+    if not existing_region_map.exists():
+        raise SystemExit("No region map data exists. Pass --region-outlines or --region-map-json.")
+    return "data/generated/region_map.generated.json"
+
+
+def require_template_files(templates_dir: Path, *, require_bilateral_template: bool = True) -> None:
+    required = [
+        "TIRegionTemplate.json",
+        "TINationTemplate.json",
+        "TITechTemplate.json",
+        "TIProjectTemplate.json",
+    ]
+    if require_bilateral_template:
+        required.append("TIBilateralTemplate.json")
+    missing = [name for name in required if not (templates_dir / name).is_file()]
+    if missing:
+        raise SystemExit(f"Missing required template file(s): {', '.join(missing)}")
+
+
+def scenario_path(scenario_year: str, filename: str) -> str:
+    return str(SCENARIO_OUTPUT_ROOT / scenario_year / filename)
+
+
+def build_scenario_outputs(
+    args: argparse.Namespace,
+    *,
+    templates_dir: Path,
+    bilateral_template: Path,
+    raw_region_input: str,
+    scenario_year: str,
+) -> None:
+    python = sys.executable
+    region_output = scenario_path(scenario_year, "region_map.generated.json")
+    nation_output = scenario_path(scenario_year, "nations.catalog.json")
+    research_output = scenario_path(scenario_year, "research.catalog.json")
+    claim_output = scenario_path(scenario_year, "claim_map.generated.json")
+
+    run([
+        python,
+        "tools/build_region_outline_data.py",
+        "--raw-json",
+        raw_region_input,
+        "--output",
+        region_output,
+        "--templates-dir",
+        str(templates_dir),
+        "--scenario-year",
+        scenario_year,
+        "--languages",
+        args.catalog_languages,
+    ])
+    run([
+        python,
+        "tools/build_nation_catalog.py",
+        "--templates-dir",
+        str(templates_dir),
+        "--languages",
+        args.catalog_languages,
+        "--region-map",
+        region_output,
+        "--bilateral-template",
+        str(bilateral_template),
+        "--scenario-year",
+        scenario_year,
+        "--output",
+        nation_output,
+    ])
+    run([
+        python,
+        "tools/build_research_catalog.py",
+        "--templates-dir",
+        str(templates_dir),
+        "--languages",
+        args.catalog_languages,
+        "--bilateral-template",
+        str(bilateral_template),
+        "--aliases",
+        "data/manual/region_aliases.json",
+        "--scenario-year",
+        scenario_year,
+        "--output",
+        research_output,
+    ])
+    run([
+        python,
+        "tools/build_claim_data.py",
+        "--region-map",
+        region_output,
+        "--bilateral-template",
+        str(bilateral_template),
+        "--aliases",
+        "data/manual/region_aliases.json",
+        "--nation-catalog",
+        nation_output,
+        "--research-catalog",
+        research_output,
+        "--scenario-year",
+        scenario_year,
+        "--output",
+        claim_output,
+    ])
+
+
+def copy_default_scenario_outputs() -> None:
+    mappings = (
+        ("region_map.generated.json", "data/generated/region_map.generated.json"),
+        ("claim_map.generated.json", "data/generated/claim_map.generated.json"),
+        ("nations.catalog.json", "data/generated/nations.catalog.json"),
+        ("research.catalog.json", "data/generated/research.catalog.json"),
+    )
+    for source_name, target_name in mappings:
+        shutil.copyfile(ROOT / scenario_path(DEFAULT_SCENARIO_YEAR, source_name), ROOT / target_name)
+
+
 def build_pages(args: argparse.Namespace) -> None:
     python = sys.executable
 
@@ -88,105 +221,36 @@ def build_pages(args: argparse.Namespace) -> None:
         if not templates_dir:
             raise SystemExit("Pass --templates-dir or --bilateral-template.")
         bilateral_template = template_file(templates_dir, "TIBilateralTemplate.json")
+    if not bilateral_template.is_file():
+        raise SystemExit(f"Missing required bilateral template file: {bilateral_template}")
     if not templates_dir:
         templates_dir = infer_templates_dir(bilateral_template)
+    if not templates_dir:
+        raise SystemExit("Scenario rebuild requires --templates-dir or a bilateral template inside Templates.")
+    require_template_files(templates_dir, require_bilateral_template=not args.bilateral_template)
+    if args.scenario_year != DEFAULT_SCENARIO_YEAR:
+        print(f"Warning: --scenario-year is deprecated; generating all scenarios and keeping {DEFAULT_SCENARIO_YEAR} as default.")
 
-    existing_region_map = ROOT / "data/generated/region_map.generated.json"
-    if args.region_map_json:
-        run([
-            python,
-            "tools/build_region_outline_data.py",
-            "--raw-json",
-            args.region_map_json,
-            "--output",
-            "data/generated/region_map.generated.json",
-        ])
-    elif args.region_outlines and (args.refresh_region_outlines or not existing_region_map.exists()):
-        raw_output = "data/generated/region_outlines.raw.json"
-        run([python, "tools/extract_region_outlines.py", "--asset", args.region_outlines, "--raw-output", raw_output])
-        run([
-            python,
-            "tools/build_region_outline_data.py",
-            "--raw-json",
-            raw_output,
-            "--output",
-            "data/generated/region_map.generated.json",
-        ])
-    elif args.region_outlines:
-        print("Using existing data/generated/region_map.generated.json; pass --refresh-region-outlines to rebuild it from --region-outlines.")
-    elif not existing_region_map.exists():
-        raise SystemExit("No region map data exists. Pass --region-outlines or --region-map-json.")
-
-    if templates_dir and (templates_dir / "TIRegionTemplate.json").is_file():
-        run([
-            python,
-            "tools/build_region_outline_data.py",
-            "--raw-json",
-            "data/generated/region_map.generated.json",
-            "--output",
-            "data/generated/region_map.generated.json",
-            "--templates-dir",
-            str(templates_dir),
-            "--scenario-year",
-            args.scenario_year,
-            "--languages",
-            args.catalog_languages,
-        ])
-
-    if templates_dir and (templates_dir / "TINationTemplate.json").is_file():
-        run([
-            python,
-            "tools/build_nation_catalog.py",
-            "--templates-dir",
-            str(templates_dir),
-            "--languages",
-            args.catalog_languages,
-            "--region-map",
-            "data/generated/region_map.generated.json",
-            "--bilateral-template",
-            str(bilateral_template),
-            "--scenario-year",
-            args.scenario_year,
-            "--output",
-            "data/generated/nations.catalog.json",
-        ])
-    if (
-        templates_dir
-        and (templates_dir / "TITechTemplate.json").is_file()
-        and (templates_dir / "TIProjectTemplate.json").is_file()
-    ):
-        run([
-            python,
-            "tools/build_research_catalog.py",
-            "--templates-dir",
-            str(templates_dir),
-            "--languages",
-            args.catalog_languages,
-            "--bilateral-template",
-            str(bilateral_template),
-            "--aliases",
-            "data/manual/region_aliases.json",
-            "--output",
-            "data/generated/research.catalog.json",
-        ])
-
-    claim_command = [
+    raw_region_input = prepare_region_geometry(args)
+    for scenario_year in SCENARIO_YEARS:
+        build_scenario_outputs(
+            args,
+            templates_dir=templates_dir,
+            bilateral_template=bilateral_template,
+            raw_region_input=raw_region_input,
+            scenario_year=scenario_year,
+        )
+    copy_default_scenario_outputs()
+    run([
         python,
-        "tools/build_claim_data.py",
-        "--region-map",
-        "data/generated/region_map.generated.json",
-        "--bilateral-template",
-        str(bilateral_template),
-        "--aliases",
-        "data/manual/region_aliases.json",
-        "--nation-catalog",
-        "data/generated/nations.catalog.json",
-        "--research-catalog",
-        "data/generated/research.catalog.json",
+        "tools/build_scenario_bundle.py",
+        "--base-dir",
+        str(SCENARIO_OUTPUT_ROOT),
         "--output",
-        "data/generated/claim_map.generated.json",
-    ]
-    run(claim_command)
+        "data/generated/scenario_bundle.generated.json",
+        "--default-scenario",
+        DEFAULT_SCENARIO_YEAR,
+    ])
     run([python, "tools/build_pages.py"])
 
     if not args.skip_verify:
@@ -247,7 +311,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--region-outlines", help="Path to Terra Invicta regionoutlines Unity asset bundle.")
     parser.add_argument("--refresh-region-outlines", action="store_true", help="Rebuild region map data from --region-outlines instead of reusing existing generated region map data.")
     parser.add_argument("--region-map-json", help="Pre-extracted raw region outline JSON fixture.")
-    parser.add_argument("--scenario-year", default="2026", choices=("2022", "2026", "2070"), help="Scenario start year used for template-derived region and nation metadata.")
+    parser.add_argument("--scenario-year", default=DEFAULT_SCENARIO_YEAR, choices=SCENARIO_YEARS, help="Deprecated compatibility option. Rebuilds now generate all scenarios and keep 2026 as the default.")
     parser.add_argument("--catalog-languages", default="kor,en", help="Comma-separated localization languages for generated catalogs.")
     parser.add_argument("--skip-verify", action="store_true", help="Skip npm verify.")
     parser.add_argument("--no-commit", action="store_true", help="Build and verify without committing generated changes.")

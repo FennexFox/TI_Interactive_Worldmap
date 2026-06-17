@@ -114,6 +114,9 @@
   .searchOption.empty { display:block; color:var(--muted); cursor:default; }
   .searchOptionTag { min-width:3.4em; color:#dbeafe; font-weight:800; letter-spacing:.02em; }
   .searchOptionLabel { color:#cbd5e1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .scenarioControl { margin-bottom:10px; }
+  .scenarioControl label { margin-top:0; }
+  .scenarioSummary { min-height:18px; margin-top:6px; color:var(--muted); font-size:12px; line-height:1.45; }
   .row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .mapbar { display:flex; gap:8px; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid rgba(255,255,255,.08); background:rgba(10,15,25,.78); backdrop-filter:blur(8px); }
   .mapbar .left { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }

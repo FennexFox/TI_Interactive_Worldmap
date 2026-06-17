@@ -17,10 +17,12 @@ from catalog_utils import (
     unique_strings,
     write_json_output,
 )
+from scenario_rows import filter_bilateral_rows_for_scenario
 
 
 SCHEMA_VERSION = 1
 DEFAULT_OUTPUT = Path("data/generated/nations.catalog.json")
+DEFAULT_NATION_DISPLAY_OVERRIDES = Path("data/manual/nation_display_overrides.json")
 SCENARIO_YEARS = ("2022", "2026", "2070")
 DEFAULT_SCENARIO_YEAR = "2026"
 
@@ -35,9 +37,35 @@ def scenario_template_name(name: str, scenario_year: str) -> str:
     return f"{scenario_year}_{norm_id(name)}"
 
 
-def load_nation_localizations(templates_dir: Path, languages: list[str]) -> dict[str, dict[str, str]]:
+def load_nation_display_overrides(path: Path = DEFAULT_NATION_DISPLAY_OVERRIDES) -> dict[str, dict[str, Any]]:
+    if not path.is_file():
+        return {}
+    raw = load_json(path)
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        norm_id(tag): value
+        for tag, value in raw.items()
+        if norm_id(tag) and isinstance(value, dict)
+    }
+
+
+def nation_localization_priority(data_name: str, tag: str, scenario_year: str) -> int:
+    if data_name == scenario_template_name(tag, scenario_year):
+        return 2
+    if data_name == tag:
+        return 1
+    return 0
+
+
+def load_nation_localizations(
+    templates_dir: Path,
+    languages: list[str],
+    scenario_year: str = DEFAULT_SCENARIO_YEAR,
+) -> dict[str, dict[str, str]]:
     root = templates_dir.parent / "Localization"
     localizations: dict[str, dict[str, str]] = {}
+    priorities: dict[str, dict[str, int]] = {}
     for language in languages:
         values = read_localization_file(root / language / f"TINationTemplate.{language}")
         for key, value in values.items():
@@ -48,10 +76,14 @@ def load_nation_localizations(templates_dir: Path, languages: list[str]) -> dict
             tag = norm_id(data_name)
             if not tag:
                 continue
-            current = localizations.setdefault(tag, {})
-            if data_name == tag or language not in current:
-                current[language] = value
-    return dict(sorted(localizations.items()))
+            priority = nation_localization_priority(data_name, tag, scenario_year)
+            if priority <= 0:
+                continue
+            current_priority = priorities.setdefault(tag, {}).get(language, -1)
+            if priority > current_priority:
+                localizations.setdefault(tag, {})[language] = value
+                priorities[tag][language] = priority
+    return {tag: dict(sorted(values.items())) for tag, values in sorted(localizations.items())}
 
 
 def load_nation_templates(templates_dir: Path, scenario_year: str) -> dict[str, dict[str, Any]]:
@@ -148,11 +180,18 @@ def build_catalog(
     region_map: dict[str, Any] | None = None,
     bilateral_rows: list[dict[str, Any]] | None = None,
     scenario_year: str = DEFAULT_SCENARIO_YEAR,
+    nation_display_overrides: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     templates = load_nation_templates(templates_dir, scenario_year)
-    localizations = load_nation_localizations(templates_dir, languages)
+    localizations = load_nation_localizations(templates_dir, languages, scenario_year)
+    display_overrides = nation_display_overrides or {}
     initial_regions = initial_regions_by_nation(region_map)
-    claim_regions, breakaway_from = bilateral_nation_flags(bilateral_rows)
+    scenario_bilateral_rows = filter_bilateral_rows_for_scenario(
+        bilateral_rows or [],
+        scenario_year,
+        relation_types=("Claim", "Breakaway"),
+    )
+    claim_regions, breakaway_from = bilateral_nation_flags(scenario_bilateral_rows)
     all_tags = sorted(
         set(templates)
         | set(localizations)
@@ -160,16 +199,29 @@ def build_catalog(
         | set(claim_regions)
         | set(breakaway_from)
         | set(breakaway_from.values())
+        | set(display_overrides)
     )
 
     nations: dict[str, dict[str, Any]] = {}
     for tag in all_tags:
         template = templates.get(tag)
-        display_name = localizations.get(tag, {})
+        display_name = dict(localizations.get(tag, {}))
         friendly_name = template.get("friendlyName") if template else None
+        override = display_overrides.get(tag, {})
+        override_display_name = override.get("displayName") if isinstance(override.get("displayName"), dict) else {}
+        if override_display_name:
+            display_name.update({str(language): str(value) for language, value in override_display_name.items() if value})
+        if override.get("friendlyName"):
+            friendly_name = str(override["friendlyName"])
+        override_aliases = override.get("aliases") if isinstance(override.get("aliases"), list) else []
         display_values = [*display_name.values(), friendly_name]
-        aliases = unique_strings([tag, *display_values, *derived_display_aliases(display_values)])
+        if override_aliases:
+            aliases = unique_strings([tag, *override_aliases, *display_name.values(), *derived_display_aliases(list(display_name.values()))])
+        else:
+            aliases = unique_strings([tag, *display_values, *derived_display_aliases(display_values)])
         localization_keys = [f"TINationTemplate.displayName.{tag}"] if display_name else []
+        if override:
+            localization_keys.append(str(DEFAULT_NATION_DISPLAY_OVERRIDES))
         entry = {
             "tag": tag,
             "displayName": dict(sorted(display_name.items())),
@@ -225,6 +277,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--bilateral-template", help="Path to TIBilateralTemplate.json.")
     parser.add_argument("--scenario-year", default=DEFAULT_SCENARIO_YEAR, choices=SCENARIO_YEARS)
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
+    parser.add_argument("--nation-display-overrides", default=str(DEFAULT_NATION_DISPLAY_OVERRIDES), help="Optional manual nation display-name override JSON.")
     return parser.parse_args()
 
 
@@ -243,6 +296,7 @@ def main() -> int:
         region_map=region_map,
         bilateral_rows=bilateral_rows,
         scenario_year=args.scenario_year,
+        nation_display_overrides=load_nation_display_overrides(Path(args.nation_display_overrides)),
     )
     output = write_json_output(Path(args.output), catalog)
     print(f"Wrote {output}")
