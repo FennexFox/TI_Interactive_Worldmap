@@ -8,6 +8,20 @@ Default to `gpt-5.4-mini` for subagents unless a task is high-risk, architectura
 
 Keep the main agent focused on orchestration, final synthesis, and high-risk judgment. Delegate concrete, well-scoped work when doing so is unlikely to reduce quality.
 
+## Graphify And Serena Workflow
+
+Use Graphify as a structural navigation aid when it can reduce search and context cost. Read `graphify-out/GRAPH_REPORT.md` before broad refactors, unfamiliar feature work, cross-module changes, performance work, or tasks with unclear ownership. Trivial, obvious single-file edits may skip Graphify.
+
+Graphify is a map, not source of truth. Treat inferred or semantic edges as leads only; verify relationships in the actual source before editing or reviewing.
+
+When Serena is available, prefer symbol and reference queries over loading whole large files. In particular, avoid reading all of `src/app.js` or generated output when a focused symbol lookup, reference search, or small source slice is enough.
+
+Suggested Graphify entry points:
+
+- Map interaction and rendering: `App Interaction Flow`, `App Render Orchestration`, `SVG Map Layers`, `Map Visual State`, `Map View State`, `Map Pointer Rendering`, and `Claim Overlay Caching`.
+- Data and build work: `Catalog Build Pipeline`, `Claim Data Builder`, `Generated Output Verify`, and `Pages Build Tool`.
+- State and scenario work: `App State Management`, `Active Data Access`, and `Derived Data Indices`.
+
 ## Generated And Derived Artifacts
 
 This repository checks in generated data, static deployment output, and data parsed or cataloged from external Terra Invicta files. These files are **not source of truth**. They are build artifacts.
