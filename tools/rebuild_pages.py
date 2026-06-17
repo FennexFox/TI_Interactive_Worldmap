@@ -103,14 +103,15 @@ def prepare_region_geometry(args: argparse.Namespace) -> str:
     return "data/generated/region_map.generated.json"
 
 
-def require_template_files(templates_dir: Path) -> None:
-    required = (
+def require_template_files(templates_dir: Path, *, require_bilateral_template: bool = True) -> None:
+    required = [
         "TIRegionTemplate.json",
         "TINationTemplate.json",
         "TITechTemplate.json",
         "TIProjectTemplate.json",
-        "TIBilateralTemplate.json",
-    )
+    ]
+    if require_bilateral_template:
+        required.append("TIBilateralTemplate.json")
     missing = [name for name in required if not (templates_dir / name).is_file()]
     if missing:
         raise SystemExit(f"Missing required template file(s): {', '.join(missing)}")
@@ -220,11 +221,13 @@ def build_pages(args: argparse.Namespace) -> None:
         if not templates_dir:
             raise SystemExit("Pass --templates-dir or --bilateral-template.")
         bilateral_template = template_file(templates_dir, "TIBilateralTemplate.json")
+    if not bilateral_template.is_file():
+        raise SystemExit(f"Missing required bilateral template file: {bilateral_template}")
     if not templates_dir:
         templates_dir = infer_templates_dir(bilateral_template)
     if not templates_dir:
         raise SystemExit("Scenario rebuild requires --templates-dir or a bilateral template inside Templates.")
-    require_template_files(templates_dir)
+    require_template_files(templates_dir, require_bilateral_template=not args.bilateral_template)
     if args.scenario_year != DEFAULT_SCENARIO_YEAR:
         print(f"Warning: --scenario-year is deprecated; generating all scenarios and keeping {DEFAULT_SCENARIO_YEAR} as default.")
 

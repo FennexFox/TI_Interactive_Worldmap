@@ -694,12 +694,14 @@ function claimGroupCountText(count) { return currentLanguage === 'ko' ? t('count
 function claimModeLabel(value) { return t(`claimMode.${value || 'all'}`); }
 function activeScenarioSummary() {
   const entry = appData.scenarios[activeScenarioId()] || activeData || {};
+  const claimMap = entry.claimMap || activeData?.claimMap || {};
+  const researchCatalog = entry.catalogs?.research || activeData?.catalogs?.research || {};
   const summary = entry.summary || activeData?.summary || {};
   return {
     regions: summary.regionCount ?? entry.regionMap?.regions?.length ?? activeData?.regionMap?.regions?.length ?? 0,
     nations: summary.nationCount ?? Object.keys(entry.catalogs?.nations?.nations || activeData?.catalogs?.nations?.nations || {}).length,
-    claims: summary.claimRowsNormalized ?? activeData?.claimMap?.summary?.claimRowsNormalized ?? 0,
-    projects: summary.claimGrantingProjectCount ?? summary.projectCount ?? Object.keys(activeData?.catalogs?.research?.projects || {}).length,
+    claims: summary.claimRowsNormalized ?? claimMap.claimStats?.claimRowsNormalized ?? claimMap.summary?.claimRowsNormalized ?? 0,
+    projects: summary.claimGrantingProjectCount ?? summary.projectCount ?? researchCatalog.counts?.claimGrantingProjects ?? claimMap.claimStats?.projectCount ?? 0,
   };
 }
 function renderScenarioOptions() {
