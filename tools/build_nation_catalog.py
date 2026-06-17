@@ -36,9 +36,22 @@ def scenario_template_name(name: str, scenario_year: str) -> str:
     return f"{scenario_year}_{norm_id(name)}"
 
 
-def load_nation_localizations(templates_dir: Path, languages: list[str]) -> dict[str, dict[str, str]]:
+def nation_localization_priority(data_name: str, tag: str, scenario_year: str) -> int:
+    if data_name == scenario_template_name(tag, scenario_year):
+        return 2
+    if data_name == tag:
+        return 1
+    return 0
+
+
+def load_nation_localizations(
+    templates_dir: Path,
+    languages: list[str],
+    scenario_year: str = DEFAULT_SCENARIO_YEAR,
+) -> dict[str, dict[str, str]]:
     root = templates_dir.parent / "Localization"
     localizations: dict[str, dict[str, str]] = {}
+    priorities: dict[str, dict[str, int]] = {}
     for language in languages:
         values = read_localization_file(root / language / f"TINationTemplate.{language}")
         for key, value in values.items():
@@ -49,10 +62,14 @@ def load_nation_localizations(templates_dir: Path, languages: list[str]) -> dict
             tag = norm_id(data_name)
             if not tag:
                 continue
-            current = localizations.setdefault(tag, {})
-            if data_name == tag or language not in current:
-                current[language] = value
-    return dict(sorted(localizations.items()))
+            priority = nation_localization_priority(data_name, tag, scenario_year)
+            if priority <= 0:
+                continue
+            current_priority = priorities.setdefault(tag, {}).get(language, -1)
+            if priority > current_priority:
+                localizations.setdefault(tag, {})[language] = value
+                priorities[tag][language] = priority
+    return {tag: dict(sorted(values.items())) for tag, values in sorted(localizations.items())}
 
 
 def load_nation_templates(templates_dir: Path, scenario_year: str) -> dict[str, dict[str, Any]]:
@@ -151,7 +168,7 @@ def build_catalog(
     scenario_year: str = DEFAULT_SCENARIO_YEAR,
 ) -> dict[str, Any]:
     templates = load_nation_templates(templates_dir, scenario_year)
-    localizations = load_nation_localizations(templates_dir, languages)
+    localizations = load_nation_localizations(templates_dir, languages, scenario_year)
     initial_regions = initial_regions_by_nation(region_map)
     scenario_bilateral_rows = filter_bilateral_rows_for_scenario(
         bilateral_rows or [],

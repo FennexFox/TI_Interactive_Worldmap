@@ -225,7 +225,7 @@ class CatalogBuilderTests(unittest.TestCase):
                 "\n".join(
                     [
                         "TINationTemplate.displayName.CAN=Canada",
-                        "TINationTemplate.displayName.2026_CAN=2026_Canada",
+                        "TINationTemplate.displayName.2026_CAN=Canada",
                         "TINationTemplate.displayName.SAU=Saudi Arabia",
                     ]
                 ),
@@ -264,6 +264,89 @@ class CatalogBuilderTests(unittest.TestCase):
             self.assertTrue(catalog["nations"]["SEN"]["existsAtStart"])
             self.assertTrue(catalog["nations"]["SEN"]["isBreakaway"])
             self.assertNotIn("Senegambia", catalog["nations"]["SEN"]["aliases"])
+
+    def test_nation_catalog_prefers_matching_scenario_localization(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            templates_dir = root / "Templates"
+            write_json(
+                templates_dir / "TINationTemplate.json",
+                [
+                    {"dataName": "INO", "friendlyName": "Java"},
+                    {"dataName": "2026_INO", "friendlyName": "2026_Indonesia"},
+                ],
+            )
+            write_text(
+                root / "Localization" / "en" / "TINationTemplate.en",
+                "\n".join(
+                    [
+                        "TINationTemplate.displayName.INO=Java",
+                        "TINationTemplate.displayName.2026_INO=Indonesia",
+                    ]
+                ),
+            )
+
+            catalog = nc.build_catalog(templates_dir, ["en"], scenario_year="2026")
+
+            self.assertEqual(catalog["nations"]["INO"]["displayName"]["en"], "Indonesia")
+            self.assertIn("Indonesia", catalog["nations"]["INO"]["aliases"])
+            self.assertNotIn("Java", catalog["nations"]["INO"]["aliases"])
+
+    def test_region_outline_owner_name_prefers_matching_scenario_localization(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            templates_dir = root / "Templates"
+            write_json(
+                templates_dir / "TINationTemplate.json",
+                [
+                    {"dataName": "INO", "friendlyName": "Java"},
+                    {"dataName": "2026_INO", "friendlyName": "2026_Indonesia"},
+                ],
+            )
+            write_json(
+                templates_dir / "TIRegionTemplate.json",
+                [
+                    {
+                        "dataName": "2026_Java",
+                        "mapRegionName": "map_Java",
+                        "primaryCity": "Jakarta",
+                        "sortNation": "Indonesia",
+                    }
+                ],
+            )
+            write_json(
+                templates_dir / "TIMapRegionTemplate.json",
+                [{"dataName": "map_Java", "friendlyNationName": "Indonesia"}],
+            )
+            write_text(
+                root / "Localization" / "en" / "TINationTemplate.en",
+                "\n".join(
+                    [
+                        "TINationTemplate.displayName.INO=Java",
+                        "TINationTemplate.displayName.2026_INO=Indonesia",
+                    ]
+                ),
+            )
+            write_text(
+                root / "Localization" / "en" / "TIRegionTemplate.en",
+                "TIRegionTemplate.displayName.Java=Jakarta\n",
+            )
+            raw = {
+                "collectionName": "fixture",
+                "width": 10,
+                "height": 10,
+                "regions": [
+                    {"regionName": "Java", "nationTag": "INO", "path": "M 0 0 L 1 0 L 0 1 Z"},
+                ],
+            }
+
+            metadata = ro.load_region_metadata(templates_dir, ["en"], "2026")
+            region_map = ro.compact_region_outlines(raw, region_metadata=metadata, scenario_year="2026")
+            row = region_map["regions"][0]
+
+            self.assertEqual(row["nationTag"], "INO")
+            self.assertEqual(row["displayName"]["en"], "Jakarta")
+            self.assertEqual(row["ownerName"], "Indonesia")
 
     def test_research_catalog_records_claim_granting_projects(self):
         with tempfile.TemporaryDirectory() as tmp:

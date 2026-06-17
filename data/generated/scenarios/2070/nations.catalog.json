@@ -31,8 +31,8 @@
       "friendlyName": "Aceh",
       "aliases": [
         "ACE",
-        "아체",
-        "Aceh"
+        "Aceh",
+        "아체"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -60,8 +60,8 @@
       "friendlyName": "Afghanistan",
       "aliases": [
         "AFG",
-        "아프가니스탄",
-        "Afghanistan"
+        "Afghanistan",
+        "아프가니스탄"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -90,8 +90,8 @@
       "friendlyName": "Angola",
       "aliases": [
         "AGO",
-        "앙골라",
-        "Angola"
+        "Angola",
+        "앙골라"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -120,8 +120,8 @@
       "friendlyName": "Alaska",
       "aliases": [
         "AKA",
-        "알래스카",
-        "Alaska"
+        "Alaska",
+        "알래스카"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -169,8 +169,8 @@
       "friendlyName": "The Alien Nation",
       "aliases": [
         "ALN",
-        "외계 정부",
         "Alien Administration",
+        "외계 정부",
         "The Alien Nation"
       ],
       "existsAtStart": false,
@@ -199,8 +199,8 @@
       "friendlyName": "Austria",
       "aliases": [
         "ALP",
-        "오스트리아",
-        "Austria"
+        "Austria",
+        "오스트리아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -229,8 +229,8 @@
       "friendlyName": "Ambazonia",
       "aliases": [
         "AMB",
-        "암바조니아",
-        "Ambazonia"
+        "Ambazonia",
+        "암바조니아"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -258,8 +258,8 @@
       "friendlyName": "Arewa",
       "aliases": [
         "ARE",
-        "아레와",
-        "Arewa"
+        "Arewa",
+        "아레와"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -287,8 +287,8 @@
       "friendlyName": "Argentina",
       "aliases": [
         "ARG",
-        "아르헨티나",
-        "Argentina"
+        "Argentina",
+        "아르헨티나"
       ],
       "existsAtStart": true,
       "initialRegionCount": 3,
@@ -317,8 +317,8 @@
       "friendlyName": "Armenia",
       "aliases": [
         "ARM",
-        "아르메니아",
-        "Armenia"
+        "Armenia",
+        "아르메니아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -347,8 +347,8 @@
       "friendlyName": "Assam",
       "aliases": [
         "ASM",
-        "아삼",
-        "Assam"
+        "Assam",
+        "아삼"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -376,8 +376,8 @@
       "friendlyName": "AtlanticUnion",
       "aliases": [
         "ATL",
-        "대서양 연합",
         "Atlantic Union",
+        "대서양 연합",
         "AtlanticUnion"
       ],
       "existsAtStart": false,
@@ -406,8 +406,8 @@
       "friendlyName": "Atzlan",
       "aliases": [
         "ATZ",
-        "아즈틀란",
         "Aztlán",
+        "아즈틀란",
         "Atzlan"
       ],
       "existsAtStart": false,
@@ -436,8 +436,8 @@
       "friendlyName": "Australia",
       "aliases": [
         "AUS",
-        "호주",
-        "Australia"
+        "Australia",
+        "호주"
       ],
       "existsAtStart": true,
       "initialRegionCount": 6,
@@ -466,8 +466,8 @@
       "friendlyName": "Azawad",
       "aliases": [
         "AZA",
-        "아자와드",
-        "Azawad"
+        "Azawad",
+        "아자와드"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -495,8 +495,8 @@
       "friendlyName": "Azerbaijan",
       "aliases": [
         "AZE",
-        "아제르바이잔",
-        "Azerbaijan"
+        "Azerbaijan",
+        "아제르바이잔"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -525,8 +525,8 @@
       "friendlyName": "Azores",
       "aliases": [
         "AZO",
-        "아조레스-마데이라",
         "Azores-Madeira",
+        "아조레스-마데이라",
         "Azores"
       ],
       "existsAtStart": false,
@@ -555,8 +555,8 @@
       "friendlyName": "Bahamas",
       "aliases": [
         "BAH",
-        "바하마",
-        "Bahamas"
+        "Bahamas",
+        "바하마"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -585,8 +585,8 @@
       "friendlyName": "EuskalHerria",
       "aliases": [
         "BAS",
-        "바스크",
         "Euskal Herria",
+        "바스크",
         "EuskalHerria"
       ],
       "existsAtStart": false,
@@ -615,8 +615,8 @@
       "friendlyName": "Bavaria",
       "aliases": [
         "BAV",
-        "바이에른",
-        "Bavaria"
+        "Bavaria",
+        "바이에른"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -644,8 +644,8 @@
       "friendlyName": "Baluchistan",
       "aliases": [
         "BCH",
-        "발루치스탄",
         "Balochistan",
+        "발루치스탄",
         "Baluchistan"
       ],
       "existsAtStart": false,
@@ -674,8 +674,8 @@
       "friendlyName": "BejaCongress",
       "aliases": [
         "BEJ",
-        "베자 의회",
         "Beja Congress",
+        "베자 의회",
         "BejaCongress"
       ],
       "existsAtStart": false,
@@ -704,8 +704,8 @@
       "friendlyName": "Belize",
       "aliases": [
         "BEL",
-        "벨리즈",
-        "Belize"
+        "Belize",
+        "벨리즈"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -734,8 +734,8 @@
       "friendlyName": "Benin",
       "aliases": [
         "BEN",
-        "베냉",
-        "Benin"
+        "Benin",
+        "베냉"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -764,8 +764,8 @@
       "friendlyName": "Bangladesh",
       "aliases": [
         "BGD",
-        "방글라데시",
-        "Bangladesh"
+        "Bangladesh",
+        "방글라데시"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -794,8 +794,8 @@
       "friendlyName": "Bengal",
       "aliases": [
         "BGL",
-        "벵골",
-        "Bengal"
+        "Bengal",
+        "벵골"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -823,8 +823,8 @@
       "friendlyName": "Belgium",
       "aliases": [
         "BGM",
-        "벨기에-룩셈부르크",
         "Belgium-Luxembourg",
+        "벨기에-룩셈부르크",
         "Belgium"
       ],
       "existsAtStart": true,
@@ -854,8 +854,8 @@
       "friendlyName": "Bhutan",
       "aliases": [
         "BHU",
-        "부탄",
-        "Bhutan"
+        "Bhutan",
+        "부탄"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -884,8 +884,8 @@
       "friendlyName": "Biafra",
       "aliases": [
         "BIA",
-        "비아프라",
-        "Biafra"
+        "Biafra",
+        "비아프라"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -913,8 +913,8 @@
       "friendlyName": "BurkinaFaso",
       "aliases": [
         "BKF",
-        "부르키나파소",
         "Burkina Faso",
+        "부르키나파소",
         "BurkinaFaso"
       ],
       "existsAtStart": true,
@@ -944,8 +944,8 @@
       "friendlyName": "Belarus",
       "aliases": [
         "BLR",
-        "벨라루스",
-        "Belarus"
+        "Belarus",
+        "벨라루스"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -974,8 +974,8 @@
       "friendlyName": "Bolivia",
       "aliases": [
         "BOL",
-        "볼리비아",
-        "Bolivia"
+        "Bolivia",
+        "볼리비아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -1004,8 +1004,8 @@
       "friendlyName": "Borneo",
       "aliases": [
         "BOR",
-        "보르네오",
-        "Borneo"
+        "Borneo",
+        "보르네오"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -1033,8 +1033,8 @@
       "friendlyName": "Brazil",
       "aliases": [
         "BRA",
-        "브라질",
-        "Brazil"
+        "Brazil",
+        "브라질"
       ],
       "existsAtStart": true,
       "initialRegionCount": 9,
@@ -1063,8 +1063,8 @@
       "friendlyName": "Brittany",
       "aliases": [
         "BRT",
-        "브르타뉴",
         "Bretagne",
+        "브르타뉴",
         "Brittany"
       ],
       "existsAtStart": false,
@@ -1093,8 +1093,8 @@
       "friendlyName": "Brunei",
       "aliases": [
         "BRU",
-        "브루나이 다루살람",
         "Brunei Darussalam",
+        "브루나이 다루살람",
         "Brunei"
       ],
       "existsAtStart": true,
@@ -1124,8 +1124,8 @@
       "friendlyName": "BosniaandHerzegovina",
       "aliases": [
         "BSM",
-        "보스니아-헤르체고비나",
         "Bosnia-Herzegovina",
+        "보스니아-헤르체고비나",
         "BosniaandHerzegovina"
       ],
       "existsAtStart": true,
@@ -1155,8 +1155,8 @@
       "friendlyName": "Bulgaria",
       "aliases": [
         "BUL",
-        "불가리아",
-        "Bulgaria"
+        "Bulgaria",
+        "불가리아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -1185,8 +1185,8 @@
       "friendlyName": "Buryatia",
       "aliases": [
         "BUR",
-        "부랴티아",
-        "Buryatia"
+        "Buryatia",
+        "부랴티아"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -1214,8 +1214,8 @@
       "friendlyName": "Botswana",
       "aliases": [
         "BWA",
-        "보츠와나",
-        "Botswana"
+        "Botswana",
+        "보츠와나"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -1244,8 +1244,8 @@
       "friendlyName": "Lesser Antilles States",
       "aliases": [
         "CAB",
-        "소앤틸리스",
-        "Lesser Antilles States"
+        "Lesser Antilles States",
+        "소앤틸리스"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -1274,8 +1274,8 @@
       "friendlyName": "CentralAfricanRepublic",
       "aliases": [
         "CAF",
-        "중앙 아프리카 공화국",
         "Central African Republic",
+        "중앙 아프리카 공화국",
         "CentralAfricanRepublic"
       ],
       "existsAtStart": true,
@@ -1305,8 +1305,8 @@
       "friendlyName": "California",
       "aliases": [
         "CAL",
-        "캘리포니아",
-        "California"
+        "California",
+        "캘리포니아"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -1333,8 +1333,8 @@
       },
       "aliases": [
         "CAM",
-        "중앙 아메리카 국가",
-        "Central American States"
+        "Central American States",
+        "중앙 아메리카 국가"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -1359,8 +1359,8 @@
       "friendlyName": "Canada",
       "aliases": [
         "CAN",
-        "캐나다",
-        "Canada"
+        "Canada",
+        "캐나다"
       ],
       "existsAtStart": true,
       "initialRegionCount": 9,
@@ -1389,8 +1389,8 @@
       "friendlyName": "CapeRepublic",
       "aliases": [
         "CAP",
-        "케이프 공화국",
         "Cape Republic",
+        "케이프 공화국",
         "CapeRepublic"
       ],
       "existsAtStart": false,
@@ -1419,8 +1419,8 @@
       "friendlyName": "Catalonia",
       "aliases": [
         "CAT",
-        "카탈루냐",
-        "Catalonia"
+        "Catalonia",
+        "카탈루냐"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -1448,8 +1448,8 @@
       "friendlyName": "Chhattisgarh",
       "aliases": [
         "CHA",
-        "차티스가르",
-        "Chhattisgarh"
+        "Chhattisgarh",
+        "차티스가르"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -1477,8 +1477,8 @@
       "friendlyName": "Chile",
       "aliases": [
         "CHL",
-        "칠레",
-        "Chile"
+        "Chile",
+        "칠레"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -1507,8 +1507,8 @@
       "friendlyName": "China",
       "aliases": [
         "CHN",
-        "중국",
-        "China"
+        "China",
+        "중국"
       ],
       "existsAtStart": true,
       "initialRegionCount": 26,
@@ -1538,8 +1538,8 @@
       "friendlyName": "Cameroon",
       "aliases": [
         "CMR",
-        "카메룬",
-        "Cameroon"
+        "Cameroon",
+        "카메룬"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -1588,8 +1588,8 @@
       "friendlyName": "Congo",
       "aliases": [
         "COD",
-        "콩고",
-        "Congo"
+        "Congo",
+        "콩고"
       ],
       "existsAtStart": true,
       "initialRegionCount": 3,
@@ -1618,8 +1618,8 @@
       "friendlyName": "Colombia",
       "aliases": [
         "COL",
-        "콜롬비아",
-        "Colombia"
+        "Colombia",
+        "콜롬비아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -1648,8 +1648,8 @@
       "friendlyName": "RepublicoftheCongo",
       "aliases": [
         "COR",
-        "콩고 공화국",
         "Republic of the Congo",
+        "콩고 공화국",
         "RepublicoftheCongo"
       ],
       "existsAtStart": false,
@@ -1678,8 +1678,8 @@
       "friendlyName": "CostaRica",
       "aliases": [
         "COS",
-        "코스타리카",
         "Costa Rica",
+        "코스타리카",
         "CostaRica"
       ],
       "existsAtStart": true,
@@ -1709,8 +1709,8 @@
       "friendlyName": "Caliphate",
       "aliases": [
         "CPH",
-        "칼리프",
-        "Caliphate"
+        "Caliphate",
+        "칼리프"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -1738,8 +1738,8 @@
       "friendlyName": "Cabo Verde",
       "aliases": [
         "CPV",
-        "카보베르데",
-        "Cabo Verde"
+        "Cabo Verde",
+        "카보베르데"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -1768,8 +1768,8 @@
       "friendlyName": "Crimea",
       "aliases": [
         "CRI",
-        "크림반도",
-        "Crimea"
+        "Crimea",
+        "크림반도"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -1797,8 +1797,8 @@
       "friendlyName": "Croatia",
       "aliases": [
         "CRS",
-        "크로아티아",
-        "Croatia"
+        "Croatia",
+        "크로아티아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -1827,8 +1827,8 @@
       "friendlyName": "CanaryIslands",
       "aliases": [
         "CRY",
-        "카나리 제도",
         "Free Canaries",
+        "카나리 제도",
         "CanaryIslands"
       ],
       "existsAtStart": false,
@@ -1857,8 +1857,8 @@
       "friendlyName": "DominionofAmerica",
       "aliases": [
         "CSA",
-        "미국 자치령",
         "Dominion of America",
+        "미국 자치령",
         "DominionofAmerica",
         "Dominion"
       ],
@@ -1888,8 +1888,8 @@
       "friendlyName": "Cascadia",
       "aliases": [
         "CSD",
-        "카스카디아",
-        "Cascadia"
+        "Cascadia",
+        "카스카디아"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -1917,8 +1917,8 @@
       "friendlyName": "Cuba",
       "aliases": [
         "CUB",
-        "쿠바",
-        "Cuba"
+        "Cuba",
+        "쿠바"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -1947,8 +1947,8 @@
       "friendlyName": "Cyrenaica",
       "aliases": [
         "CYE",
-        "키레나이카",
-        "Cyrenaica"
+        "Cyrenaica",
+        "키레나이카"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -1976,8 +1976,8 @@
       "friendlyName": "Czechia",
       "aliases": [
         "CZE",
-        "체코",
-        "Czechia"
+        "Czechia",
+        "체코"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -2006,8 +2006,8 @@
       "friendlyName": "Darfur",
       "aliases": [
         "DAR",
-        "다르푸르",
-        "Darfur"
+        "Darfur",
+        "다르푸르"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -2035,8 +2035,8 @@
       "friendlyName": "Denmark",
       "aliases": [
         "DEN",
-        "덴마크",
-        "Denmark"
+        "Denmark",
+        "덴마크"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -2065,8 +2065,8 @@
       "friendlyName": "Germany",
       "aliases": [
         "DEU",
-        "동독",
         "East Germany",
+        "동독",
         "Germany"
       ],
       "existsAtStart": true,
@@ -2096,8 +2096,8 @@
       "friendlyName": "Djibouti",
       "aliases": [
         "DJI",
-        "지부티",
-        "Djibouti"
+        "Djibouti",
+        "지부티"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -2126,8 +2126,8 @@
       "friendlyName": "Dominican Republic",
       "aliases": [
         "DOM",
-        "도미니카 공화국",
-        "Dominican Republic"
+        "Dominican Republic",
+        "도미니카 공화국"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -2156,8 +2156,8 @@
       "friendlyName": "Donetsk",
       "aliases": [
         "DON",
-        "도네츠크 공화국",
         "Donetsk Republic",
+        "도네츠크 공화국",
         "Donetsk"
       ],
       "existsAtStart": false,
@@ -2186,8 +2186,8 @@
       "friendlyName": "DravidaNadu",
       "aliases": [
         "DVD",
-        "드라비다 나두",
         "Dravida Nadu",
+        "드라비다 나두",
         "DravidaNadu"
       ],
       "existsAtStart": false,
@@ -2216,8 +2216,8 @@
       "friendlyName": "Algeria",
       "aliases": [
         "DZA",
-        "알제리",
-        "Algeria"
+        "Algeria",
+        "알제리"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -2245,8 +2245,8 @@
       },
       "aliases": [
         "EBK",
-        "동부 발칸 국가",
-        "Eastern Balkan States"
+        "Eastern Balkan States",
+        "동부 발칸 국가"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -2271,8 +2271,8 @@
       "friendlyName": "Ecuador",
       "aliases": [
         "ECU",
-        "에콰도르",
-        "Ecuador"
+        "Ecuador",
+        "에콰도르"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -2301,8 +2301,8 @@
       "friendlyName": "Egypt",
       "aliases": [
         "EGY",
-        "이집트",
-        "Egypt"
+        "Egypt",
+        "이집트"
       ],
       "existsAtStart": true,
       "initialRegionCount": 3,
@@ -2331,8 +2331,8 @@
       "friendlyName": "El Salvador",
       "aliases": [
         "ELS",
-        "엘살바도르",
-        "El Salvador"
+        "El Salvador",
+        "엘살바도르"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -2361,8 +2361,8 @@
       "friendlyName": "Equatorial Guinea",
       "aliases": [
         "EQG",
-        "적도 기니",
-        "Equatorial Guinea"
+        "Equatorial Guinea",
+        "적도 기니"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -2391,8 +2391,8 @@
       "friendlyName": "Eritrea",
       "aliases": [
         "ERI",
-        "에리트레아",
-        "Eritrea"
+        "Eritrea",
+        "에리트레아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -2421,8 +2421,8 @@
       "friendlyName": "Spain",
       "aliases": [
         "ESP",
-        "스페인",
-        "Spain"
+        "Spain",
+        "스페인"
       ],
       "existsAtStart": true,
       "initialRegionCount": 5,
@@ -2451,8 +2451,8 @@
       "friendlyName": "Estonia",
       "aliases": [
         "EST",
-        "에스토니아",
-        "Estonia"
+        "Estonia",
+        "에스토니아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -2481,8 +2481,8 @@
       "friendlyName": "Eswatini",
       "aliases": [
         "ESW",
-        "에스와티니",
-        "Eswatini"
+        "Eswatini",
+        "에스와티니"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -2511,8 +2511,8 @@
       "friendlyName": "Ethiopia",
       "aliases": [
         "ETH",
-        "에티오피아",
-        "Ethiopia"
+        "Ethiopia",
+        "에티오피아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 3,
@@ -2541,8 +2541,8 @@
       "friendlyName": "EastTurkestan",
       "aliases": [
         "ETK",
-        "동 투르키스탄",
         "East Turkestan",
+        "동 투르키스탄",
         "EastTurkestan"
       ],
       "existsAtStart": false,
@@ -2571,8 +2571,8 @@
       "friendlyName": "France",
       "aliases": [
         "EUA",
-        "프랑스",
-        "France"
+        "France",
+        "프랑스"
       ],
       "existsAtStart": true,
       "initialRegionCount": 8,
@@ -2601,8 +2601,8 @@
       "friendlyName": "FreeAmazonas",
       "aliases": [
         "FAM",
-        "자유 아마조나스",
         "Free Amazonas",
+        "자유 아마조나스",
         "FreeAmazonas"
       ],
       "existsAtStart": false,
@@ -2631,8 +2631,8 @@
       "friendlyName": "Finland",
       "aliases": [
         "FIN",
-        "핀란드",
-        "Finland"
+        "Finland",
+        "핀란드"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -2661,8 +2661,8 @@
       "friendlyName": "FirstNation",
       "aliases": [
         "FNT",
-        "캐나다 원주민 국가",
         "First Nation",
+        "캐나다 원주민 국가",
         "FirstNation"
       ],
       "existsAtStart": false,
@@ -2691,8 +2691,8 @@
       "friendlyName": "Fujian",
       "aliases": [
         "FUJ",
-        "푸젠",
-        "Fujian"
+        "Fujian",
+        "푸젠"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -2720,8 +2720,8 @@
       "friendlyName": "Gambia",
       "aliases": [
         "GAM",
-        "감비아",
         "The Gambia",
+        "감비아",
         "Gambia"
       ],
       "existsAtStart": true,
@@ -2751,8 +2751,8 @@
       "friendlyName": "Guanxi",
       "aliases": [
         "GAX",
-        "광시",
         "Guangxi",
+        "광시",
         "Guanxi"
       ],
       "existsAtStart": false,
@@ -2781,8 +2781,8 @@
       "friendlyName": "United Kingdom",
       "aliases": [
         "GBR",
-        "잉글랜드",
         "England",
+        "잉글랜드",
         "United Kingdom"
       ],
       "existsAtStart": true,
@@ -2812,8 +2812,8 @@
       "friendlyName": "Georgia",
       "aliases": [
         "GEO",
-        "조지아",
-        "Georgia"
+        "Georgia",
+        "조지아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -2842,8 +2842,8 @@
       "friendlyName": "Ghana",
       "aliases": [
         "GHA",
-        "가나",
-        "Ghana"
+        "Ghana",
+        "가나"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -2872,8 +2872,8 @@
       "friendlyName": "Guinea",
       "aliases": [
         "GIN",
-        "기니",
-        "Guinea"
+        "Guinea",
+        "기니"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -2902,8 +2902,8 @@
       "friendlyName": "Guinea-Bissau",
       "aliases": [
         "GNB",
-        "기니비사우",
-        "Guinea-Bissau"
+        "Guinea-Bissau",
+        "기니비사우"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -2932,8 +2932,8 @@
       "friendlyName": "Greece",
       "aliases": [
         "GRE",
-        "그리스",
-        "Greece"
+        "Greece",
+        "그리스"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -2962,8 +2962,8 @@
       "friendlyName": "Greenland",
       "aliases": [
         "GRL",
-        "그린란드",
-        "Greenland"
+        "Greenland",
+        "그린란드"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -2991,8 +2991,8 @@
       "friendlyName": "Guatemala",
       "aliases": [
         "GTM",
-        "과테말라",
-        "Guatemala"
+        "Guatemala",
+        "과테말라"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -3021,8 +3021,8 @@
       "friendlyName": "Liangguang",
       "aliases": [
         "GUA",
-        "양광",
-        "Liangguang"
+        "Liangguang",
+        "양광"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -3050,8 +3050,8 @@
       "friendlyName": "Gujarat",
       "aliases": [
         "GUJ",
-        "구자르트",
-        "Gujarat"
+        "Gujarat",
+        "구자르트"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -3079,8 +3079,8 @@
       "friendlyName": "GulfStates",
       "aliases": [
         "GUS",
-        "카타르-바레인",
         "Qatar-Bahrain",
+        "카타르-바레인",
         "GulfStates"
       ],
       "existsAtStart": true,
@@ -3110,8 +3110,8 @@
       "friendlyName": "Guyana",
       "aliases": [
         "GUY",
-        "가이아나",
-        "Guyana"
+        "Guyana",
+        "가이아나"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -3140,8 +3140,8 @@
       "friendlyName": "Gwailor",
       "aliases": [
         "GWA",
-        "괄리오르",
         "Gwalior",
+        "괄리오르",
         "Gwailor"
       ],
       "existsAtStart": false,
@@ -3170,8 +3170,8 @@
       "friendlyName": "Hawaii",
       "aliases": [
         "HAW",
-        "하와이",
         "Hawai'i",
+        "하와이",
         "Hawaii"
       ],
       "existsAtStart": false,
@@ -3200,8 +3200,8 @@
       "friendlyName": "HongKong",
       "aliases": [
         "HKO",
-        "홍콩",
         "Hong Kong",
+        "홍콩",
         "HongKong"
       ],
       "existsAtStart": false,
@@ -3230,8 +3230,8 @@
       "friendlyName": "Hunan",
       "aliases": [
         "HNN",
-        "후난",
-        "Hunan"
+        "Hunan",
+        "후난"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -3259,8 +3259,8 @@
       "friendlyName": "Honduras",
       "aliases": [
         "HON",
-        "온두라스",
-        "Honduras"
+        "Honduras",
+        "온두라스"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -3289,8 +3289,8 @@
       "friendlyName": "Haiti",
       "aliases": [
         "HTI",
-        "아이티",
-        "Haiti"
+        "Haiti",
+        "아이티"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -3319,8 +3319,8 @@
       "friendlyName": "Hungary",
       "aliases": [
         "HUN",
-        "헝가리",
-        "Hungary"
+        "Hungary",
+        "헝가리"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -3349,8 +3349,8 @@
       "friendlyName": "Hyderabad",
       "aliases": [
         "HYD",
-        "하이데라바드",
-        "Hyderabad"
+        "Hyderabad",
+        "하이데라바드"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -3378,8 +3378,8 @@
       "friendlyName": "Nepal",
       "aliases": [
         "HYS",
-        "네팔",
-        "Nepal"
+        "Nepal",
+        "네팔"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -3408,8 +3408,8 @@
       "friendlyName": "Indonesia",
       "aliases": [
         "IDN",
-        "자바",
         "Java",
+        "자바",
         "Indonesia"
       ],
       "existsAtStart": true,
@@ -3439,8 +3439,8 @@
       "friendlyName": "India",
       "aliases": [
         "IND",
-        "인도",
-        "India"
+        "India",
+        "인도"
       ],
       "existsAtStart": true,
       "initialRegionCount": 17,
@@ -3469,8 +3469,8 @@
       "friendlyName": "Ingria",
       "aliases": [
         "ING",
-        "상트페테르부르크 공화국",
         "Petersburg Republic",
+        "상트페테르부르크 공화국",
         "Ingria"
       ],
       "existsAtStart": false,
@@ -3499,8 +3499,8 @@
       "friendlyName": "Ireland",
       "aliases": [
         "IRL",
-        "아일랜드",
-        "Ireland"
+        "Ireland",
+        "아일랜드"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -3529,8 +3529,8 @@
       "friendlyName": "Iran",
       "aliases": [
         "IRN",
-        "이란",
-        "Iran"
+        "Iran",
+        "이란"
       ],
       "existsAtStart": true,
       "initialRegionCount": 5,
@@ -3559,8 +3559,8 @@
       "friendlyName": "Iraq",
       "aliases": [
         "IRQ",
-        "이라크",
-        "Iraq"
+        "Iraq",
+        "이라크"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -3589,8 +3589,8 @@
       "friendlyName": "Iceland",
       "aliases": [
         "ISL",
-        "아이슬란드",
-        "Iceland"
+        "Iceland",
+        "아이슬란드"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -3619,8 +3619,8 @@
       "friendlyName": "Israel",
       "aliases": [
         "ISR",
-        "이스라엘",
-        "Israel"
+        "Israel",
+        "이스라엘"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -3650,8 +3650,8 @@
       "friendlyName": "Italy",
       "aliases": [
         "ITA",
-        "이탈리아",
-        "Italy"
+        "Italy",
+        "이탈리아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 3,
@@ -3680,8 +3680,8 @@
       "friendlyName": "IvoryCoast",
       "aliases": [
         "IVO",
-        "코트디부아르",
         "Ivory Coast",
+        "코트디부아르",
         "IvoryCoast"
       ],
       "existsAtStart": true,
@@ -3711,8 +3711,8 @@
       "friendlyName": "Jaipur",
       "aliases": [
         "JAI",
-        "자이푸르",
-        "Jaipur"
+        "Jaipur",
+        "자이푸르"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -3740,8 +3740,8 @@
       "friendlyName": "Jamaica",
       "aliases": [
         "JAM",
-        "자메이카",
-        "Jamaica"
+        "Jamaica",
+        "자메이카"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -3770,8 +3770,8 @@
       "friendlyName": "Jefferson",
       "aliases": [
         "JEF",
-        "제퍼슨 자유 국가",
         "Jefferson Free State",
+        "제퍼슨 자유 국가",
         "Jefferson"
       ],
       "existsAtStart": false,
@@ -3800,8 +3800,8 @@
       "friendlyName": "Jordan",
       "aliases": [
         "JOR",
-        "요르단",
-        "Jordan"
+        "Jordan",
+        "요르단"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -3830,8 +3830,8 @@
       "friendlyName": "Japan",
       "aliases": [
         "JPN",
-        "일본",
-        "Japan"
+        "Japan",
+        "일본"
       ],
       "existsAtStart": true,
       "initialRegionCount": 5,
@@ -3860,8 +3860,8 @@
       "friendlyName": "Kachin-Arakan",
       "aliases": [
         "KAC",
-        "가친-아라칸",
-        "Kachin-Arakan"
+        "Kachin-Arakan",
+        "가친-아라칸"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -3889,8 +3889,8 @@
       "friendlyName": "KaliningradRepublic",
       "aliases": [
         "KAL",
-        "발트 공화국",
         "Baltic Republic",
+        "발트 공화국",
         "KaliningradRepublic"
       ],
       "existsAtStart": false,
@@ -3919,8 +3919,8 @@
       "friendlyName": "Karelia",
       "aliases": [
         "KAR",
-        "카렐리야",
-        "Karelia"
+        "Karelia",
+        "카렐리야"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -3948,8 +3948,8 @@
       "friendlyName": "Katanga",
       "aliases": [
         "KAT",
-        "카탕가",
-        "Katanga"
+        "Katanga",
+        "카탕가"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -3977,8 +3977,8 @@
       "friendlyName": "Kazakhstan",
       "aliases": [
         "KAZ",
-        "카자흐스탄",
-        "Kazakhstan"
+        "Kazakhstan",
+        "카자흐스탄"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -4007,8 +4007,8 @@
       "friendlyName": "Kenya",
       "aliases": [
         "KEN",
-        "케냐",
-        "Kenya"
+        "Kenya",
+        "케냐"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -4037,8 +4037,8 @@
       "friendlyName": "KeoDeudai",
       "aliases": [
         "KEO",
-        "케오 데우다이",
         "Keo Deudai",
+        "케오 데우다이",
         "KeoDeudai"
       ],
       "existsAtStart": false,
@@ -4067,8 +4067,8 @@
       "friendlyName": "Kyrgyzstan",
       "aliases": [
         "KGZ",
-        "키르기스스탄",
-        "Kyrgyzstan"
+        "Kyrgyzstan",
+        "키르기스스탄"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -4097,8 +4097,8 @@
       "friendlyName": "Khalistan",
       "aliases": [
         "KHA",
-        "칼리스탄",
-        "Khalistan"
+        "Khalistan",
+        "칼리스탄"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -4126,8 +4126,8 @@
       "friendlyName": "Cambodia",
       "aliases": [
         "KHM",
-        "캄보디아",
-        "Cambodia"
+        "Cambodia",
+        "캄보디아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -4156,8 +4156,8 @@
       "friendlyName": "Khuzestan",
       "aliases": [
         "KHU",
-        "후제스탄",
-        "Khuzestan"
+        "Khuzestan",
+        "후제스탄"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -4185,8 +4185,8 @@
       "friendlyName": "KomiRepublic",
       "aliases": [
         "KOM",
-        "코미 공화국",
         "Komi Republic",
+        "코미 공화국",
         "KomiRepublic"
       ],
       "existsAtStart": false,
@@ -4215,8 +4215,8 @@
       "friendlyName": "SouthKorea",
       "aliases": [
         "KOR",
-        "남한",
         "South Korea",
+        "남한",
         "SouthKorea"
       ],
       "existsAtStart": true,
@@ -4246,8 +4246,8 @@
       "friendlyName": "Kosovo",
       "aliases": [
         "KOS",
-        "코소보",
-        "Kosovo"
+        "Kosovo",
+        "코소보"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -4276,8 +4276,8 @@
       "friendlyName": "Kurdistan",
       "aliases": [
         "KRD",
-        "쿠르디스탄",
-        "Kurdistan"
+        "Kurdistan",
+        "쿠르디스탄"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -4305,8 +4305,8 @@
       "friendlyName": "Karakalpakstan",
       "aliases": [
         "KRK",
-        "카라칼팍스탄",
-        "Karakalpakstan"
+        "Karakalpakstan",
+        "카라칼팍스탄"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -4334,8 +4334,8 @@
       "friendlyName": "JammuandKashmir",
       "aliases": [
         "KSH",
-        "잠무 카슈미르",
         "Jammu and Kashmir",
+        "잠무 카슈미르",
         "JammuandKashmir"
       ],
       "existsAtStart": false,
@@ -4364,8 +4364,8 @@
       "friendlyName": "Kuwait",
       "aliases": [
         "KUW",
-        "쿠웨이트",
-        "Kuwait"
+        "Kuwait",
+        "쿠웨이트"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -4394,8 +4394,8 @@
       "friendlyName": "Laos",
       "aliases": [
         "LAO",
-        "라오스",
-        "Laos"
+        "Laos",
+        "라오스"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -4424,8 +4424,8 @@
       "friendlyName": "Liberia",
       "aliases": [
         "LBR",
-        "라이베리아",
-        "Liberia"
+        "Liberia",
+        "라이베리아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -4454,8 +4454,8 @@
       "friendlyName": "Libya",
       "aliases": [
         "LBY",
-        "리비아",
-        "Libya"
+        "Libya",
+        "리비아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -4484,8 +4484,8 @@
       "friendlyName": "Lebanon",
       "aliases": [
         "LEB",
-        "레바논",
-        "Lebanon"
+        "Lebanon",
+        "레바논"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -4514,8 +4514,8 @@
       "friendlyName": "Lesotho",
       "aliases": [
         "LES",
-        "레소토",
-        "Lesotho"
+        "Lesotho",
+        "레소토"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -4564,8 +4564,8 @@
       "friendlyName": "SriLanka",
       "aliases": [
         "LKA",
-        "스리랑카",
         "Sri Lanka",
+        "스리랑카",
         "SriLanka"
       ],
       "existsAtStart": true,
@@ -4595,8 +4595,8 @@
       "friendlyName": "Lunda-Tchokwé",
       "aliases": [
         "LNT",
-        "룬다-초크웨",
-        "Lunda-Tchokwé"
+        "Lunda-Tchokwé",
+        "룬다-초크웨"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -4624,8 +4624,8 @@
       "friendlyName": "Logone",
       "aliases": [
         "LOG",
-        "다르 엘-쿠티",
         "Dar El-Kuti",
+        "다르 엘-쿠티",
         "Logone"
       ],
       "existsAtStart": false,
@@ -4654,8 +4654,8 @@
       "friendlyName": "Lithuania",
       "aliases": [
         "LTU",
-        "리투아니아",
-        "Lithuania"
+        "Lithuania",
+        "리투아니아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -4684,8 +4684,8 @@
       "friendlyName": "Latvia",
       "aliases": [
         "LVA",
-        "라트비아",
-        "Latvia"
+        "Latvia",
+        "라트비아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -4714,8 +4714,8 @@
       "friendlyName": "Gabon",
       "aliases": [
         "LWG",
-        "가봉",
-        "Gabon"
+        "Gabon",
+        "가봉"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -4743,8 +4743,8 @@
       "friendlyName": "Maharashtra",
       "aliases": [
         "MAH",
-        "마하라슈트라",
-        "Maharashtra"
+        "Maharashtra",
+        "마하라슈트라"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -4772,8 +4772,8 @@
       "friendlyName": "Malawi",
       "aliases": [
         "MAL",
-        "말라위",
-        "Malawi"
+        "Malawi",
+        "말라위"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -4802,8 +4802,8 @@
       "friendlyName": "Morocco",
       "aliases": [
         "MAR",
-        "모로코",
-        "Morocco"
+        "Morocco",
+        "모로코"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -4832,8 +4832,8 @@
       "friendlyName": "MicronesianStates",
       "aliases": [
         "MCS",
-        "미크로네시아 국가",
         "Micronesian States",
+        "미크로네시아 국가",
         "MicronesianStates"
       ],
       "existsAtStart": true,
@@ -4863,8 +4863,8 @@
       "friendlyName": "Madagascar",
       "aliases": [
         "MDG",
-        "마다가스카르",
-        "Madagascar"
+        "Madagascar",
+        "마다가스카르"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -4893,8 +4893,8 @@
       "friendlyName": "Mordovia",
       "aliases": [
         "MDV",
-        "몰도비아",
-        "Mordovia"
+        "Mordovia",
+        "몰도비아"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -4922,8 +4922,8 @@
       "friendlyName": "Mexico",
       "aliases": [
         "MEX",
-        "멕시코",
-        "Mexico"
+        "Mexico",
+        "멕시코"
       ],
       "existsAtStart": true,
       "initialRegionCount": 4,
@@ -4952,8 +4952,8 @@
       "friendlyName": "Mindanao",
       "aliases": [
         "MIN",
-        "민다나오",
-        "Mindanao"
+        "Mindanao",
+        "민다나오"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -4981,8 +4981,8 @@
       "friendlyName": "North Macedonia",
       "aliases": [
         "MKD",
-        "북마케도니아",
-        "North Macedonia"
+        "North Macedonia",
+        "북마케도니아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -5011,8 +5011,8 @@
       "friendlyName": "Maldives",
       "aliases": [
         "MLD",
-        "몰디브",
-        "Maldives"
+        "Maldives",
+        "몰디브"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -5040,8 +5040,8 @@
       },
       "aliases": [
         "MLG",
-        "중부 기니",
-        "Middle Guinea"
+        "Middle Guinea",
+        "중부 기니"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -5066,8 +5066,8 @@
       "friendlyName": "Mali",
       "aliases": [
         "MLI",
-        "말리",
-        "Mali"
+        "Mali",
+        "말리"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -5096,8 +5096,8 @@
       "friendlyName": "Myanmar",
       "aliases": [
         "MMR",
-        "미얀마",
-        "Myanmar"
+        "Myanmar",
+        "미얀마"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -5126,8 +5126,8 @@
       "friendlyName": "Guandong",
       "aliases": [
         "MNC",
-        "관동",
-        "Guandong"
+        "Guandong",
+        "관동"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -5155,8 +5155,8 @@
       "friendlyName": "Montenegro",
       "aliases": [
         "MNE",
-        "몬테네그로",
-        "Montenegro"
+        "Montenegro",
+        "몬테네그로"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -5185,8 +5185,8 @@
       "friendlyName": "Mongolia",
       "aliases": [
         "MNG",
-        "몽골",
-        "Mongolia"
+        "Mongolia",
+        "몽골"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -5215,8 +5215,8 @@
       "friendlyName": "Moldova",
       "aliases": [
         "MOL",
-        "몰도바",
-        "Moldova"
+        "Moldova",
+        "몰도바"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -5245,8 +5245,8 @@
       "friendlyName": "MombasaRepublic",
       "aliases": [
         "MOM",
-        "몸바사 공화국",
         "Mombasa Republic",
+        "몸바사 공화국",
         "MombasaRepublic"
       ],
       "existsAtStart": false,
@@ -5275,8 +5275,8 @@
       "friendlyName": "Mozambique",
       "aliases": [
         "MOZ",
-        "모잠비크",
-        "Mozambique"
+        "Mozambique",
+        "모잠비크"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -5305,8 +5305,8 @@
       "friendlyName": "Mauritius",
       "aliases": [
         "MRS",
-        "모리셔스",
-        "Mauritius"
+        "Mauritius",
+        "모리셔스"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -5335,8 +5335,8 @@
       "friendlyName": "Mauritania",
       "aliases": [
         "MRT",
-        "모리타니",
-        "Mauritania"
+        "Mauritania",
+        "모리타니"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -5365,8 +5365,8 @@
       "friendlyName": "Mysore",
       "aliases": [
         "MSO",
-        "마이소르",
-        "Mysore"
+        "Mysore",
+        "마이소르"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -5394,8 +5394,8 @@
       "friendlyName": "Malaysia",
       "aliases": [
         "MYS",
-        "말레이시아",
-        "Malaysia"
+        "Malaysia",
+        "말레이시아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -5423,8 +5423,8 @@
       },
       "aliases": [
         "NBK",
-        "북부 발칸 국가",
-        "Northern Balkan States"
+        "Northern Balkan States",
+        "북부 발칸 국가"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -5449,8 +5449,8 @@
       "friendlyName": "NorthCaucasusFederation",
       "aliases": [
         "NCF",
-        "북코카서스 연합",
         "North Caucasus Confederation",
+        "북코카서스 연합",
         "NorthCaucasusFederation"
       ],
       "existsAtStart": false,
@@ -5479,8 +5479,8 @@
       "friendlyName": "NewCaledonia",
       "aliases": [
         "NCL",
-        "뉴칼레도니아",
         "New Caledonia",
+        "뉴칼레도니아",
         "NewCaledonia"
       ],
       "existsAtStart": false,
@@ -5509,8 +5509,8 @@
       "friendlyName": "NorthernAssembly",
       "aliases": [
         "NEN",
-        "북부 의회",
         "Northern Assembly",
+        "북부 의회",
         "NorthernAssembly"
       ],
       "existsAtStart": false,
@@ -5539,8 +5539,8 @@
       "friendlyName": "Niger",
       "aliases": [
         "NER",
-        "니제르",
-        "Niger"
+        "Niger",
+        "니제르"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -5569,8 +5569,8 @@
       "friendlyName": "Netherlands",
       "aliases": [
         "NET",
-        "네덜란드",
-        "Netherlands"
+        "Netherlands",
+        "네덜란드"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -5599,8 +5599,8 @@
       "friendlyName": "Nigeria",
       "aliases": [
         "NGA",
-        "나이지리아",
-        "Nigeria"
+        "Nigeria",
+        "나이지리아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 3,
@@ -5629,8 +5629,8 @@
       "friendlyName": "Nicaragua",
       "aliases": [
         "NIC",
-        "니카라과",
-        "Nicaragua"
+        "Nicaragua",
+        "니카라과"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -5659,8 +5659,8 @@
       "friendlyName": "Norway",
       "aliases": [
         "NOR",
-        "노르웨이",
-        "Norway"
+        "Norway",
+        "노르웨이"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -5689,8 +5689,8 @@
       "friendlyName": "Nubia",
       "aliases": [
         "NUB",
-        "누비아",
-        "Nubia"
+        "Nubia",
+        "누비아"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -5718,8 +5718,8 @@
       "friendlyName": "NewZealand",
       "aliases": [
         "NZL",
-        "뉴질랜드",
         "New Zealand",
+        "뉴질랜드",
         "NewZealand"
       ],
       "existsAtStart": true,
@@ -5749,8 +5749,8 @@
       "friendlyName": "Occitania",
       "aliases": [
         "OCT",
-        "옥시타니아",
-        "Occitania"
+        "Occitania",
+        "옥시타니아"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -5778,8 +5778,8 @@
       "friendlyName": "Odisha",
       "aliases": [
         "ODI",
-        "오디샤",
-        "Odisha"
+        "Odisha",
+        "오디샤"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -5807,8 +5807,8 @@
       "friendlyName": "Ogaden",
       "aliases": [
         "OGA",
-        "오가덴",
-        "Ogaden"
+        "Ogaden",
+        "오가덴"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -5836,8 +5836,8 @@
       "friendlyName": "Oman",
       "aliases": [
         "OMN",
-        "오만",
-        "Oman"
+        "Oman",
+        "오만"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -5866,8 +5866,8 @@
       "friendlyName": "Padania",
       "aliases": [
         "PAD",
-        "파다니아",
-        "Padania"
+        "Padania",
+        "파다니아"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -5895,8 +5895,8 @@
       "friendlyName": "Pakistan",
       "aliases": [
         "PAK",
-        "펀자브",
         "Punjab",
+        "펀자브",
         "Pakistan"
       ],
       "existsAtStart": true,
@@ -5926,8 +5926,8 @@
       "friendlyName": "Palestine",
       "aliases": [
         "PAL",
-        "팔레스타인",
-        "Palestine"
+        "Palestine",
+        "팔레스타인"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -5957,8 +5957,8 @@
       "friendlyName": "Panama",
       "aliases": [
         "PAN",
-        "파나마",
-        "Panama"
+        "Panama",
+        "파나마"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -5987,8 +5987,8 @@
       "friendlyName": "Patagonia",
       "aliases": [
         "PAT",
-        "파타고니아",
-        "Patagonia"
+        "Patagonia",
+        "파타고니아"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -6016,8 +6016,8 @@
       "friendlyName": "PacificFederation",
       "aliases": [
         "PCF",
-        "극동 연방",
         "Far East Federation",
+        "극동 연방",
         "PacificFederation"
       ],
       "existsAtStart": false,
@@ -6046,8 +6046,8 @@
       "friendlyName": "MelanesianStates",
       "aliases": [
         "PCS",
-        "멜라네시아 국가",
         "Melanesian States",
+        "멜라네시아 국가",
         "MelanesianStates"
       ],
       "existsAtStart": true,
@@ -6077,8 +6077,8 @@
       "friendlyName": "Peru",
       "aliases": [
         "PER",
-        "페루",
-        "Peru"
+        "Peru",
+        "페루"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -6107,8 +6107,8 @@
       "friendlyName": "PéyiGuyane",
       "aliases": [
         "PGN",
-        "프랑스령 기아나",
         "Péyi Guyane",
+        "프랑스령 기아나",
         "PéyiGuyane"
       ],
       "existsAtStart": false,
@@ -6137,8 +6137,8 @@
       "friendlyName": "Philippines",
       "aliases": [
         "PHL",
-        "필리핀",
-        "Philippines"
+        "Philippines",
+        "필리핀"
       ],
       "existsAtStart": true,
       "initialRegionCount": 3,
@@ -6167,8 +6167,8 @@
       "friendlyName": "PolynesianStates",
       "aliases": [
         "PLS",
-        "폴리네시아 국가",
         "Polynesian States",
+        "폴리네시아 국가",
         "PolynesianStates"
       ],
       "existsAtStart": false,
@@ -6197,8 +6197,8 @@
       "friendlyName": "Papua New Guinea",
       "aliases": [
         "PNG",
-        "파푸아 뉴기니",
-        "Papua New Guinea"
+        "Papua New Guinea",
+        "파푸아 뉴기니"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -6227,8 +6227,8 @@
       "friendlyName": "Poland",
       "aliases": [
         "POL",
-        "폴란드",
-        "Poland"
+        "Poland",
+        "폴란드"
       ],
       "existsAtStart": true,
       "initialRegionCount": 3,
@@ -6257,8 +6257,8 @@
       "friendlyName": "ProtectorateAuthority",
       "aliases": [
         "PRA",
-        "국제연합",
         "United Nations",
+        "국제연합",
         "ProtectorateAuthority"
       ],
       "existsAtStart": false,
@@ -6287,8 +6287,8 @@
       "friendlyName": "NorthKorea",
       "aliases": [
         "PRK",
-        "북한",
         "North Korea",
+        "북한",
         "NorthKorea"
       ],
       "existsAtStart": true,
@@ -6318,8 +6318,8 @@
       "friendlyName": "PuertoRico",
       "aliases": [
         "PRO",
-        "푸에르토리코",
         "Puerto Rico",
+        "푸에르토리코",
         "PuertoRico"
       ],
       "existsAtStart": false,
@@ -6348,8 +6348,8 @@
       "friendlyName": "Portugal",
       "aliases": [
         "PRT",
-        "포르투갈",
-        "Portugal"
+        "Portugal",
+        "포르투갈"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -6378,8 +6378,8 @@
       "friendlyName": "Paraguay",
       "aliases": [
         "PRY",
-        "파라과이",
-        "Paraguay"
+        "Paraguay",
+        "파라과이"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -6408,8 +6408,8 @@
       "friendlyName": "Quebec",
       "aliases": [
         "QUB",
-        "퀘벡",
-        "Quebec"
+        "Quebec",
+        "퀘벡"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -6437,8 +6437,8 @@
       "friendlyName": "RioBravo",
       "aliases": [
         "RIO",
-        "리오 브라보",
         "Rio Bravo",
+        "리오 브라보",
         "RioBravo"
       ],
       "existsAtStart": false,
@@ -6467,8 +6467,8 @@
       "friendlyName": "RepublicofLakota",
       "aliases": [
         "RLK",
-        "라코타 공화국",
         "Republic of Lakota",
+        "라코타 공화국",
         "RepublicofLakota"
       ],
       "existsAtStart": false,
@@ -6497,8 +6497,8 @@
       "friendlyName": "RepublicoftheMoluccas",
       "aliases": [
         "RMO",
-        "말루쿠 공화국",
         "Republic of the Moluccas",
+        "말루쿠 공화국",
         "RepublicoftheMoluccas"
       ],
       "existsAtStart": false,
@@ -6527,8 +6527,8 @@
       "friendlyName": "NewAfrika",
       "aliases": [
         "RNA",
-        "뉴아프리카",
         "New Afrika",
+        "뉴아프리카",
         "NewAfrika"
       ],
       "existsAtStart": false,
@@ -6557,8 +6557,8 @@
       "friendlyName": "RepublicofNewEngland",
       "aliases": [
         "RNE",
-        "뉴잉글랜드 공화국",
         "Republic of New England",
+        "뉴잉글랜드 공화국",
         "RepublicofNewEngland"
       ],
       "existsAtStart": false,
@@ -6587,8 +6587,8 @@
       "friendlyName": "RepublicofAinu",
       "aliases": [
         "ROA",
-        "아이누 공화국",
         "Republic of Ainu",
+        "아이누 공화국",
         "RepublicofAinu"
       ],
       "existsAtStart": false,
@@ -6617,8 +6617,8 @@
       "friendlyName": "Romania",
       "aliases": [
         "ROM",
-        "루마니아",
-        "Romania"
+        "Romania",
+        "루마니아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -6647,8 +6647,8 @@
       "friendlyName": "Rostovskaya",
       "aliases": [
         "ROS",
-        "돈 카자크 군대",
         "Donskoe Kazache Voysko",
+        "돈 카자크 군대",
         "Rostovskaya"
       ],
       "existsAtStart": false,
@@ -6677,8 +6677,8 @@
       "friendlyName": "Comoros",
       "aliases": [
         "RTK",
-        "코모로",
-        "Comoros"
+        "Comoros",
+        "코모로"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -6707,8 +6707,8 @@
       "friendlyName": "Russia",
       "aliases": [
         "RUS",
-        "러시아",
-        "Russia"
+        "Russia",
+        "러시아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 20,
@@ -6737,8 +6737,8 @@
       "friendlyName": "Rwanda-Burundi",
       "aliases": [
         "RWB",
-        "르완다-브룬디",
-        "Rwanda-Burundi"
+        "Rwanda-Burundi",
+        "르완다-브룬디"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -6767,8 +6767,8 @@
       "friendlyName": "RepublicofWestPapua",
       "aliases": [
         "RWP",
-        "서파푸아 공화국",
         "Republic of West Papua",
+        "서파푸아 공화국",
         "RepublicofWestPapua"
       ],
       "existsAtStart": false,
@@ -6797,8 +6797,8 @@
       "friendlyName": "RepublicoftheRyukus",
       "aliases": [
         "RYU",
-        "류큐 공화국",
         "Republic of the Ryukyus",
+        "류큐 공화국",
         "RepublicoftheRyukus"
       ],
       "existsAtStart": false,
@@ -6827,8 +6827,8 @@
       "friendlyName": "Sahrawi",
       "aliases": [
         "SAH",
-        "사라위",
-        "Sahrawi"
+        "Sahrawi",
+        "사라위"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -6856,8 +6856,8 @@
       "friendlyName": "Sakha",
       "aliases": [
         "SAK",
-        "야쿠티아",
         "Yakutia",
+        "야쿠티아",
         "Sakha"
       ],
       "existsAtStart": false,
@@ -6886,8 +6886,8 @@
       "friendlyName": "SaoPaulo",
       "aliases": [
         "SAO",
-        "상파울루",
         "São Paulo",
+        "상파울루",
         "SaoPaulo"
       ],
       "existsAtStart": false,
@@ -6916,8 +6916,8 @@
       "friendlyName": "Saudi Arabia",
       "aliases": [
         "SAU",
-        "사우디아라비아",
-        "Saudi Arabia"
+        "Saudi Arabia",
+        "사우디아라비아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 3,
@@ -6946,8 +6946,8 @@
       "friendlyName": "Albania",
       "aliases": [
         "SBK",
-        "알바니아",
-        "Albania"
+        "Albania",
+        "알바니아"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -6975,8 +6975,8 @@
       "friendlyName": "Sweden",
       "aliases": [
         "SCA",
-        "스웨덴",
-        "Sweden"
+        "Sweden",
+        "스웨덴"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -7005,8 +7005,8 @@
       "friendlyName": "Sichuan",
       "aliases": [
         "SCH",
-        "스촨",
-        "Sichuan"
+        "Sichuan",
+        "스촨"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -7034,8 +7034,8 @@
       "friendlyName": "Scotland",
       "aliases": [
         "SCT",
-        "스코틀랜드",
-        "Scotland"
+        "Scotland",
+        "스코틀랜드"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -7063,8 +7063,8 @@
       "friendlyName": "Sudan",
       "aliases": [
         "SDN",
-        "수단",
-        "Sudan"
+        "Sudan",
+        "수단"
       ],
       "existsAtStart": true,
       "initialRegionCount": 3,
@@ -7093,8 +7093,8 @@
       "friendlyName": "Senegal",
       "aliases": [
         "SEG",
-        "세네갈",
-        "Senegal"
+        "Senegal",
+        "세네갈"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -7123,8 +7123,8 @@
       "friendlyName": "Serbia",
       "aliases": [
         "SER",
-        "세르비아",
-        "Serbia"
+        "Serbia",
+        "세르비아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -7153,8 +7153,8 @@
       "friendlyName": "Singapore",
       "aliases": [
         "SGP",
-        "싱가포르",
-        "Singapore"
+        "Singapore",
+        "싱가포르"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -7183,8 +7183,8 @@
       "friendlyName": "Shaangan",
       "aliases": [
         "SHG",
-        "섬감",
-        "Shaangan"
+        "Shaangan",
+        "섬감"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -7212,8 +7212,8 @@
       "friendlyName": "Siberia",
       "aliases": [
         "SIB",
-        "시베리아",
-        "Siberia"
+        "Siberia",
+        "시베리아"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -7241,8 +7241,8 @@
       "friendlyName": "Sicily",
       "aliases": [
         "SIC",
-        "시칠리아",
-        "Sicily"
+        "Sicily",
+        "시칠리아"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -7270,8 +7270,8 @@
       "friendlyName": "Silesia",
       "aliases": [
         "SIL",
-        "실레시아",
-        "Silesia"
+        "Silesia",
+        "실레시아"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -7299,8 +7299,8 @@
       "friendlyName": "Sindh",
       "aliases": [
         "SIN",
-        "신드",
-        "Sindh"
+        "Sindh",
+        "신드"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -7328,8 +7328,8 @@
       "friendlyName": "Sierra Leone",
       "aliases": [
         "SLE",
-        "시에라리온",
-        "Sierra Leone"
+        "Sierra Leone",
+        "시에라리온"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -7358,8 +7358,8 @@
       "friendlyName": "Slovakia",
       "aliases": [
         "SLO",
-        "슬로바키아",
-        "Slovakia"
+        "Slovakia",
+        "슬로바키아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -7388,8 +7388,8 @@
       "friendlyName": "Slovenia",
       "aliases": [
         "SLV",
-        "슬로베니아",
-        "Slovenia"
+        "Slovenia",
+        "슬로베니아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -7418,8 +7418,8 @@
       "friendlyName": "Somaliland",
       "aliases": [
         "SOL",
-        "소말릴란드",
-        "Somaliland"
+        "Somaliland",
+        "소말릴란드"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -7449,8 +7449,8 @@
       "friendlyName": "Somalia",
       "aliases": [
         "SOM",
-        "소말리아",
-        "Somalia"
+        "Somalia",
+        "소말리아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -7480,8 +7480,8 @@
       "friendlyName": "SouthPeru",
       "aliases": [
         "SPE",
-        "대 쿠야수유",
         "Qullana Suyu Marka",
+        "대 쿠야수유",
         "SouthPeru"
       ],
       "existsAtStart": false,
@@ -7510,8 +7510,8 @@
       "friendlyName": "SouthSudan",
       "aliases": [
         "SSD",
-        "남수단",
         "South Sudan",
+        "남수단",
         "SouthSudan"
       ],
       "existsAtStart": true,
@@ -7541,8 +7541,8 @@
       "friendlyName": "SaoTomeandPrincipe",
       "aliases": [
         "STP",
-        "상투메 프린시페",
         "São Tomé and Príncipe",
+        "상투메 프린시페",
         "SaoTomeandPrincipe"
       ],
       "existsAtStart": true,
@@ -7572,8 +7572,8 @@
       "friendlyName": "SulBrazil",
       "aliases": [
         "SUB",
-        "남브라질",
         "Sul Brazil",
+        "남브라질",
         "SulBrazil"
       ],
       "existsAtStart": false,
@@ -7602,8 +7602,8 @@
       "friendlyName": "Sumatra",
       "aliases": [
         "SUM",
-        "수마트라",
-        "Sumatra"
+        "Sumatra",
+        "수마트라"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -7631,8 +7631,8 @@
       "friendlyName": "Suriname",
       "aliases": [
         "SUR",
-        "수리남",
-        "Suriname"
+        "Suriname",
+        "수리남"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -7661,8 +7661,8 @@
       "friendlyName": "RepublicofVietnam",
       "aliases": [
         "SVN",
-        "베트남 공화국",
         "Republic of Vietnam",
+        "베트남 공화국",
         "RepublicofVietnam"
       ],
       "existsAtStart": false,
@@ -7691,8 +7691,8 @@
       "friendlyName": "Namibia",
       "aliases": [
         "SWA",
-        "나미비아",
-        "Namibia"
+        "Namibia",
+        "나미비아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -7721,8 +7721,8 @@
       "friendlyName": "Switzerland",
       "aliases": [
         "SWI",
-        "스위스",
-        "Switzerland"
+        "Switzerland",
+        "스위스"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -7751,8 +7751,8 @@
       "friendlyName": "Seychelles",
       "aliases": [
         "SYC",
-        "세이셸",
-        "Seychelles"
+        "Seychelles",
+        "세이셸"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -7781,8 +7781,8 @@
       "friendlyName": "Syria",
       "aliases": [
         "SYR",
-        "시리아",
-        "Syria"
+        "Syria",
+        "시리아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -7811,8 +7811,8 @@
       "friendlyName": "Tatarstan",
       "aliases": [
         "TAR",
-        "타타르스탄",
-        "Tatarstan"
+        "Tatarstan",
+        "타타르스탄"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -7840,8 +7840,8 @@
       "friendlyName": "Tibet",
       "aliases": [
         "TBT",
-        "티베트",
-        "Tibet"
+        "Tibet",
+        "티베트"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -7869,8 +7869,8 @@
       "friendlyName": "Chad",
       "aliases": [
         "TCD",
-        "차드",
-        "Chad"
+        "Chad",
+        "차드"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -7899,8 +7899,8 @@
       "friendlyName": "TeWaipounamu",
       "aliases": [
         "TEW",
-        "테 와이포우나무",
         "Te Waipounamu",
+        "테 와이포우나무",
         "TeWaipounamu"
       ],
       "existsAtStart": false,
@@ -7929,8 +7929,8 @@
       "friendlyName": "RepublicofTexas",
       "aliases": [
         "TEX",
-        "텍사스 공화국",
         "Republic of Texas",
+        "텍사스 공화국",
         "RepublicofTexas"
       ],
       "existsAtStart": false,
@@ -7959,8 +7959,8 @@
       "friendlyName": "Togo",
       "aliases": [
         "TGO",
-        "토고",
-        "Togo"
+        "Togo",
+        "토고"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -7989,8 +7989,8 @@
       "friendlyName": "Thailand",
       "aliases": [
         "THA",
-        "태국",
-        "Thailand"
+        "Thailand",
+        "태국"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -8019,8 +8019,8 @@
       "friendlyName": "TigrayNation",
       "aliases": [
         "TIG",
-        "티그레이",
         "Tigray",
+        "티그레이",
         "TigrayNation"
       ],
       "existsAtStart": false,
@@ -8049,8 +8049,8 @@
       "friendlyName": "Tajikistan",
       "aliases": [
         "TJK",
-        "타지키스탄",
-        "Tajikistan"
+        "Tajikistan",
+        "타지키스탄"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -8079,8 +8079,8 @@
       "friendlyName": "Turkmenistan",
       "aliases": [
         "TKM",
-        "투르크메니스탄",
-        "Turkmenistan"
+        "Turkmenistan",
+        "투르크메니스탄"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -8109,8 +8109,8 @@
       "friendlyName": "Timor-Leste",
       "aliases": [
         "TLS",
-        "동티모르",
-        "Timor-Leste"
+        "Timor-Leste",
+        "동티모르"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -8158,8 +8158,8 @@
       "friendlyName": "Transylvania",
       "aliases": [
         "TRA",
-        "트란실바니아",
-        "Transylvania"
+        "Transylvania",
+        "트란실바니아"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -8187,8 +8187,8 @@
       "friendlyName": "Tunisia",
       "aliases": [
         "TUN",
-        "튀니지",
-        "Tunisia"
+        "Tunisia",
+        "튀니지"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -8217,8 +8217,8 @@
       "friendlyName": "Turkey",
       "aliases": [
         "TUR",
-        "튀르키예",
         "Türkiye",
+        "튀르키예",
         "Turkey"
       ],
       "existsAtStart": true,
@@ -8248,8 +8248,8 @@
       "friendlyName": "Taiwan",
       "aliases": [
         "TWN",
-        "대만",
-        "Taiwan"
+        "Taiwan",
+        "대만"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -8279,8 +8279,8 @@
       "friendlyName": "Tanzania",
       "aliases": [
         "TZA",
-        "탄자니아",
-        "Tanzania"
+        "Tanzania",
+        "탄자니아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 3,
@@ -8309,8 +8309,8 @@
       "friendlyName": "United Arab Emirates",
       "aliases": [
         "UAE",
-        "아랍에미리트",
-        "United Arab Emirates"
+        "United Arab Emirates",
+        "아랍에미리트"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -8339,8 +8339,8 @@
       "friendlyName": "Uganda",
       "aliases": [
         "UGA",
-        "우간다",
-        "Uganda"
+        "Uganda",
+        "우간다"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -8369,8 +8369,8 @@
       "friendlyName": "Ukraine",
       "aliases": [
         "UKR",
-        "우크라이나",
-        "Ukraine"
+        "Ukraine",
+        "우크라이나"
       ],
       "existsAtStart": true,
       "initialRegionCount": 4,
@@ -8399,8 +8399,8 @@
       "friendlyName": "UnitedNortheastBrazil",
       "aliases": [
         "UNB",
-        "북동부 브라질 연합",
         "United Northeast Brazil",
+        "북동부 브라질 연합",
         "UnitedNortheastBrazil"
       ],
       "existsAtStart": false,
@@ -8428,8 +8428,8 @@
       },
       "aliases": [
         "UPG",
-        "상기니",
-        "Upper Guinea"
+        "Upper Guinea",
+        "상기니"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -8454,8 +8454,8 @@
       "friendlyName": "UralRepublic",
       "aliases": [
         "URL",
-        "우랄 공화국",
         "Ural Republic",
+        "우랄 공화국",
         "UralRepublic"
       ],
       "existsAtStart": false,
@@ -8484,8 +8484,8 @@
       "friendlyName": "Uruguay",
       "aliases": [
         "URY",
-        "우루과이",
-        "Uruguay"
+        "Uruguay",
+        "우루과이"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -8514,8 +8514,8 @@
       "friendlyName": "United States of America",
       "aliases": [
         "USA",
-        "미합중국",
         "United States of America",
+        "미합중국",
         "United States"
       ],
       "existsAtStart": true,
@@ -8545,8 +8545,8 @@
       "friendlyName": "Uzbekistan",
       "aliases": [
         "UZB",
-        "우즈베키스탄",
-        "Uzbekistan"
+        "Uzbekistan",
+        "우즈베키스탄"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -8575,8 +8575,8 @@
       "friendlyName": "Venezuela",
       "aliases": [
         "VEN",
-        "베네수엘라",
-        "Venezuela"
+        "Venezuela",
+        "베네수엘라"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -8605,8 +8605,8 @@
       "friendlyName": "Vietnam",
       "aliases": [
         "VNM",
-        "베트남",
-        "Vietnam"
+        "Vietnam",
+        "베트남"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -8635,8 +8635,8 @@
       "friendlyName": "Wales",
       "aliases": [
         "WAL",
-        "웨일즈",
-        "Wales"
+        "Wales",
+        "웨일즈"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -8664,8 +8664,8 @@
       "friendlyName": "Waziristan",
       "aliases": [
         "WAZ",
-        "와지리스탄",
-        "Waziristan"
+        "Waziristan",
+        "와지리스탄"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -8692,8 +8692,8 @@
       },
       "aliases": [
         "WBK",
-        "서부 발칸 국가",
-        "Western Balkan States"
+        "Western Balkan States",
+        "서부 발칸 국가"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -8718,8 +8718,8 @@
       "friendlyName": "WesternCanada",
       "aliases": [
         "WCA",
-        "서부 캐나다",
         "West Canada",
+        "서부 캐나다",
         "WesternCanada"
       ],
       "existsAtStart": false,
@@ -8748,8 +8748,8 @@
       "friendlyName": "Westralia",
       "aliases": [
         "WES",
-        "웨스트리아",
-        "Westralia"
+        "Westralia",
+        "웨스트리아"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -8777,8 +8777,8 @@
       "friendlyName": "WestGermany",
       "aliases": [
         "WGA",
-        "서독",
         "West Germany",
+        "서독",
         "WestGermany"
       ],
       "existsAtStart": false,
@@ -8807,8 +8807,8 @@
       "friendlyName": "Huanan",
       "aliases": [
         "WUR",
-        "화난",
-        "Huanan"
+        "Huanan",
+        "화난"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -8836,8 +8836,8 @@
       "friendlyName": "Yemen",
       "aliases": [
         "YEM",
-        "예멘",
-        "Yemen"
+        "Yemen",
+        "예멘"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -8867,8 +8867,8 @@
       "friendlyName": "SouthYemen",
       "aliases": [
         "YMS",
-        "남예멘",
         "South Yemen",
+        "남예멘",
         "SouthYemen"
       ],
       "existsAtStart": false,
@@ -8898,8 +8898,8 @@
       "friendlyName": "Yucatán",
       "aliases": [
         "YUC",
-        "유카탄",
-        "Yucatán"
+        "Yucatán",
+        "유카탄"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -8927,8 +8927,8 @@
       "friendlyName": "Yungui",
       "aliases": [
         "YUN",
-        "윈구이",
-        "Yungui"
+        "Yungui",
+        "윈구이"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -8956,8 +8956,8 @@
       "friendlyName": "South Africa",
       "aliases": [
         "ZAF",
-        "남아프리카",
-        "South Africa"
+        "South Africa",
+        "남아프리카"
       ],
       "existsAtStart": true,
       "initialRegionCount": 2,
@@ -8986,8 +8986,8 @@
       "friendlyName": "Zanzibar",
       "aliases": [
         "ZAN",
-        "잔지바르",
-        "Zanzibar"
+        "Zanzibar",
+        "잔지바르"
       ],
       "existsAtStart": false,
       "initialRegionCount": 0,
@@ -9015,8 +9015,8 @@
       "friendlyName": "Zambia",
       "aliases": [
         "ZMB",
-        "잠비아",
-        "Zambia"
+        "Zambia",
+        "잠비아"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -9045,8 +9045,8 @@
       "friendlyName": "Zimbabwe",
       "aliases": [
         "ZWE",
-        "짐바브웨",
-        "Zimbabwe"
+        "Zimbabwe",
+        "짐바브웨"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
