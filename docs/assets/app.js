@@ -811,6 +811,7 @@ const foreignHoverDescriptorCache = new Map();
 const manualEnvelopeModelCache = new Map();
 const reachableCapitalCandidateDescriptorCache = new Map();
 const claimHatchPathCache = new Map();
+let claimHatchClipIdSequence = 0;
 const CLAIM_OVERLAY_EMPTY_RENDER_KEY = 'claim-overlay-paths:empty';
 const CLAIM_LABEL_EMPTY_RENDER_KEY = 'claim-labels:empty';
 const FOREIGN_HOVER_EMPTY_RENDER_KEY = 'foreign-hover:empty';
@@ -4001,6 +4002,8 @@ function formatHatchNumber(value) {
   return Number(value).toFixed(6);
 }
 function pathBounds(path = '') {
+  // Region outline paths are generated as M/L coordinate pairs; use a real SVG
+  // path parser if the generated path grammar expands beyond x/y token pairs.
   const numbers = String(path || '').match(/-?\d+(?:\.\d+)?/g)?.map(Number) || [];
   if (numbers.length < 4) return null;
   let minX = Infinity;
@@ -4042,10 +4045,10 @@ function hostileClaimHatchPath(region) {
   if (cacheKey) claimHatchPathCache.set(cacheKey, hatchPath);
   return hatchPath;
 }
-function hatchClipId(descriptor, copyContext, index) {
+function hatchClipId(namespace, descriptor, copyContext, index) {
   const region = String(descriptor.region || 'region').replace(/[^A-Za-z0-9_-]/g, '-');
   const copy = String(copyContext.copyIndex).replace(/[^A-Za-z0-9_-]/g, '-');
-  return `hostile-claim-hatch-${copy}-${index}-${region}`;
+  return `hostile-claim-hatch-${namespace}-${copy}-${index}-${region}`;
 }
 function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyContexts} = {}) {
   const fillDescriptors = [];
@@ -4079,6 +4082,7 @@ function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyCont
     }
   }
   const fillGroups = buildVisualFillGroups(fillDescriptors);
+  const hatchClipNamespace = hatchDescriptors.length ? claimHatchClipIdSequence++ : 0;
   return createProjectedCopyFragment(copyContexts, 'claim-overlay-copy', copyContext => {
     const frag = document.createDocumentFragment();
     const copyData = worldCopyDataset(copyContext);
@@ -4096,7 +4100,7 @@ function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyCont
     }
     hatchDescriptors.forEach((descriptor, index) => {
       if (!descriptor.hatchPath) return;
-      const clipId = hatchClipId(descriptor, copyContext, index);
+      const clipId = hatchClipId(hatchClipNamespace, descriptor, copyContext, index);
       const defs = createSvgElement('defs');
       const clipPath = createSvgElement('clipPath', {id: clipId});
       clipPath.appendChild(createSvgElement('path', {d: descriptor.regionPath}));
