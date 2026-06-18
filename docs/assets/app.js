@@ -1558,6 +1558,10 @@ function localizedDisplayName(displayName) {
   if (!displayName || typeof displayName !== 'object') return '';
   return displayName[dataLanguageKey()] || displayName.en || displayName.kor || Object.values(displayName).find(Boolean) || '';
 }
+function localizedDisplayNameValues(displayName) {
+  if (!displayName || typeof displayName !== 'object') return [];
+  return Object.values(displayName).filter(Boolean);
+}
 function uniqueSearchTerms(values) {
   const seen = new Set();
   const result = [];
@@ -1574,16 +1578,24 @@ function nationDisplayName(tag) {
   const meta = NATION_META[tag] || {};
   return localizedDisplayName(meta.displayName) || meta.friendlyName || meta.label || meta.name || tag;
 }
+function nationEffectiveDisplayName(tag) {
+  const meta = NATION_META[tag] || {};
+  return localizedDisplayName(meta.unionDisplayName) || nationDisplayName(tag);
+}
 function nationSearchAliases(tag) {
   const meta = NATION_META[tag] || {};
   const displayName = meta.displayName && typeof meta.displayName === 'object' ? meta.displayName : {};
+  const baseDisplayName = meta.baseDisplayName && typeof meta.baseDisplayName === 'object' ? meta.baseDisplayName : {};
+  const unionDisplayName = meta.unionDisplayName && typeof meta.unionDisplayName === 'object' ? meta.unionDisplayName : {};
   const explicitAliases = Array.isArray(meta.aliases) ? meta.aliases : [];
   return uniqueSearchTerms([
     tag,
     ...explicitAliases,
     displayName.en,
     displayName.kor,
-    ...Object.values(displayName),
+    ...localizedDisplayNameValues(displayName),
+    ...localizedDisplayNameValues(baseDisplayName),
+    ...localizedDisplayNameValues(unionDisplayName),
     meta.friendlyName,
     meta.label,
     meta.name,
@@ -1626,7 +1638,7 @@ function claimCardResearchLabel(entry, nation, {compact=false} = {}) {
 }
 function claimCardTitleParts(entry, kind) {
   const nation = kind === 'incoming' ? (entry.claimant || '') : getActiveNation();
-  const nationName = nationDisplayName(nation);
+  const nationName = entry?.project ? nationEffectiveDisplayName(nation) : nationDisplayName(nation);
   return {
     tag: nation || '-',
     nation: nationName || nation || '-',

@@ -63,9 +63,20 @@ def load_nation_localizations(
     languages: list[str],
     scenario_year: str = DEFAULT_SCENARIO_YEAR,
 ) -> dict[str, dict[str, str]]:
+    layers = load_nation_localization_layers(templates_dir, languages, scenario_year)
+    return {
+        tag: dict(sorted((values.get("scenario") or values.get("base") or {}).items()))
+        for tag, values in sorted(layers.items())
+    }
+
+
+def load_nation_localization_layers(
+    templates_dir: Path,
+    languages: list[str],
+    scenario_year: str = DEFAULT_SCENARIO_YEAR,
+) -> dict[str, dict[str, dict[str, str]]]:
     root = templates_dir.parent / "Localization"
-    localizations: dict[str, dict[str, str]] = {}
-    priorities: dict[str, dict[str, int]] = {}
+    localizations: dict[str, dict[str, dict[str, str]]] = {}
     for language in languages:
         values = read_localization_file(root / language / f"TINationTemplate.{language}")
         for key, value in values.items():
@@ -77,13 +88,83 @@ def load_nation_localizations(
             if not tag:
                 continue
             priority = nation_localization_priority(data_name, tag, scenario_year)
-            if priority <= 0:
-                continue
-            current_priority = priorities.setdefault(tag, {}).get(language, -1)
-            if priority > current_priority:
-                localizations.setdefault(tag, {})[language] = value
-                priorities[tag][language] = priority
-    return {tag: dict(sorted(values.items())) for tag, values in sorted(localizations.items())}
+            if priority == 2:
+                localizations.setdefault(tag, {}).setdefault("scenario", {})[language] = value
+            elif priority == 1:
+                localizations.setdefault(tag, {}).setdefault("base", {})[language] = value
+    return {
+        tag: {kind: dict(sorted(names.items())) for kind, names in sorted(values.items())}
+        for tag, values in sorted(localizations.items())
+    }
+
+
+def load_nation_template_layers(templates_dir: Path, scenario_year: str) -> dict[str, dict[str, dict[str, Any]]]:
+    templates: dict[str, dict[str, dict[str, Any]]] = {}
+    for data_name, row in load_named_templates(templates_dir, "TINationTemplate.json").items():
+        if row.get("disable"):
+            continue
+        tag = norm_id(data_name)
+        if not tag:
+            continue
+        if data_name == tag:
+            layer = "base"
+        elif data_name == scenario_template_name(tag, scenario_year):
+            layer = "scenario"
+        else:
+            continue
+        normalized = dict(row)
+        normalized["dataName"] = tag
+        if normalized.get("friendlyName"):
+            normalized["friendlyName"] = norm_id(normalized["friendlyName"])
+        if data_name != tag:
+            normalized["sourceDataName"] = data_name
+        templates.setdefault(tag, {})[layer] = normalized
+    return {tag: dict(sorted(values.items())) for tag, values in sorted(templates.items())}
+
+
+def localized_or_friendly_display_name(
+    localized: dict[str, str] | None,
+    template: dict[str, Any] | None,
+) -> dict[str, str]:
+    if localized:
+        return dict(sorted((str(language), str(value)) for language, value in localized.items() if value))
+    friendly_name = template.get("friendlyName") if template else None
+    if friendly_name:
+        return {"en": str(friendly_name)}
+    return {}
+
+
+def display_names_equal(left: dict[str, str], right: dict[str, str]) -> bool:
+    return {k: v for k, v in left.items() if v} == {k: v for k, v in right.items() if v}
+
+
+def distinct_display_name(value: dict[str, str], *others: dict[str, str]) -> dict[str, str]:
+    if not value:
+        return {}
+    for other in others:
+        if display_names_equal(value, other):
+            return {}
+    return value
+
+
+def display_name_values(value: dict[str, str] | None) -> list[str]:
+    return list((value or {}).values())
+
+
+def localization_keys_for_layer(tag: str, display_name: dict[str, str], layer: str, scenario_year: str) -> list[str]:
+    if not display_name:
+        return []
+    data_name = scenario_template_name(tag, scenario_year) if layer == "scenario" else tag
+    return [f"TINationTemplate.displayName.{data_name}"]
+
+
+def merge_display_name_overrides(display_name: dict[str, str], override: dict[str, Any]) -> dict[str, str]:
+    override_display_name = override.get("displayName") if isinstance(override.get("displayName"), dict) else {}
+    if not override_display_name:
+        return display_name
+    merged = dict(display_name)
+    merged.update({str(language): str(value) for language, value in override_display_name.items() if value})
+    return dict(sorted(merged.items()))
 
 
 def load_nation_templates(templates_dir: Path, scenario_year: str) -> dict[str, dict[str, Any]]:
@@ -183,6 +264,8 @@ def build_catalog(
     nation_display_overrides: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     templates = load_nation_templates(templates_dir, scenario_year)
+    template_layers = load_nation_template_layers(templates_dir, scenario_year)
+    localization_layers = load_nation_localization_layers(templates_dir, languages, scenario_year)
     localizations = load_nation_localizations(templates_dir, languages, scenario_year)
     display_overrides = nation_display_overrides or {}
     initial_regions = initial_regions_by_nation(region_map)
@@ -205,26 +288,39 @@ def build_catalog(
     nations: dict[str, dict[str, Any]] = {}
     for tag in all_tags:
         template = templates.get(tag)
+        layers = template_layers.get(tag, {})
+        localized_layers = localization_layers.get(tag, {})
+        base_display_name = localized_or_friendly_display_name(localized_layers.get("base"), layers.get("base"))
+        scenario_display_name = localized_or_friendly_display_name(localized_layers.get("scenario"), layers.get("scenario"))
         display_name = dict(localizations.get(tag, {}))
+        if not display_name:
+            display_name = base_display_name or scenario_display_name
         friendly_name = template.get("friendlyName") if template else None
         override = display_overrides.get(tag, {})
-        override_display_name = override.get("displayName") if isinstance(override.get("displayName"), dict) else {}
-        if override_display_name:
-            display_name.update({str(language): str(value) for language, value in override_display_name.items() if value})
+        display_name = merge_display_name_overrides(display_name, override)
         if override.get("friendlyName"):
             friendly_name = str(override["friendlyName"])
         override_aliases = override.get("aliases") if isinstance(override.get("aliases"), list) else []
-        display_values = [*display_name.values(), friendly_name]
+        union_display_name = distinct_display_name(scenario_display_name, base_display_name, display_name)
+        display_values = [
+            *display_name_values(display_name),
+            *display_name_values(base_display_name),
+            *display_name_values(union_display_name),
+            friendly_name,
+        ]
         if override_aliases:
-            aliases = unique_strings([tag, *override_aliases, *display_name.values(), *derived_display_aliases(list(display_name.values()))])
+            aliases = unique_strings([tag, *override_aliases, *display_values, *derived_display_aliases(display_values)])
         else:
             aliases = unique_strings([tag, *display_values, *derived_display_aliases(display_values)])
-        localization_keys = [f"TINationTemplate.displayName.{tag}"] if display_name else []
+        localization_keys = localization_keys_for_layer(tag, localized_layers.get("base") or {}, "base", scenario_year)
+        localization_keys.extend(localization_keys_for_layer(tag, localized_layers.get("scenario") or {}, "scenario", scenario_year))
         if override:
             localization_keys.append(str(DEFAULT_NATION_DISPLAY_OVERRIDES))
         entry = {
             "tag": tag,
             "displayName": dict(sorted(display_name.items())),
+            "baseDisplayName": dict(sorted(base_display_name.items())),
+            "unionDisplayName": dict(sorted(union_display_name.items())),
             "friendlyName": friendly_name,
             "aliases": aliases,
             "existsAtStart": tag in initial_regions,

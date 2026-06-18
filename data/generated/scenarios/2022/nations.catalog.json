@@ -28,6 +28,11 @@
         "en": "Aceh",
         "kor": "아체"
       },
+      "baseDisplayName": {
+        "en": "Aceh",
+        "kor": "아체"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Aceh",
       "aliases": [
         "ACE",
@@ -57,6 +62,11 @@
         "en": "Afghanistan",
         "kor": "아프가니스탄"
       },
+      "baseDisplayName": {
+        "en": "Afghanistan",
+        "kor": "아프가니스탄"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Afghanistan",
       "aliases": [
         "AFG",
@@ -87,6 +97,11 @@
         "en": "Angola",
         "kor": "앙골라"
       },
+      "baseDisplayName": {
+        "en": "Angola",
+        "kor": "앙골라"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Angola",
       "aliases": [
         "AGO",
@@ -117,6 +132,11 @@
         "en": "Alaska",
         "kor": "알래스카"
       },
+      "baseDisplayName": {
+        "en": "Alaska",
+        "kor": "알래스카"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Alaska",
       "aliases": [
         "AKA",
@@ -143,6 +163,8 @@
     "ALB": {
       "tag": "ALB",
       "displayName": {},
+      "baseDisplayName": {},
+      "unionDisplayName": {},
       "aliases": [
         "ALB"
       ],
@@ -166,6 +188,11 @@
         "en": "Alien Administration",
         "kor": "외계 정부"
       },
+      "baseDisplayName": {
+        "en": "Alien Administration",
+        "kor": "외계 정부"
+      },
+      "unionDisplayName": {},
       "friendlyName": "The Alien Nation",
       "aliases": [
         "ALN",
@@ -196,6 +223,11 @@
         "en": "Austria",
         "kor": "오스트리아"
       },
+      "baseDisplayName": {
+        "en": "Austria",
+        "kor": "오스트리아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Austria",
       "aliases": [
         "ALP",
@@ -226,6 +258,11 @@
         "en": "Ambazonia",
         "kor": "암바조니아"
       },
+      "baseDisplayName": {
+        "en": "Ambazonia",
+        "kor": "암바조니아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Ambazonia",
       "aliases": [
         "AMB",
@@ -255,6 +292,11 @@
         "en": "Arewa",
         "kor": "아레와"
       },
+      "baseDisplayName": {
+        "en": "Arewa",
+        "kor": "아레와"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Arewa",
       "aliases": [
         "ARE",
@@ -284,6 +326,11 @@
         "en": "Argentina",
         "kor": "아르헨티나"
       },
+      "baseDisplayName": {
+        "en": "Argentina",
+        "kor": "아르헨티나"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Argentina",
       "aliases": [
         "ARG",
@@ -314,6 +361,11 @@
         "en": "Armenia",
         "kor": "아르메니아"
       },
+      "baseDisplayName": {
+        "en": "Armenia",
+        "kor": "아르메니아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Armenia",
       "aliases": [
         "ARM",
@@ -344,6 +396,11 @@
         "en": "Assam",
         "kor": "아삼"
       },
+      "baseDisplayName": {
+        "en": "Assam",
+        "kor": "아삼"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Assam",
       "aliases": [
         "ASM",
@@ -373,6 +430,11 @@
         "en": "Atlantic Union",
         "kor": "대서양 연합"
       },
+      "baseDisplayName": {
+        "en": "Atlantic Union",
+        "kor": "대서양 연합"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Atlantic Union",
       "aliases": [
         "ATL",
@@ -402,6 +464,11 @@
         "en": "Aztlán",
         "kor": "아즈틀란"
       },
+      "baseDisplayName": {
+        "en": "Aztlán",
+        "kor": "아즈틀란"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Atzlan",
       "aliases": [
         "ATZ",
@@ -432,6 +499,11 @@
         "en": "Australia",
         "kor": "호주"
       },
+      "baseDisplayName": {
+        "en": "Australia",
+        "kor": "호주"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Australia",
       "aliases": [
         "AUS",
@@ -462,6 +534,11 @@
         "en": "Azawad",
         "kor": "아자와드"
       },
+      "baseDisplayName": {
+        "en": "Azawad",
+        "kor": "아자와드"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Azawad",
       "aliases": [
         "AZA",
@@ -491,6 +568,11 @@
         "en": "Azerbaijan",
         "kor": "아제르바이잔"
       },
+      "baseDisplayName": {
+        "en": "Azerbaijan",
+        "kor": "아제르바이잔"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Azerbaijan",
       "aliases": [
         "AZE",
@@ -521,6 +603,11 @@
         "en": "Azores-Madeira",
         "kor": "아조레스-마데이라"
       },
+      "baseDisplayName": {
+        "en": "Azores-Madeira",
+        "kor": "아조레스-마데이라"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Azores",
       "aliases": [
         "AZO",
@@ -551,6 +638,11 @@
         "en": "Bahamas",
         "kor": "바하마"
       },
+      "baseDisplayName": {
+        "en": "Bahamas",
+        "kor": "바하마"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Bahamas",
       "aliases": [
         "BAH",
@@ -581,6 +673,11 @@
         "en": "Euskal Herria",
         "kor": "바스크"
       },
+      "baseDisplayName": {
+        "en": "Euskal Herria",
+        "kor": "바스크"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Euskal Herria",
       "aliases": [
         "BAS",
@@ -610,6 +707,11 @@
         "en": "Bavaria",
         "kor": "바이에른"
       },
+      "baseDisplayName": {
+        "en": "Bavaria",
+        "kor": "바이에른"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Bavaria",
       "aliases": [
         "BAV",
@@ -639,6 +741,11 @@
         "en": "Balochistan",
         "kor": "발루치스탄"
       },
+      "baseDisplayName": {
+        "en": "Balochistan",
+        "kor": "발루치스탄"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Baluchistan",
       "aliases": [
         "BCH",
@@ -669,6 +776,11 @@
         "en": "Beja Congress",
         "kor": "베자 의회"
       },
+      "baseDisplayName": {
+        "en": "Beja Congress",
+        "kor": "베자 의회"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Beja Congress",
       "aliases": [
         "BEJ",
@@ -698,6 +810,11 @@
         "en": "Belize",
         "kor": "벨리즈"
       },
+      "baseDisplayName": {
+        "en": "Belize",
+        "kor": "벨리즈"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Belize",
       "aliases": [
         "BEL",
@@ -728,6 +845,11 @@
         "en": "Benin",
         "kor": "베냉"
       },
+      "baseDisplayName": {
+        "en": "Benin",
+        "kor": "베냉"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Benin",
       "aliases": [
         "BEN",
@@ -758,6 +880,11 @@
         "en": "Bangladesh",
         "kor": "방글라데시"
       },
+      "baseDisplayName": {
+        "en": "Bangladesh",
+        "kor": "방글라데시"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Bangladesh",
       "aliases": [
         "BGD",
@@ -788,6 +915,11 @@
         "en": "Bengal",
         "kor": "벵골"
       },
+      "baseDisplayName": {
+        "en": "Bengal",
+        "kor": "벵골"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Bengal",
       "aliases": [
         "BGL",
@@ -817,6 +949,11 @@
         "en": "Belgium-Luxembourg",
         "kor": "벨기에-룩셈부르크"
       },
+      "baseDisplayName": {
+        "en": "Belgium-Luxembourg",
+        "kor": "벨기에-룩셈부르크"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Belgium",
       "aliases": [
         "BGM",
@@ -848,6 +985,11 @@
         "en": "Bhutan",
         "kor": "부탄"
       },
+      "baseDisplayName": {
+        "en": "Bhutan",
+        "kor": "부탄"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Bhutan",
       "aliases": [
         "BHU",
@@ -878,6 +1020,11 @@
         "en": "Biafra",
         "kor": "비아프라"
       },
+      "baseDisplayName": {
+        "en": "Biafra",
+        "kor": "비아프라"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Biafra",
       "aliases": [
         "BIA",
@@ -907,6 +1054,11 @@
         "en": "Burkina Faso",
         "kor": "부르키나파소"
       },
+      "baseDisplayName": {
+        "en": "Burkina Faso",
+        "kor": "부르키나파소"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Burkina Faso",
       "aliases": [
         "BKF",
@@ -937,6 +1089,11 @@
         "en": "Belarus",
         "kor": "벨라루스"
       },
+      "baseDisplayName": {
+        "en": "Belarus",
+        "kor": "벨라루스"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Belarus",
       "aliases": [
         "BLR",
@@ -967,6 +1124,11 @@
         "en": "Bolivia",
         "kor": "볼리비아"
       },
+      "baseDisplayName": {
+        "en": "Bolivia",
+        "kor": "볼리비아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Bolivia",
       "aliases": [
         "BOL",
@@ -997,6 +1159,11 @@
         "en": "Borneo",
         "kor": "보르네오"
       },
+      "baseDisplayName": {
+        "en": "Borneo",
+        "kor": "보르네오"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Borneo",
       "aliases": [
         "BOR",
@@ -1026,6 +1193,11 @@
         "en": "Brazil",
         "kor": "브라질"
       },
+      "baseDisplayName": {
+        "en": "Brazil",
+        "kor": "브라질"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Brazil",
       "aliases": [
         "BRA",
@@ -1056,6 +1228,11 @@
         "en": "Bretagne",
         "kor": "브르타뉴"
       },
+      "baseDisplayName": {
+        "en": "Bretagne",
+        "kor": "브르타뉴"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Brittany",
       "aliases": [
         "BRT",
@@ -1086,6 +1263,11 @@
         "en": "Brunei Darussalam",
         "kor": "브루나이 다루살람"
       },
+      "baseDisplayName": {
+        "en": "Brunei Darussalam",
+        "kor": "브루나이 다루살람"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Brunei",
       "aliases": [
         "BRU",
@@ -1117,6 +1299,11 @@
         "en": "Bosnia-Herzegovina",
         "kor": "보스니아-헤르체고비나"
       },
+      "baseDisplayName": {
+        "en": "Bosnia-Herzegovina",
+        "kor": "보스니아-헤르체고비나"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Bosnia and Herzegovina",
       "aliases": [
         "BSM",
@@ -1148,6 +1335,11 @@
         "en": "Bulgaria",
         "kor": "불가리아"
       },
+      "baseDisplayName": {
+        "en": "Bulgaria",
+        "kor": "불가리아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Bulgaria",
       "aliases": [
         "BUL",
@@ -1178,6 +1370,11 @@
         "en": "Buryatia",
         "kor": "부랴티아"
       },
+      "baseDisplayName": {
+        "en": "Buryatia",
+        "kor": "부랴티아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Buryatia",
       "aliases": [
         "BUR",
@@ -1207,6 +1404,11 @@
         "en": "Botswana",
         "kor": "보츠와나"
       },
+      "baseDisplayName": {
+        "en": "Botswana",
+        "kor": "보츠와나"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Botswana",
       "aliases": [
         "BWA",
@@ -1237,6 +1439,11 @@
         "en": "Lesser Antilles States",
         "kor": "소앤틸리스"
       },
+      "baseDisplayName": {
+        "en": "Lesser Antilles States",
+        "kor": "소앤틸리스"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Lesser Antilles States",
       "aliases": [
         "CAB",
@@ -1267,6 +1474,11 @@
         "en": "Central African Republic",
         "kor": "중앙 아프리카 공화국"
       },
+      "baseDisplayName": {
+        "en": "Central African Republic",
+        "kor": "중앙 아프리카 공화국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Central African Republic",
       "aliases": [
         "CAF",
@@ -1297,6 +1509,11 @@
         "en": "California",
         "kor": "캘리포니아"
       },
+      "baseDisplayName": {
+        "en": "California",
+        "kor": "캘리포니아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "California",
       "aliases": [
         "CAL",
@@ -1326,6 +1543,11 @@
         "en": "Central American States",
         "kor": "중앙 아메리카 국가"
       },
+      "baseDisplayName": {
+        "en": "Central American States",
+        "kor": "중앙 아메리카 국가"
+      },
+      "unionDisplayName": {},
       "aliases": [
         "CAM",
         "Central American States",
@@ -1351,6 +1573,11 @@
         "en": "Canada",
         "kor": "캐나다"
       },
+      "baseDisplayName": {
+        "en": "Canada",
+        "kor": "캐나다"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Canada",
       "aliases": [
         "CAN",
@@ -1381,6 +1608,11 @@
         "en": "Cape Republic",
         "kor": "케이프 공화국"
       },
+      "baseDisplayName": {
+        "en": "Cape Republic",
+        "kor": "케이프 공화국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Cape Republic",
       "aliases": [
         "CAP",
@@ -1410,6 +1642,11 @@
         "en": "Catalonia",
         "kor": "카탈루냐"
       },
+      "baseDisplayName": {
+        "en": "Catalonia",
+        "kor": "카탈루냐"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Catalonia",
       "aliases": [
         "CAT",
@@ -1439,6 +1676,11 @@
         "en": "Chhattisgarh",
         "kor": "차티스가르"
       },
+      "baseDisplayName": {
+        "en": "Chhattisgarh",
+        "kor": "차티스가르"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Chhattisgarh",
       "aliases": [
         "CHA",
@@ -1468,6 +1710,11 @@
         "en": "Chile",
         "kor": "칠레"
       },
+      "baseDisplayName": {
+        "en": "Chile",
+        "kor": "칠레"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Chile",
       "aliases": [
         "CHL",
@@ -1498,6 +1745,11 @@
         "en": "China",
         "kor": "중국"
       },
+      "baseDisplayName": {
+        "en": "China",
+        "kor": "중국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "China",
       "aliases": [
         "CHN",
@@ -1529,6 +1781,11 @@
         "en": "Cameroon",
         "kor": "카메룬"
       },
+      "baseDisplayName": {
+        "en": "Cameroon",
+        "kor": "카메룬"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Cameroon",
       "aliases": [
         "CMR",
@@ -1556,6 +1813,8 @@
     "COB": {
       "tag": "COB",
       "displayName": {},
+      "baseDisplayName": {},
+      "unionDisplayName": {},
       "aliases": [
         "COB"
       ],
@@ -1579,6 +1838,11 @@
         "en": "Congo",
         "kor": "콩고"
       },
+      "baseDisplayName": {
+        "en": "Congo",
+        "kor": "콩고"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Congo",
       "aliases": [
         "COD",
@@ -1609,6 +1873,11 @@
         "en": "Colombia",
         "kor": "콜롬비아"
       },
+      "baseDisplayName": {
+        "en": "Colombia",
+        "kor": "콜롬비아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Colombia",
       "aliases": [
         "COL",
@@ -1639,6 +1908,11 @@
         "en": "Republic of the Congo",
         "kor": "콩고 공화국"
       },
+      "baseDisplayName": {
+        "en": "Republic of the Congo",
+        "kor": "콩고 공화국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Republic of the Congo",
       "aliases": [
         "COR",
@@ -1668,6 +1942,11 @@
         "en": "Costa Rica",
         "kor": "코스타리카"
       },
+      "baseDisplayName": {
+        "en": "Costa Rica",
+        "kor": "코스타리카"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Costa Rica",
       "aliases": [
         "COS",
@@ -1698,6 +1977,11 @@
         "en": "Caliphate",
         "kor": "칼리프"
       },
+      "baseDisplayName": {
+        "en": "Caliphate",
+        "kor": "칼리프"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Caliphate",
       "aliases": [
         "CPH",
@@ -1727,6 +2011,11 @@
         "en": "Cabo Verde",
         "kor": "카보베르데"
       },
+      "baseDisplayName": {
+        "en": "Cabo Verde",
+        "kor": "카보베르데"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Cabo Verde",
       "aliases": [
         "CPV",
@@ -1757,6 +2046,11 @@
         "en": "Crimea",
         "kor": "크림반도"
       },
+      "baseDisplayName": {
+        "en": "Crimea",
+        "kor": "크림반도"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Crimea",
       "aliases": [
         "CRI",
@@ -1786,6 +2080,11 @@
         "en": "Croatia",
         "kor": "크로아티아"
       },
+      "baseDisplayName": {
+        "en": "Croatia",
+        "kor": "크로아티아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Croatia",
       "aliases": [
         "CRS",
@@ -1816,6 +2115,11 @@
         "en": "Free Canaries",
         "kor": "카나리 제도"
       },
+      "baseDisplayName": {
+        "en": "Free Canaries",
+        "kor": "카나리 제도"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Canary Islands",
       "aliases": [
         "CRY",
@@ -1846,6 +2150,11 @@
         "en": "Dominion of America",
         "kor": "미국 자치령"
       },
+      "baseDisplayName": {
+        "en": "Dominion of America",
+        "kor": "미국 자치령"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Dominion of America",
       "aliases": [
         "CSA",
@@ -1876,6 +2185,11 @@
         "en": "Cascadia",
         "kor": "카스카디아"
       },
+      "baseDisplayName": {
+        "en": "Cascadia",
+        "kor": "카스카디아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Cascadia",
       "aliases": [
         "CSD",
@@ -1905,6 +2219,11 @@
         "en": "Cuba",
         "kor": "쿠바"
       },
+      "baseDisplayName": {
+        "en": "Cuba",
+        "kor": "쿠바"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Cuba",
       "aliases": [
         "CUB",
@@ -1935,6 +2254,11 @@
         "en": "Cyrenaica",
         "kor": "키레나이카"
       },
+      "baseDisplayName": {
+        "en": "Cyrenaica",
+        "kor": "키레나이카"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Cyrenaica",
       "aliases": [
         "CYE",
@@ -1964,6 +2288,11 @@
         "en": "Czechia",
         "kor": "체코"
       },
+      "baseDisplayName": {
+        "en": "Czechia",
+        "kor": "체코"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Czechia",
       "aliases": [
         "CZE",
@@ -1994,6 +2323,11 @@
         "en": "Darfur",
         "kor": "다르푸르"
       },
+      "baseDisplayName": {
+        "en": "Darfur",
+        "kor": "다르푸르"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Darfur",
       "aliases": [
         "DAR",
@@ -2023,6 +2357,11 @@
         "en": "Denmark",
         "kor": "덴마크"
       },
+      "baseDisplayName": {
+        "en": "Denmark",
+        "kor": "덴마크"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Denmark",
       "aliases": [
         "DEN",
@@ -2053,6 +2392,11 @@
         "en": "East Germany",
         "kor": "동독"
       },
+      "baseDisplayName": {
+        "en": "East Germany",
+        "kor": "동독"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Germany",
       "aliases": [
         "DEU",
@@ -2084,6 +2428,11 @@
         "en": "Djibouti",
         "kor": "지부티"
       },
+      "baseDisplayName": {
+        "en": "Djibouti",
+        "kor": "지부티"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Djibouti",
       "aliases": [
         "DJI",
@@ -2114,6 +2463,11 @@
         "en": "Dominican Republic",
         "kor": "도미니카 공화국"
       },
+      "baseDisplayName": {
+        "en": "Dominican Republic",
+        "kor": "도미니카 공화국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Dominican Republic",
       "aliases": [
         "DOM",
@@ -2144,6 +2498,11 @@
         "en": "Donetsk Republic",
         "kor": "도네츠크 공화국"
       },
+      "baseDisplayName": {
+        "en": "Donetsk Republic",
+        "kor": "도네츠크 공화국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Donetsk",
       "aliases": [
         "DON",
@@ -2174,6 +2533,11 @@
         "en": "Dravida Nadu",
         "kor": "드라비다 나두"
       },
+      "baseDisplayName": {
+        "en": "Dravida Nadu",
+        "kor": "드라비다 나두"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Dravida Nadu",
       "aliases": [
         "DVD",
@@ -2203,6 +2567,11 @@
         "en": "Algeria",
         "kor": "알제리"
       },
+      "baseDisplayName": {
+        "en": "Algeria",
+        "kor": "알제리"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Algeria",
       "aliases": [
         "DZA",
@@ -2233,6 +2602,11 @@
         "en": "Eastern Balkan States",
         "kor": "동부 발칸 국가"
       },
+      "baseDisplayName": {
+        "en": "Eastern Balkan States",
+        "kor": "동부 발칸 국가"
+      },
+      "unionDisplayName": {},
       "aliases": [
         "EBK",
         "Eastern Balkan States",
@@ -2258,6 +2632,11 @@
         "en": "Ecuador",
         "kor": "에콰도르"
       },
+      "baseDisplayName": {
+        "en": "Ecuador",
+        "kor": "에콰도르"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Ecuador",
       "aliases": [
         "ECU",
@@ -2288,6 +2667,11 @@
         "en": "Egypt",
         "kor": "이집트"
       },
+      "baseDisplayName": {
+        "en": "Egypt",
+        "kor": "이집트"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Egypt",
       "aliases": [
         "EGY",
@@ -2318,6 +2702,11 @@
         "en": "El Salvador",
         "kor": "엘살바도르"
       },
+      "baseDisplayName": {
+        "en": "El Salvador",
+        "kor": "엘살바도르"
+      },
+      "unionDisplayName": {},
       "friendlyName": "El Salvador",
       "aliases": [
         "ELS",
@@ -2348,6 +2737,11 @@
         "en": "Equatorial Guinea",
         "kor": "적도 기니"
       },
+      "baseDisplayName": {
+        "en": "Equatorial Guinea",
+        "kor": "적도 기니"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Equatorial Guinea",
       "aliases": [
         "EQG",
@@ -2378,6 +2772,11 @@
         "en": "Eritrea",
         "kor": "에리트레아"
       },
+      "baseDisplayName": {
+        "en": "Eritrea",
+        "kor": "에리트레아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Eritrea",
       "aliases": [
         "ERI",
@@ -2408,6 +2807,11 @@
         "en": "Spain",
         "kor": "스페인"
       },
+      "baseDisplayName": {
+        "en": "Spain",
+        "kor": "스페인"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Spain",
       "aliases": [
         "ESP",
@@ -2438,6 +2842,11 @@
         "en": "Estonia",
         "kor": "에스토니아"
       },
+      "baseDisplayName": {
+        "en": "Estonia",
+        "kor": "에스토니아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Estonia",
       "aliases": [
         "EST",
@@ -2468,6 +2877,11 @@
         "en": "Eswatini",
         "kor": "에스와티니"
       },
+      "baseDisplayName": {
+        "en": "Eswatini",
+        "kor": "에스와티니"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Eswatini",
       "aliases": [
         "ESW",
@@ -2498,6 +2912,11 @@
         "en": "Ethiopia",
         "kor": "에티오피아"
       },
+      "baseDisplayName": {
+        "en": "Ethiopia",
+        "kor": "에티오피아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Ethiopia",
       "aliases": [
         "ETH",
@@ -2528,6 +2947,11 @@
         "en": "East Turkestan",
         "kor": "동 투르키스탄"
       },
+      "baseDisplayName": {
+        "en": "East Turkestan",
+        "kor": "동 투르키스탄"
+      },
+      "unionDisplayName": {},
       "friendlyName": "East Turkestan",
       "aliases": [
         "ETK",
@@ -2557,6 +2981,11 @@
         "en": "France",
         "kor": "프랑스"
       },
+      "baseDisplayName": {
+        "en": "France",
+        "kor": "프랑스"
+      },
+      "unionDisplayName": {},
       "friendlyName": "France",
       "aliases": [
         "EUA",
@@ -2587,6 +3016,11 @@
         "en": "Free Amazonas",
         "kor": "자유 아마조나스"
       },
+      "baseDisplayName": {
+        "en": "Free Amazonas",
+        "kor": "자유 아마조나스"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Free Amazonas",
       "aliases": [
         "FAM",
@@ -2616,6 +3050,11 @@
         "en": "Finland",
         "kor": "핀란드"
       },
+      "baseDisplayName": {
+        "en": "Finland",
+        "kor": "핀란드"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Finland",
       "aliases": [
         "FIN",
@@ -2646,6 +3085,11 @@
         "en": "First Nation",
         "kor": "캐나다 원주민 국가"
       },
+      "baseDisplayName": {
+        "en": "First Nation",
+        "kor": "캐나다 원주민 국가"
+      },
+      "unionDisplayName": {},
       "friendlyName": "First Nation",
       "aliases": [
         "FNT",
@@ -2675,6 +3119,11 @@
         "en": "Fujian",
         "kor": "푸젠"
       },
+      "baseDisplayName": {
+        "en": "Fujian",
+        "kor": "푸젠"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Fujian",
       "aliases": [
         "FUJ",
@@ -2704,6 +3153,11 @@
         "en": "The Gambia",
         "kor": "감비아"
       },
+      "baseDisplayName": {
+        "en": "The Gambia",
+        "kor": "감비아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Gambia",
       "aliases": [
         "GAM",
@@ -2735,6 +3189,11 @@
         "en": "Guangxi",
         "kor": "광시"
       },
+      "baseDisplayName": {
+        "en": "Guangxi",
+        "kor": "광시"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Guanxi",
       "aliases": [
         "GAX",
@@ -2765,6 +3224,11 @@
         "en": "England",
         "kor": "잉글랜드"
       },
+      "baseDisplayName": {
+        "en": "England",
+        "kor": "잉글랜드"
+      },
+      "unionDisplayName": {},
       "friendlyName": "United Kingdom",
       "aliases": [
         "GBR",
@@ -2796,6 +3260,11 @@
         "en": "Georgia",
         "kor": "조지아"
       },
+      "baseDisplayName": {
+        "en": "Georgia",
+        "kor": "조지아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Georgia",
       "aliases": [
         "GEO",
@@ -2826,6 +3295,11 @@
         "en": "Ghana",
         "kor": "가나"
       },
+      "baseDisplayName": {
+        "en": "Ghana",
+        "kor": "가나"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Ghana",
       "aliases": [
         "GHA",
@@ -2856,6 +3330,11 @@
         "en": "Guinea",
         "kor": "기니"
       },
+      "baseDisplayName": {
+        "en": "Guinea",
+        "kor": "기니"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Guinea",
       "aliases": [
         "GIN",
@@ -2886,6 +3365,11 @@
         "en": "Guinea-Bissau",
         "kor": "기니비사우"
       },
+      "baseDisplayName": {
+        "en": "Guinea-Bissau",
+        "kor": "기니비사우"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Guinea-Bissau",
       "aliases": [
         "GNB",
@@ -2916,6 +3400,11 @@
         "en": "Greece",
         "kor": "그리스"
       },
+      "baseDisplayName": {
+        "en": "Greece",
+        "kor": "그리스"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Greece",
       "aliases": [
         "GRE",
@@ -2946,6 +3435,11 @@
         "en": "Greenland",
         "kor": "그린란드"
       },
+      "baseDisplayName": {
+        "en": "Greenland",
+        "kor": "그린란드"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Greenland",
       "aliases": [
         "GRL",
@@ -2975,6 +3469,11 @@
         "en": "Guatemala",
         "kor": "과테말라"
       },
+      "baseDisplayName": {
+        "en": "Guatemala",
+        "kor": "과테말라"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Guatemala",
       "aliases": [
         "GTM",
@@ -3005,6 +3504,11 @@
         "en": "Liangguang",
         "kor": "양광"
       },
+      "baseDisplayName": {
+        "en": "Liangguang",
+        "kor": "양광"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Liangguang",
       "aliases": [
         "GUA",
@@ -3034,6 +3538,11 @@
         "en": "Gujarat",
         "kor": "구자르트"
       },
+      "baseDisplayName": {
+        "en": "Gujarat",
+        "kor": "구자르트"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Gujarat",
       "aliases": [
         "GUJ",
@@ -3063,6 +3572,11 @@
         "en": "Qatar-Bahrain",
         "kor": "카타르-바레인"
       },
+      "baseDisplayName": {
+        "en": "Qatar-Bahrain",
+        "kor": "카타르-바레인"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Gulf States",
       "aliases": [
         "GUS",
@@ -3094,6 +3608,11 @@
         "en": "Guyana",
         "kor": "가이아나"
       },
+      "baseDisplayName": {
+        "en": "Guyana",
+        "kor": "가이아나"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Guyana",
       "aliases": [
         "GUY",
@@ -3124,6 +3643,11 @@
         "en": "Gwalior",
         "kor": "괄리오르"
       },
+      "baseDisplayName": {
+        "en": "Gwalior",
+        "kor": "괄리오르"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Gwailor",
       "aliases": [
         "GWA",
@@ -3154,6 +3678,11 @@
         "en": "Hawai'i",
         "kor": "하와이"
       },
+      "baseDisplayName": {
+        "en": "Hawai'i",
+        "kor": "하와이"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Hawaii",
       "aliases": [
         "HAW",
@@ -3184,6 +3713,11 @@
         "en": "Hong Kong",
         "kor": "홍콩"
       },
+      "baseDisplayName": {
+        "en": "Hong Kong",
+        "kor": "홍콩"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Hong Kong",
       "aliases": [
         "HKO",
@@ -3213,6 +3747,11 @@
         "en": "Hunan",
         "kor": "후난"
       },
+      "baseDisplayName": {
+        "en": "Hunan",
+        "kor": "후난"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Hunan",
       "aliases": [
         "HNN",
@@ -3242,6 +3781,11 @@
         "en": "Honduras",
         "kor": "온두라스"
       },
+      "baseDisplayName": {
+        "en": "Honduras",
+        "kor": "온두라스"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Honduras",
       "aliases": [
         "HON",
@@ -3272,6 +3816,11 @@
         "en": "Haiti",
         "kor": "아이티"
       },
+      "baseDisplayName": {
+        "en": "Haiti",
+        "kor": "아이티"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Haiti",
       "aliases": [
         "HTI",
@@ -3302,6 +3851,11 @@
         "en": "Hungary",
         "kor": "헝가리"
       },
+      "baseDisplayName": {
+        "en": "Hungary",
+        "kor": "헝가리"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Hungary",
       "aliases": [
         "HUN",
@@ -3332,6 +3886,11 @@
         "en": "Hyderabad",
         "kor": "하이데라바드"
       },
+      "baseDisplayName": {
+        "en": "Hyderabad",
+        "kor": "하이데라바드"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Hyderabad",
       "aliases": [
         "HYD",
@@ -3361,6 +3920,11 @@
         "en": "Nepal",
         "kor": "네팔"
       },
+      "baseDisplayName": {
+        "en": "Nepal",
+        "kor": "네팔"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Nepal",
       "aliases": [
         "HYS",
@@ -3388,14 +3952,20 @@
     "IDN": {
       "tag": "IDN",
       "displayName": {
-        "en": "Indonesia",
-        "kor": "인도네시아"
+        "en": "Java",
+        "kor": "자바"
       },
+      "baseDisplayName": {
+        "en": "Java",
+        "kor": "자바"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Indonesia",
       "aliases": [
         "IDN",
-        "Indonesia",
-        "인도네시아"
+        "Java",
+        "자바",
+        "Indonesia"
       ],
       "existsAtStart": true,
       "initialRegionCount": 8,
@@ -3406,8 +3976,7 @@
       "source": {
         "template": "TINationTemplate.json",
         "localizationKeys": [
-          "TINationTemplate.displayName.IDN",
-          "data/manual/nation_display_overrides.json"
+          "TINationTemplate.displayName.IDN"
         ],
         "includedBecause": [
           "template",
@@ -3422,6 +3991,11 @@
         "en": "India",
         "kor": "인도"
       },
+      "baseDisplayName": {
+        "en": "India",
+        "kor": "인도"
+      },
+      "unionDisplayName": {},
       "friendlyName": "India",
       "aliases": [
         "IND",
@@ -3452,6 +4026,11 @@
         "en": "Petersburg Republic",
         "kor": "상트페테르부르크 공화국"
       },
+      "baseDisplayName": {
+        "en": "Petersburg Republic",
+        "kor": "상트페테르부르크 공화국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Ingria",
       "aliases": [
         "ING",
@@ -3482,6 +4061,11 @@
         "en": "Ireland",
         "kor": "아일랜드"
       },
+      "baseDisplayName": {
+        "en": "Ireland",
+        "kor": "아일랜드"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Ireland",
       "aliases": [
         "IRL",
@@ -3512,6 +4096,11 @@
         "en": "Iran",
         "kor": "이란"
       },
+      "baseDisplayName": {
+        "en": "Iran",
+        "kor": "이란"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Iran",
       "aliases": [
         "IRN",
@@ -3542,6 +4131,11 @@
         "en": "Iraq",
         "kor": "이라크"
       },
+      "baseDisplayName": {
+        "en": "Iraq",
+        "kor": "이라크"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Iraq",
       "aliases": [
         "IRQ",
@@ -3572,6 +4166,11 @@
         "en": "Iceland",
         "kor": "아이슬란드"
       },
+      "baseDisplayName": {
+        "en": "Iceland",
+        "kor": "아이슬란드"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Iceland",
       "aliases": [
         "ISL",
@@ -3602,6 +4201,11 @@
         "en": "Israel",
         "kor": "이스라엘"
       },
+      "baseDisplayName": {
+        "en": "Israel",
+        "kor": "이스라엘"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Israel",
       "aliases": [
         "ISR",
@@ -3633,6 +4237,11 @@
         "en": "Italy",
         "kor": "이탈리아"
       },
+      "baseDisplayName": {
+        "en": "Italy",
+        "kor": "이탈리아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Italy",
       "aliases": [
         "ITA",
@@ -3663,6 +4272,11 @@
         "en": "Ivory Coast",
         "kor": "코트디부아르"
       },
+      "baseDisplayName": {
+        "en": "Ivory Coast",
+        "kor": "코트디부아르"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Ivory Coast",
       "aliases": [
         "IVO",
@@ -3693,6 +4307,11 @@
         "en": "Jaipur",
         "kor": "자이푸르"
       },
+      "baseDisplayName": {
+        "en": "Jaipur",
+        "kor": "자이푸르"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Jaipur",
       "aliases": [
         "JAI",
@@ -3722,6 +4341,11 @@
         "en": "Jamaica",
         "kor": "자메이카"
       },
+      "baseDisplayName": {
+        "en": "Jamaica",
+        "kor": "자메이카"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Jamaica",
       "aliases": [
         "JAM",
@@ -3752,6 +4376,11 @@
         "en": "Jefferson Free State",
         "kor": "제퍼슨 자유 국가"
       },
+      "baseDisplayName": {
+        "en": "Jefferson Free State",
+        "kor": "제퍼슨 자유 국가"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Jefferson",
       "aliases": [
         "JEF",
@@ -3782,6 +4411,11 @@
         "en": "Jordan",
         "kor": "요르단"
       },
+      "baseDisplayName": {
+        "en": "Jordan",
+        "kor": "요르단"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Jordan",
       "aliases": [
         "JOR",
@@ -3812,6 +4446,11 @@
         "en": "Japan",
         "kor": "일본"
       },
+      "baseDisplayName": {
+        "en": "Japan",
+        "kor": "일본"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Japan",
       "aliases": [
         "JPN",
@@ -3842,6 +4481,11 @@
         "en": "Kachin-Arakan",
         "kor": "가친-아라칸"
       },
+      "baseDisplayName": {
+        "en": "Kachin-Arakan",
+        "kor": "가친-아라칸"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Kachin-Arakan",
       "aliases": [
         "KAC",
@@ -3871,6 +4515,11 @@
         "en": "Baltic Republic",
         "kor": "발트 공화국"
       },
+      "baseDisplayName": {
+        "en": "Baltic Republic",
+        "kor": "발트 공화국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Kaliningrad Republic",
       "aliases": [
         "KAL",
@@ -3901,6 +4550,11 @@
         "en": "Karelia",
         "kor": "카렐리야"
       },
+      "baseDisplayName": {
+        "en": "Karelia",
+        "kor": "카렐리야"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Karelia",
       "aliases": [
         "KAR",
@@ -3930,6 +4584,11 @@
         "en": "Katanga",
         "kor": "카탕가"
       },
+      "baseDisplayName": {
+        "en": "Katanga",
+        "kor": "카탕가"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Katanga",
       "aliases": [
         "KAT",
@@ -3959,6 +4618,11 @@
         "en": "Kazakhstan",
         "kor": "카자흐스탄"
       },
+      "baseDisplayName": {
+        "en": "Kazakhstan",
+        "kor": "카자흐스탄"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Kazakhstan",
       "aliases": [
         "KAZ",
@@ -3989,6 +4653,11 @@
         "en": "Kenya",
         "kor": "케냐"
       },
+      "baseDisplayName": {
+        "en": "Kenya",
+        "kor": "케냐"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Kenya",
       "aliases": [
         "KEN",
@@ -4019,6 +4688,11 @@
         "en": "Keo Deudai",
         "kor": "케오 데우다이"
       },
+      "baseDisplayName": {
+        "en": "Keo Deudai",
+        "kor": "케오 데우다이"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Keo Deudai",
       "aliases": [
         "KEO",
@@ -4048,6 +4722,11 @@
         "en": "Kyrgyzstan",
         "kor": "키르기스스탄"
       },
+      "baseDisplayName": {
+        "en": "Kyrgyzstan",
+        "kor": "키르기스스탄"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Kyrgyzstan",
       "aliases": [
         "KGZ",
@@ -4078,6 +4757,11 @@
         "en": "Khalistan",
         "kor": "칼리스탄"
       },
+      "baseDisplayName": {
+        "en": "Khalistan",
+        "kor": "칼리스탄"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Khalistan",
       "aliases": [
         "KHA",
@@ -4107,6 +4791,11 @@
         "en": "Cambodia",
         "kor": "캄보디아"
       },
+      "baseDisplayName": {
+        "en": "Cambodia",
+        "kor": "캄보디아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Cambodia",
       "aliases": [
         "KHM",
@@ -4137,6 +4826,11 @@
         "en": "Khuzestan",
         "kor": "후제스탄"
       },
+      "baseDisplayName": {
+        "en": "Khuzestan",
+        "kor": "후제스탄"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Khuzestan",
       "aliases": [
         "KHU",
@@ -4166,6 +4860,11 @@
         "en": "Komi Republic",
         "kor": "코미 공화국"
       },
+      "baseDisplayName": {
+        "en": "Komi Republic",
+        "kor": "코미 공화국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Komi Republic",
       "aliases": [
         "KOM",
@@ -4195,6 +4894,11 @@
         "en": "South Korea",
         "kor": "남한"
       },
+      "baseDisplayName": {
+        "en": "South Korea",
+        "kor": "남한"
+      },
+      "unionDisplayName": {},
       "friendlyName": "South Korea",
       "aliases": [
         "KOR",
@@ -4225,6 +4929,11 @@
         "en": "Kosovo",
         "kor": "코소보"
       },
+      "baseDisplayName": {
+        "en": "Kosovo",
+        "kor": "코소보"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Kosovo",
       "aliases": [
         "KOS",
@@ -4255,6 +4964,11 @@
         "en": "Kurdistan",
         "kor": "쿠르디스탄"
       },
+      "baseDisplayName": {
+        "en": "Kurdistan",
+        "kor": "쿠르디스탄"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Kurdistan",
       "aliases": [
         "KRD",
@@ -4284,6 +4998,11 @@
         "en": "Karakalpakstan",
         "kor": "카라칼팍스탄"
       },
+      "baseDisplayName": {
+        "en": "Karakalpakstan",
+        "kor": "카라칼팍스탄"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Karakalpakstan",
       "aliases": [
         "KRK",
@@ -4313,6 +5032,11 @@
         "en": "Jammu and Kashmir",
         "kor": "잠무 카슈미르"
       },
+      "baseDisplayName": {
+        "en": "Jammu and Kashmir",
+        "kor": "잠무 카슈미르"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Jammu and Kashmir",
       "aliases": [
         "KSH",
@@ -4342,6 +5066,11 @@
         "en": "Kuwait",
         "kor": "쿠웨이트"
       },
+      "baseDisplayName": {
+        "en": "Kuwait",
+        "kor": "쿠웨이트"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Kuwait",
       "aliases": [
         "KUW",
@@ -4372,6 +5101,11 @@
         "en": "Laos",
         "kor": "라오스"
       },
+      "baseDisplayName": {
+        "en": "Laos",
+        "kor": "라오스"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Laos",
       "aliases": [
         "LAO",
@@ -4402,6 +5136,11 @@
         "en": "Liberia",
         "kor": "라이베리아"
       },
+      "baseDisplayName": {
+        "en": "Liberia",
+        "kor": "라이베리아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Liberia",
       "aliases": [
         "LBR",
@@ -4432,6 +5171,11 @@
         "en": "Libya",
         "kor": "리비아"
       },
+      "baseDisplayName": {
+        "en": "Libya",
+        "kor": "리비아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Libya",
       "aliases": [
         "LBY",
@@ -4462,6 +5206,11 @@
         "en": "Lebanon",
         "kor": "레바논"
       },
+      "baseDisplayName": {
+        "en": "Lebanon",
+        "kor": "레바논"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Lebanon",
       "aliases": [
         "LEB",
@@ -4492,6 +5241,11 @@
         "en": "Lesotho",
         "kor": "레소토"
       },
+      "baseDisplayName": {
+        "en": "Lesotho",
+        "kor": "레소토"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Lesotho",
       "aliases": [
         "LES",
@@ -4519,6 +5273,8 @@
     "LGN": {
       "tag": "LGN",
       "displayName": {},
+      "baseDisplayName": {},
+      "unionDisplayName": {},
       "aliases": [
         "LGN"
       ],
@@ -4542,6 +5298,11 @@
         "en": "Sri Lanka",
         "kor": "스리랑카"
       },
+      "baseDisplayName": {
+        "en": "Sri Lanka",
+        "kor": "스리랑카"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Sri Lanka",
       "aliases": [
         "LKA",
@@ -4572,6 +5333,11 @@
         "en": "Lunda-Tchokwé",
         "kor": "룬다-초크웨"
       },
+      "baseDisplayName": {
+        "en": "Lunda-Tchokwé",
+        "kor": "룬다-초크웨"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Lunda-Tchokwé",
       "aliases": [
         "LNT",
@@ -4601,6 +5367,11 @@
         "en": "Dar El-Kuti",
         "kor": "다르 엘-쿠티"
       },
+      "baseDisplayName": {
+        "en": "Dar El-Kuti",
+        "kor": "다르 엘-쿠티"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Logone",
       "aliases": [
         "LOG",
@@ -4631,6 +5402,11 @@
         "en": "Lithuania",
         "kor": "리투아니아"
       },
+      "baseDisplayName": {
+        "en": "Lithuania",
+        "kor": "리투아니아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Lithuania",
       "aliases": [
         "LTU",
@@ -4661,6 +5437,11 @@
         "en": "Latvia",
         "kor": "라트비아"
       },
+      "baseDisplayName": {
+        "en": "Latvia",
+        "kor": "라트비아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Latvia",
       "aliases": [
         "LVA",
@@ -4691,6 +5472,11 @@
         "en": "Gabon",
         "kor": "가봉"
       },
+      "baseDisplayName": {
+        "en": "Gabon",
+        "kor": "가봉"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Gabon",
       "aliases": [
         "LWG",
@@ -4720,6 +5506,11 @@
         "en": "Maharashtra",
         "kor": "마하라슈트라"
       },
+      "baseDisplayName": {
+        "en": "Maharashtra",
+        "kor": "마하라슈트라"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Maharashtra",
       "aliases": [
         "MAH",
@@ -4749,6 +5540,11 @@
         "en": "Malawi",
         "kor": "말라위"
       },
+      "baseDisplayName": {
+        "en": "Malawi",
+        "kor": "말라위"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Malawi",
       "aliases": [
         "MAL",
@@ -4779,6 +5575,11 @@
         "en": "Morocco",
         "kor": "모로코"
       },
+      "baseDisplayName": {
+        "en": "Morocco",
+        "kor": "모로코"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Morocco",
       "aliases": [
         "MAR",
@@ -4809,6 +5610,11 @@
         "en": "Micronesian States",
         "kor": "미크로네시아 국가"
       },
+      "baseDisplayName": {
+        "en": "Micronesian States",
+        "kor": "미크로네시아 국가"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Micronesian States",
       "aliases": [
         "MCS",
@@ -4839,6 +5645,11 @@
         "en": "Madagascar",
         "kor": "마다가스카르"
       },
+      "baseDisplayName": {
+        "en": "Madagascar",
+        "kor": "마다가스카르"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Madagascar",
       "aliases": [
         "MDG",
@@ -4869,6 +5680,11 @@
         "en": "Mordovia",
         "kor": "몰도비아"
       },
+      "baseDisplayName": {
+        "en": "Mordovia",
+        "kor": "몰도비아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Mordovia",
       "aliases": [
         "MDV",
@@ -4898,6 +5714,11 @@
         "en": "Mexico",
         "kor": "멕시코"
       },
+      "baseDisplayName": {
+        "en": "Mexico",
+        "kor": "멕시코"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Mexico",
       "aliases": [
         "MEX",
@@ -4928,6 +5749,11 @@
         "en": "Mindanao",
         "kor": "민다나오"
       },
+      "baseDisplayName": {
+        "en": "Mindanao",
+        "kor": "민다나오"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Mindanao",
       "aliases": [
         "MIN",
@@ -4957,6 +5783,11 @@
         "en": "North Macedonia",
         "kor": "북마케도니아"
       },
+      "baseDisplayName": {
+        "en": "North Macedonia",
+        "kor": "북마케도니아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "North Macedonia",
       "aliases": [
         "MKD",
@@ -4987,6 +5818,11 @@
         "en": "Maldives",
         "kor": "몰디브"
       },
+      "baseDisplayName": {
+        "en": "Maldives",
+        "kor": "몰디브"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Maldives",
       "aliases": [
         "MLD",
@@ -5017,6 +5853,11 @@
         "en": "Middle Guinea",
         "kor": "중부 기니"
       },
+      "baseDisplayName": {
+        "en": "Middle Guinea",
+        "kor": "중부 기니"
+      },
+      "unionDisplayName": {},
       "aliases": [
         "MLG",
         "Middle Guinea",
@@ -5042,6 +5883,11 @@
         "en": "Mali",
         "kor": "말리"
       },
+      "baseDisplayName": {
+        "en": "Mali",
+        "kor": "말리"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Mali",
       "aliases": [
         "MLI",
@@ -5072,6 +5918,11 @@
         "en": "Myanmar",
         "kor": "미얀마"
       },
+      "baseDisplayName": {
+        "en": "Myanmar",
+        "kor": "미얀마"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Myanmar",
       "aliases": [
         "MMR",
@@ -5102,6 +5953,11 @@
         "en": "Guandong",
         "kor": "관동"
       },
+      "baseDisplayName": {
+        "en": "Guandong",
+        "kor": "관동"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Guandong",
       "aliases": [
         "MNC",
@@ -5131,6 +5987,11 @@
         "en": "Montenegro",
         "kor": "몬테네그로"
       },
+      "baseDisplayName": {
+        "en": "Montenegro",
+        "kor": "몬테네그로"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Montenegro",
       "aliases": [
         "MNE",
@@ -5161,6 +6022,11 @@
         "en": "Mongolia",
         "kor": "몽골"
       },
+      "baseDisplayName": {
+        "en": "Mongolia",
+        "kor": "몽골"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Mongolia",
       "aliases": [
         "MNG",
@@ -5191,6 +6057,11 @@
         "en": "Moldova",
         "kor": "몰도바"
       },
+      "baseDisplayName": {
+        "en": "Moldova",
+        "kor": "몰도바"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Moldova",
       "aliases": [
         "MOL",
@@ -5221,6 +6092,11 @@
         "en": "Mombasa Republic",
         "kor": "몸바사 공화국"
       },
+      "baseDisplayName": {
+        "en": "Mombasa Republic",
+        "kor": "몸바사 공화국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Mombasa Republic",
       "aliases": [
         "MOM",
@@ -5250,6 +6126,11 @@
         "en": "Mozambique",
         "kor": "모잠비크"
       },
+      "baseDisplayName": {
+        "en": "Mozambique",
+        "kor": "모잠비크"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Mozambique",
       "aliases": [
         "MOZ",
@@ -5280,6 +6161,11 @@
         "en": "Mauritius",
         "kor": "모리셔스"
       },
+      "baseDisplayName": {
+        "en": "Mauritius",
+        "kor": "모리셔스"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Mauritius",
       "aliases": [
         "MRS",
@@ -5310,6 +6196,11 @@
         "en": "Mauritania",
         "kor": "모리타니"
       },
+      "baseDisplayName": {
+        "en": "Mauritania",
+        "kor": "모리타니"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Mauritania",
       "aliases": [
         "MRT",
@@ -5340,6 +6231,11 @@
         "en": "Mysore",
         "kor": "마이소르"
       },
+      "baseDisplayName": {
+        "en": "Mysore",
+        "kor": "마이소르"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Mysore",
       "aliases": [
         "MSO",
@@ -5369,6 +6265,11 @@
         "en": "Malaysia",
         "kor": "말레이시아"
       },
+      "baseDisplayName": {
+        "en": "Malaysia",
+        "kor": "말레이시아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Malaysia",
       "aliases": [
         "MYS",
@@ -5399,6 +6300,11 @@
         "en": "Northern Balkan States",
         "kor": "북부 발칸 국가"
       },
+      "baseDisplayName": {
+        "en": "Northern Balkan States",
+        "kor": "북부 발칸 국가"
+      },
+      "unionDisplayName": {},
       "aliases": [
         "NBK",
         "Northern Balkan States",
@@ -5424,6 +6330,11 @@
         "en": "North Caucasus Confederation",
         "kor": "북코카서스 연합"
       },
+      "baseDisplayName": {
+        "en": "North Caucasus Confederation",
+        "kor": "북코카서스 연합"
+      },
+      "unionDisplayName": {},
       "friendlyName": "North Caucasus Federation",
       "aliases": [
         "NCF",
@@ -5454,6 +6365,11 @@
         "en": "New Caledonia",
         "kor": "뉴칼레도니아"
       },
+      "baseDisplayName": {
+        "en": "New Caledonia",
+        "kor": "뉴칼레도니아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "New Caledonia",
       "aliases": [
         "NCL",
@@ -5483,6 +6399,11 @@
         "en": "Northern Assembly",
         "kor": "북부 의회"
       },
+      "baseDisplayName": {
+        "en": "Northern Assembly",
+        "kor": "북부 의회"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Northern Assembly",
       "aliases": [
         "NEN",
@@ -5512,6 +6433,11 @@
         "en": "Niger",
         "kor": "니제르"
       },
+      "baseDisplayName": {
+        "en": "Niger",
+        "kor": "니제르"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Niger",
       "aliases": [
         "NER",
@@ -5542,6 +6468,11 @@
         "en": "Netherlands",
         "kor": "네덜란드"
       },
+      "baseDisplayName": {
+        "en": "Netherlands",
+        "kor": "네덜란드"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Netherlands",
       "aliases": [
         "NET",
@@ -5572,6 +6503,11 @@
         "en": "Nigeria",
         "kor": "나이지리아"
       },
+      "baseDisplayName": {
+        "en": "Nigeria",
+        "kor": "나이지리아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Nigeria",
       "aliases": [
         "NGA",
@@ -5602,6 +6538,11 @@
         "en": "Nicaragua",
         "kor": "니카라과"
       },
+      "baseDisplayName": {
+        "en": "Nicaragua",
+        "kor": "니카라과"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Nicaragua",
       "aliases": [
         "NIC",
@@ -5632,6 +6573,11 @@
         "en": "Norway",
         "kor": "노르웨이"
       },
+      "baseDisplayName": {
+        "en": "Norway",
+        "kor": "노르웨이"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Norway",
       "aliases": [
         "NOR",
@@ -5662,6 +6608,11 @@
         "en": "Nubia",
         "kor": "누비아"
       },
+      "baseDisplayName": {
+        "en": "Nubia",
+        "kor": "누비아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Nubia",
       "aliases": [
         "NUB",
@@ -5691,6 +6642,11 @@
         "en": "New Zealand",
         "kor": "뉴질랜드"
       },
+      "baseDisplayName": {
+        "en": "New Zealand",
+        "kor": "뉴질랜드"
+      },
+      "unionDisplayName": {},
       "friendlyName": "New Zealand",
       "aliases": [
         "NZL",
@@ -5721,6 +6677,11 @@
         "en": "Occitania",
         "kor": "옥시타니아"
       },
+      "baseDisplayName": {
+        "en": "Occitania",
+        "kor": "옥시타니아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Occitania",
       "aliases": [
         "OCT",
@@ -5750,6 +6711,11 @@
         "en": "Odisha",
         "kor": "오디샤"
       },
+      "baseDisplayName": {
+        "en": "Odisha",
+        "kor": "오디샤"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Odisha",
       "aliases": [
         "ODI",
@@ -5779,6 +6745,11 @@
         "en": "Ogaden",
         "kor": "오가덴"
       },
+      "baseDisplayName": {
+        "en": "Ogaden",
+        "kor": "오가덴"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Ogaden",
       "aliases": [
         "OGA",
@@ -5808,6 +6779,11 @@
         "en": "Oman",
         "kor": "오만"
       },
+      "baseDisplayName": {
+        "en": "Oman",
+        "kor": "오만"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Oman",
       "aliases": [
         "OMN",
@@ -5838,6 +6814,11 @@
         "en": "Padania",
         "kor": "파다니아"
       },
+      "baseDisplayName": {
+        "en": "Padania",
+        "kor": "파다니아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Padania",
       "aliases": [
         "PAD",
@@ -5867,6 +6848,11 @@
         "en": "Punjab",
         "kor": "펀자브"
       },
+      "baseDisplayName": {
+        "en": "Punjab",
+        "kor": "펀자브"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Pakistan",
       "aliases": [
         "PAK",
@@ -5898,6 +6884,11 @@
         "en": "Palestine",
         "kor": "팔레스타인"
       },
+      "baseDisplayName": {
+        "en": "Palestine",
+        "kor": "팔레스타인"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Palestine",
       "aliases": [
         "PAL",
@@ -5929,6 +6920,11 @@
         "en": "Panama",
         "kor": "파나마"
       },
+      "baseDisplayName": {
+        "en": "Panama",
+        "kor": "파나마"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Panama",
       "aliases": [
         "PAN",
@@ -5959,6 +6955,11 @@
         "en": "Patagonia",
         "kor": "파타고니아"
       },
+      "baseDisplayName": {
+        "en": "Patagonia",
+        "kor": "파타고니아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Patagonia",
       "aliases": [
         "PAT",
@@ -5988,6 +6989,11 @@
         "en": "Far East Federation",
         "kor": "극동 연방"
       },
+      "baseDisplayName": {
+        "en": "Far East Federation",
+        "kor": "극동 연방"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Pacific Federation",
       "aliases": [
         "PCF",
@@ -6018,6 +7024,11 @@
         "en": "Melanesian States",
         "kor": "멜라네시아 국가"
       },
+      "baseDisplayName": {
+        "en": "Melanesian States",
+        "kor": "멜라네시아 국가"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Melanesian States",
       "aliases": [
         "PCS",
@@ -6048,6 +7059,11 @@
         "en": "Peru",
         "kor": "페루"
       },
+      "baseDisplayName": {
+        "en": "Peru",
+        "kor": "페루"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Peru",
       "aliases": [
         "PER",
@@ -6078,6 +7094,11 @@
         "en": "Péyi Guyane",
         "kor": "프랑스령 기아나"
       },
+      "baseDisplayName": {
+        "en": "Péyi Guyane",
+        "kor": "프랑스령 기아나"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Péyi Guyane",
       "aliases": [
         "PGN",
@@ -6107,6 +7128,11 @@
         "en": "Philippines",
         "kor": "필리핀"
       },
+      "baseDisplayName": {
+        "en": "Philippines",
+        "kor": "필리핀"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Philippines",
       "aliases": [
         "PHL",
@@ -6137,6 +7163,11 @@
         "en": "Polynesian States",
         "kor": "폴리네시아 국가"
       },
+      "baseDisplayName": {
+        "en": "Polynesian States",
+        "kor": "폴리네시아 국가"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Polynesian States",
       "aliases": [
         "PLS",
@@ -6166,6 +7197,11 @@
         "en": "Papua New Guinea",
         "kor": "파푸아 뉴기니"
       },
+      "baseDisplayName": {
+        "en": "Papua New Guinea",
+        "kor": "파푸아 뉴기니"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Papua New Guinea",
       "aliases": [
         "PNG",
@@ -6196,6 +7232,11 @@
         "en": "Poland",
         "kor": "폴란드"
       },
+      "baseDisplayName": {
+        "en": "Poland",
+        "kor": "폴란드"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Poland",
       "aliases": [
         "POL",
@@ -6226,6 +7267,11 @@
         "en": "United Nations",
         "kor": "국제연합"
       },
+      "baseDisplayName": {
+        "en": "United Nations",
+        "kor": "국제연합"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Protectorate Authority",
       "aliases": [
         "PRA",
@@ -6256,6 +7302,11 @@
         "en": "North Korea",
         "kor": "북한"
       },
+      "baseDisplayName": {
+        "en": "North Korea",
+        "kor": "북한"
+      },
+      "unionDisplayName": {},
       "friendlyName": "North Korea",
       "aliases": [
         "PRK",
@@ -6286,6 +7337,11 @@
         "en": "Puerto Rico",
         "kor": "푸에르토리코"
       },
+      "baseDisplayName": {
+        "en": "Puerto Rico",
+        "kor": "푸에르토리코"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Puerto Rico",
       "aliases": [
         "PRO",
@@ -6315,6 +7371,11 @@
         "en": "Portugal",
         "kor": "포르투갈"
       },
+      "baseDisplayName": {
+        "en": "Portugal",
+        "kor": "포르투갈"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Portugal",
       "aliases": [
         "PRT",
@@ -6345,6 +7406,11 @@
         "en": "Paraguay",
         "kor": "파라과이"
       },
+      "baseDisplayName": {
+        "en": "Paraguay",
+        "kor": "파라과이"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Paraguay",
       "aliases": [
         "PRY",
@@ -6375,6 +7441,11 @@
         "en": "Quebec",
         "kor": "퀘벡"
       },
+      "baseDisplayName": {
+        "en": "Quebec",
+        "kor": "퀘벡"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Quebec",
       "aliases": [
         "QUB",
@@ -6404,6 +7475,11 @@
         "en": "Rio Bravo",
         "kor": "리오 브라보"
       },
+      "baseDisplayName": {
+        "en": "Rio Bravo",
+        "kor": "리오 브라보"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Rio Bravo",
       "aliases": [
         "RIO",
@@ -6433,6 +7509,11 @@
         "en": "Republic of Lakota",
         "kor": "라코타 공화국"
       },
+      "baseDisplayName": {
+        "en": "Republic of Lakota",
+        "kor": "라코타 공화국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Republic of Lakota",
       "aliases": [
         "RLK",
@@ -6462,6 +7543,11 @@
         "en": "Republic of the Moluccas",
         "kor": "말루쿠 공화국"
       },
+      "baseDisplayName": {
+        "en": "Republic of the Moluccas",
+        "kor": "말루쿠 공화국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Republic of the Moluccas",
       "aliases": [
         "RMO",
@@ -6491,6 +7577,11 @@
         "en": "New Afrika",
         "kor": "뉴아프리카"
       },
+      "baseDisplayName": {
+        "en": "New Afrika",
+        "kor": "뉴아프리카"
+      },
+      "unionDisplayName": {},
       "friendlyName": "New Afrika",
       "aliases": [
         "RNA",
@@ -6520,6 +7611,11 @@
         "en": "Republic of New England",
         "kor": "뉴잉글랜드 공화국"
       },
+      "baseDisplayName": {
+        "en": "Republic of New England",
+        "kor": "뉴잉글랜드 공화국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Republic of New England",
       "aliases": [
         "RNE",
@@ -6549,6 +7645,11 @@
         "en": "Republic of Ainu",
         "kor": "아이누 공화국"
       },
+      "baseDisplayName": {
+        "en": "Republic of Ainu",
+        "kor": "아이누 공화국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Republic of Ainu",
       "aliases": [
         "ROA",
@@ -6578,6 +7679,11 @@
         "en": "Romania",
         "kor": "루마니아"
       },
+      "baseDisplayName": {
+        "en": "Romania",
+        "kor": "루마니아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Romania",
       "aliases": [
         "ROM",
@@ -6608,6 +7714,11 @@
         "en": "Donskoe Kazache Voysko",
         "kor": "돈 카자크 군대"
       },
+      "baseDisplayName": {
+        "en": "Donskoe Kazache Voysko",
+        "kor": "돈 카자크 군대"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Rostovskaya",
       "aliases": [
         "ROS",
@@ -6638,6 +7749,11 @@
         "en": "Comoros",
         "kor": "코모로"
       },
+      "baseDisplayName": {
+        "en": "Comoros",
+        "kor": "코모로"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Comoros",
       "aliases": [
         "RTK",
@@ -6668,6 +7784,11 @@
         "en": "Russia",
         "kor": "러시아"
       },
+      "baseDisplayName": {
+        "en": "Russia",
+        "kor": "러시아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Russia",
       "aliases": [
         "RUS",
@@ -6698,6 +7819,11 @@
         "en": "Rwanda-Burundi",
         "kor": "르완다-브룬디"
       },
+      "baseDisplayName": {
+        "en": "Rwanda-Burundi",
+        "kor": "르완다-브룬디"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Rwanda-Burundi",
       "aliases": [
         "RWB",
@@ -6728,6 +7854,11 @@
         "en": "Republic of West Papua",
         "kor": "서파푸아 공화국"
       },
+      "baseDisplayName": {
+        "en": "Republic of West Papua",
+        "kor": "서파푸아 공화국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Republic of West Papua",
       "aliases": [
         "RWP",
@@ -6757,6 +7888,11 @@
         "en": "Republic of the Ryukyus",
         "kor": "류큐 공화국"
       },
+      "baseDisplayName": {
+        "en": "Republic of the Ryukyus",
+        "kor": "류큐 공화국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Republic of the Ryukus",
       "aliases": [
         "RYU",
@@ -6787,6 +7923,11 @@
         "en": "Sahrawi",
         "kor": "사라위"
       },
+      "baseDisplayName": {
+        "en": "Sahrawi",
+        "kor": "사라위"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Sahrawi",
       "aliases": [
         "SAH",
@@ -6816,6 +7957,11 @@
         "en": "Yakutia",
         "kor": "야쿠티아"
       },
+      "baseDisplayName": {
+        "en": "Yakutia",
+        "kor": "야쿠티아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Sakha",
       "aliases": [
         "SAK",
@@ -6846,6 +7992,11 @@
         "en": "São Paulo",
         "kor": "상파울루"
       },
+      "baseDisplayName": {
+        "en": "São Paulo",
+        "kor": "상파울루"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Sao Paulo",
       "aliases": [
         "SAO",
@@ -6876,6 +8027,11 @@
         "en": "Saudi Arabia",
         "kor": "사우디아라비아"
       },
+      "baseDisplayName": {
+        "en": "Saudi Arabia",
+        "kor": "사우디아라비아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Saudi Arabia",
       "aliases": [
         "SAU",
@@ -6906,6 +8062,11 @@
         "en": "Albania",
         "kor": "알바니아"
       },
+      "baseDisplayName": {
+        "en": "Albania",
+        "kor": "알바니아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Albania",
       "aliases": [
         "SBK",
@@ -6935,6 +8096,11 @@
         "en": "Sweden",
         "kor": "스웨덴"
       },
+      "baseDisplayName": {
+        "en": "Sweden",
+        "kor": "스웨덴"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Sweden",
       "aliases": [
         "SCA",
@@ -6965,6 +8131,11 @@
         "en": "Sichuan",
         "kor": "스촨"
       },
+      "baseDisplayName": {
+        "en": "Sichuan",
+        "kor": "스촨"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Sichuan",
       "aliases": [
         "SCH",
@@ -6994,6 +8165,11 @@
         "en": "Scotland",
         "kor": "스코틀랜드"
       },
+      "baseDisplayName": {
+        "en": "Scotland",
+        "kor": "스코틀랜드"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Scotland",
       "aliases": [
         "SCT",
@@ -7023,6 +8199,11 @@
         "en": "Sudan",
         "kor": "수단"
       },
+      "baseDisplayName": {
+        "en": "Sudan",
+        "kor": "수단"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Sudan",
       "aliases": [
         "SDN",
@@ -7053,6 +8234,11 @@
         "en": "Senegal",
         "kor": "세네갈"
       },
+      "baseDisplayName": {
+        "en": "Senegal",
+        "kor": "세네갈"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Senegal",
       "aliases": [
         "SEG",
@@ -7083,6 +8269,11 @@
         "en": "Serbia",
         "kor": "세르비아"
       },
+      "baseDisplayName": {
+        "en": "Serbia",
+        "kor": "세르비아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Serbia",
       "aliases": [
         "SER",
@@ -7113,6 +8304,11 @@
         "en": "Singapore",
         "kor": "싱가포르"
       },
+      "baseDisplayName": {
+        "en": "Singapore",
+        "kor": "싱가포르"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Singapore",
       "aliases": [
         "SGP",
@@ -7143,6 +8339,11 @@
         "en": "Shaangan",
         "kor": "섬감"
       },
+      "baseDisplayName": {
+        "en": "Shaangan",
+        "kor": "섬감"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Shaangan",
       "aliases": [
         "SHG",
@@ -7172,6 +8373,11 @@
         "en": "Siberia",
         "kor": "시베리아"
       },
+      "baseDisplayName": {
+        "en": "Siberia",
+        "kor": "시베리아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Siberia",
       "aliases": [
         "SIB",
@@ -7201,6 +8407,11 @@
         "en": "Sicily",
         "kor": "시칠리아"
       },
+      "baseDisplayName": {
+        "en": "Sicily",
+        "kor": "시칠리아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Sicily",
       "aliases": [
         "SIC",
@@ -7230,6 +8441,11 @@
         "en": "Silesia",
         "kor": "실레시아"
       },
+      "baseDisplayName": {
+        "en": "Silesia",
+        "kor": "실레시아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Silesia",
       "aliases": [
         "SIL",
@@ -7259,6 +8475,11 @@
         "en": "Sindh",
         "kor": "신드"
       },
+      "baseDisplayName": {
+        "en": "Sindh",
+        "kor": "신드"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Sindh",
       "aliases": [
         "SIN",
@@ -7288,6 +8509,11 @@
         "en": "Sierra Leone",
         "kor": "시에라리온"
       },
+      "baseDisplayName": {
+        "en": "Sierra Leone",
+        "kor": "시에라리온"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Sierra Leone",
       "aliases": [
         "SLE",
@@ -7318,6 +8544,11 @@
         "en": "Slovakia",
         "kor": "슬로바키아"
       },
+      "baseDisplayName": {
+        "en": "Slovakia",
+        "kor": "슬로바키아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Slovakia",
       "aliases": [
         "SLO",
@@ -7348,6 +8579,11 @@
         "en": "Slovenia",
         "kor": "슬로베니아"
       },
+      "baseDisplayName": {
+        "en": "Slovenia",
+        "kor": "슬로베니아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Slovenia",
       "aliases": [
         "SLV",
@@ -7378,6 +8614,11 @@
         "en": "Somaliland",
         "kor": "소말릴란드"
       },
+      "baseDisplayName": {
+        "en": "Somaliland",
+        "kor": "소말릴란드"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Somaliland",
       "aliases": [
         "SOL",
@@ -7409,6 +8650,11 @@
         "en": "Somalia",
         "kor": "소말리아"
       },
+      "baseDisplayName": {
+        "en": "Somalia",
+        "kor": "소말리아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Somalia",
       "aliases": [
         "SOM",
@@ -7440,6 +8686,11 @@
         "en": "Qullana Suyu Marka",
         "kor": "대 쿠야수유"
       },
+      "baseDisplayName": {
+        "en": "Qullana Suyu Marka",
+        "kor": "대 쿠야수유"
+      },
+      "unionDisplayName": {},
       "friendlyName": "South Peru",
       "aliases": [
         "SPE",
@@ -7470,6 +8721,11 @@
         "en": "South Sudan",
         "kor": "남수단"
       },
+      "baseDisplayName": {
+        "en": "South Sudan",
+        "kor": "남수단"
+      },
+      "unionDisplayName": {},
       "friendlyName": "South Sudan",
       "aliases": [
         "SSD",
@@ -7500,6 +8756,11 @@
         "en": "São Tomé and Príncipe",
         "kor": "상투메 프린시페"
       },
+      "baseDisplayName": {
+        "en": "São Tomé and Príncipe",
+        "kor": "상투메 프린시페"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Sao Tome and Principe",
       "aliases": [
         "STP",
@@ -7531,6 +8792,11 @@
         "en": "Sul Brazil",
         "kor": "남브라질"
       },
+      "baseDisplayName": {
+        "en": "Sul Brazil",
+        "kor": "남브라질"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Sul Brazil",
       "aliases": [
         "SUB",
@@ -7560,6 +8826,11 @@
         "en": "Sumatra",
         "kor": "수마트라"
       },
+      "baseDisplayName": {
+        "en": "Sumatra",
+        "kor": "수마트라"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Sumatra",
       "aliases": [
         "SUM",
@@ -7589,6 +8860,11 @@
         "en": "Suriname",
         "kor": "수리남"
       },
+      "baseDisplayName": {
+        "en": "Suriname",
+        "kor": "수리남"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Suriname",
       "aliases": [
         "SUR",
@@ -7619,6 +8895,11 @@
         "en": "Republic of Vietnam",
         "kor": "베트남 공화국"
       },
+      "baseDisplayName": {
+        "en": "Republic of Vietnam",
+        "kor": "베트남 공화국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Republic of Vietnam",
       "aliases": [
         "SVN",
@@ -7648,6 +8929,11 @@
         "en": "Namibia",
         "kor": "나미비아"
       },
+      "baseDisplayName": {
+        "en": "Namibia",
+        "kor": "나미비아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Namibia",
       "aliases": [
         "SWA",
@@ -7678,6 +8964,11 @@
         "en": "Switzerland",
         "kor": "스위스"
       },
+      "baseDisplayName": {
+        "en": "Switzerland",
+        "kor": "스위스"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Switzerland",
       "aliases": [
         "SWI",
@@ -7708,6 +8999,11 @@
         "en": "Seychelles",
         "kor": "세이셸"
       },
+      "baseDisplayName": {
+        "en": "Seychelles",
+        "kor": "세이셸"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Seychelles",
       "aliases": [
         "SYC",
@@ -7738,6 +9034,11 @@
         "en": "Syria",
         "kor": "시리아"
       },
+      "baseDisplayName": {
+        "en": "Syria",
+        "kor": "시리아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Syria",
       "aliases": [
         "SYR",
@@ -7768,6 +9069,11 @@
         "en": "Tatarstan",
         "kor": "타타르스탄"
       },
+      "baseDisplayName": {
+        "en": "Tatarstan",
+        "kor": "타타르스탄"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Tatarstan",
       "aliases": [
         "TAR",
@@ -7797,6 +9103,11 @@
         "en": "Tibet",
         "kor": "티베트"
       },
+      "baseDisplayName": {
+        "en": "Tibet",
+        "kor": "티베트"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Tibet",
       "aliases": [
         "TBT",
@@ -7826,6 +9137,11 @@
         "en": "Chad",
         "kor": "차드"
       },
+      "baseDisplayName": {
+        "en": "Chad",
+        "kor": "차드"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Chad",
       "aliases": [
         "TCD",
@@ -7856,6 +9172,11 @@
         "en": "Te Waipounamu",
         "kor": "테 와이포우나무"
       },
+      "baseDisplayName": {
+        "en": "Te Waipounamu",
+        "kor": "테 와이포우나무"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Te Waipounamu",
       "aliases": [
         "TEW",
@@ -7885,6 +9206,11 @@
         "en": "Republic of Texas",
         "kor": "텍사스 공화국"
       },
+      "baseDisplayName": {
+        "en": "Republic of Texas",
+        "kor": "텍사스 공화국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Republic of Texas",
       "aliases": [
         "TEX",
@@ -7914,6 +9240,11 @@
         "en": "Togo",
         "kor": "토고"
       },
+      "baseDisplayName": {
+        "en": "Togo",
+        "kor": "토고"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Togo",
       "aliases": [
         "TGO",
@@ -7944,6 +9275,11 @@
         "en": "Thailand",
         "kor": "태국"
       },
+      "baseDisplayName": {
+        "en": "Thailand",
+        "kor": "태국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Thailand",
       "aliases": [
         "THA",
@@ -7974,6 +9310,11 @@
         "en": "Tigray",
         "kor": "티그레이"
       },
+      "baseDisplayName": {
+        "en": "Tigray",
+        "kor": "티그레이"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Tigray Nation",
       "aliases": [
         "TIG",
@@ -8004,6 +9345,11 @@
         "en": "Tajikistan",
         "kor": "타지키스탄"
       },
+      "baseDisplayName": {
+        "en": "Tajikistan",
+        "kor": "타지키스탄"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Tajikistan",
       "aliases": [
         "TJK",
@@ -8034,6 +9380,11 @@
         "en": "Turkmenistan",
         "kor": "투르크메니스탄"
       },
+      "baseDisplayName": {
+        "en": "Turkmenistan",
+        "kor": "투르크메니스탄"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Turkmenistan",
       "aliases": [
         "TKM",
@@ -8064,6 +9415,11 @@
         "en": "Timor-Leste",
         "kor": "동티모르"
       },
+      "baseDisplayName": {
+        "en": "Timor-Leste",
+        "kor": "동티모르"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Timor-Leste",
       "aliases": [
         "TLS",
@@ -8090,6 +9446,8 @@
     "TMR": {
       "tag": "TMR",
       "displayName": {},
+      "baseDisplayName": {},
+      "unionDisplayName": {},
       "aliases": [
         "TMR"
       ],
@@ -8113,6 +9471,11 @@
         "en": "Transylvania",
         "kor": "트란실바니아"
       },
+      "baseDisplayName": {
+        "en": "Transylvania",
+        "kor": "트란실바니아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Transylvania",
       "aliases": [
         "TRA",
@@ -8142,6 +9505,11 @@
         "en": "Tunisia",
         "kor": "튀니지"
       },
+      "baseDisplayName": {
+        "en": "Tunisia",
+        "kor": "튀니지"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Tunisia",
       "aliases": [
         "TUN",
@@ -8172,6 +9540,11 @@
         "en": "Türkiye",
         "kor": "튀르키예"
       },
+      "baseDisplayName": {
+        "en": "Türkiye",
+        "kor": "튀르키예"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Turkey",
       "aliases": [
         "TUR",
@@ -8203,6 +9576,11 @@
         "en": "Taiwan",
         "kor": "대만"
       },
+      "baseDisplayName": {
+        "en": "Taiwan",
+        "kor": "대만"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Taiwan",
       "aliases": [
         "TWN",
@@ -8234,6 +9612,11 @@
         "en": "Tanzania",
         "kor": "탄자니아"
       },
+      "baseDisplayName": {
+        "en": "Tanzania",
+        "kor": "탄자니아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Tanzania",
       "aliases": [
         "TZA",
@@ -8264,6 +9647,11 @@
         "en": "United Arab Emirates",
         "kor": "아랍에미리트"
       },
+      "baseDisplayName": {
+        "en": "United Arab Emirates",
+        "kor": "아랍에미리트"
+      },
+      "unionDisplayName": {},
       "friendlyName": "United Arab Emirates",
       "aliases": [
         "UAE",
@@ -8294,6 +9682,11 @@
         "en": "Uganda",
         "kor": "우간다"
       },
+      "baseDisplayName": {
+        "en": "Uganda",
+        "kor": "우간다"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Uganda",
       "aliases": [
         "UGA",
@@ -8324,6 +9717,11 @@
         "en": "Ukraine",
         "kor": "우크라이나"
       },
+      "baseDisplayName": {
+        "en": "Ukraine",
+        "kor": "우크라이나"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Ukraine",
       "aliases": [
         "UKR",
@@ -8354,6 +9752,11 @@
         "en": "United Northeast Brazil",
         "kor": "북동부 브라질 연합"
       },
+      "baseDisplayName": {
+        "en": "United Northeast Brazil",
+        "kor": "북동부 브라질 연합"
+      },
+      "unionDisplayName": {},
       "friendlyName": "United Northeast Brazil",
       "aliases": [
         "UNB",
@@ -8383,6 +9786,11 @@
         "en": "Upper Guinea",
         "kor": "상기니"
       },
+      "baseDisplayName": {
+        "en": "Upper Guinea",
+        "kor": "상기니"
+      },
+      "unionDisplayName": {},
       "aliases": [
         "UPG",
         "Upper Guinea",
@@ -8408,6 +9816,11 @@
         "en": "Ural Republic",
         "kor": "우랄 공화국"
       },
+      "baseDisplayName": {
+        "en": "Ural Republic",
+        "kor": "우랄 공화국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Ural Republic",
       "aliases": [
         "URL",
@@ -8437,6 +9850,11 @@
         "en": "Uruguay",
         "kor": "우루과이"
       },
+      "baseDisplayName": {
+        "en": "Uruguay",
+        "kor": "우루과이"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Uruguay",
       "aliases": [
         "URY",
@@ -8467,6 +9885,11 @@
         "en": "United States of America",
         "kor": "미합중국"
       },
+      "baseDisplayName": {
+        "en": "United States of America",
+        "kor": "미합중국"
+      },
+      "unionDisplayName": {},
       "friendlyName": "United States of America",
       "aliases": [
         "USA",
@@ -8498,6 +9921,11 @@
         "en": "Uzbekistan",
         "kor": "우즈베키스탄"
       },
+      "baseDisplayName": {
+        "en": "Uzbekistan",
+        "kor": "우즈베키스탄"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Uzbekistan",
       "aliases": [
         "UZB",
@@ -8528,6 +9956,11 @@
         "en": "Venezuela",
         "kor": "베네수엘라"
       },
+      "baseDisplayName": {
+        "en": "Venezuela",
+        "kor": "베네수엘라"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Venezuela",
       "aliases": [
         "VEN",
@@ -8558,6 +9991,11 @@
         "en": "Vietnam",
         "kor": "베트남"
       },
+      "baseDisplayName": {
+        "en": "Vietnam",
+        "kor": "베트남"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Vietnam",
       "aliases": [
         "VNM",
@@ -8588,6 +10026,11 @@
         "en": "Wales",
         "kor": "웨일즈"
       },
+      "baseDisplayName": {
+        "en": "Wales",
+        "kor": "웨일즈"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Wales",
       "aliases": [
         "WAL",
@@ -8617,6 +10060,11 @@
         "en": "Waziristan",
         "kor": "와지리스탄"
       },
+      "baseDisplayName": {
+        "en": "Waziristan",
+        "kor": "와지리스탄"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Waziristan",
       "aliases": [
         "WAZ",
@@ -8646,6 +10094,11 @@
         "en": "Western Balkan States",
         "kor": "서부 발칸 국가"
       },
+      "baseDisplayName": {
+        "en": "Western Balkan States",
+        "kor": "서부 발칸 국가"
+      },
+      "unionDisplayName": {},
       "aliases": [
         "WBK",
         "Western Balkan States",
@@ -8671,6 +10124,11 @@
         "en": "West Canada",
         "kor": "서부 캐나다"
       },
+      "baseDisplayName": {
+        "en": "West Canada",
+        "kor": "서부 캐나다"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Western Canada",
       "aliases": [
         "WCA",
@@ -8701,6 +10159,11 @@
         "en": "Westralia",
         "kor": "웨스트리아"
       },
+      "baseDisplayName": {
+        "en": "Westralia",
+        "kor": "웨스트리아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Westralia",
       "aliases": [
         "WES",
@@ -8730,6 +10193,11 @@
         "en": "West Germany",
         "kor": "서독"
       },
+      "baseDisplayName": {
+        "en": "West Germany",
+        "kor": "서독"
+      },
+      "unionDisplayName": {},
       "friendlyName": "West Germany",
       "aliases": [
         "WGA",
@@ -8759,6 +10227,11 @@
         "en": "Huanan",
         "kor": "화난"
       },
+      "baseDisplayName": {
+        "en": "Huanan",
+        "kor": "화난"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Huanan",
       "aliases": [
         "WUR",
@@ -8788,6 +10261,11 @@
         "en": "Yemen",
         "kor": "예멘"
       },
+      "baseDisplayName": {
+        "en": "Yemen",
+        "kor": "예멘"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Yemen",
       "aliases": [
         "YEM",
@@ -8819,6 +10297,11 @@
         "en": "South Yemen",
         "kor": "남예멘"
       },
+      "baseDisplayName": {
+        "en": "South Yemen",
+        "kor": "남예멘"
+      },
+      "unionDisplayName": {},
       "friendlyName": "South Yemen",
       "aliases": [
         "YMS",
@@ -8849,6 +10332,11 @@
         "en": "Yucatán",
         "kor": "유카탄"
       },
+      "baseDisplayName": {
+        "en": "Yucatán",
+        "kor": "유카탄"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Yucatán",
       "aliases": [
         "YUC",
@@ -8878,6 +10366,11 @@
         "en": "Yungui",
         "kor": "윈구이"
       },
+      "baseDisplayName": {
+        "en": "Yungui",
+        "kor": "윈구이"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Yungui",
       "aliases": [
         "YUN",
@@ -8907,6 +10400,11 @@
         "en": "South Africa",
         "kor": "남아프리카"
       },
+      "baseDisplayName": {
+        "en": "South Africa",
+        "kor": "남아프리카"
+      },
+      "unionDisplayName": {},
       "friendlyName": "South Africa",
       "aliases": [
         "ZAF",
@@ -8937,6 +10435,11 @@
         "en": "Zanzibar",
         "kor": "잔지바르"
       },
+      "baseDisplayName": {
+        "en": "Zanzibar",
+        "kor": "잔지바르"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Zanzibar",
       "aliases": [
         "ZAN",
@@ -8966,6 +10469,11 @@
         "en": "Zambia",
         "kor": "잠비아"
       },
+      "baseDisplayName": {
+        "en": "Zambia",
+        "kor": "잠비아"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Zambia",
       "aliases": [
         "ZMB",
@@ -8996,6 +10504,11 @@
         "en": "Zimbabwe",
         "kor": "짐바브웨"
       },
+      "baseDisplayName": {
+        "en": "Zimbabwe",
+        "kor": "짐바브웨"
+      },
+      "unionDisplayName": {},
       "friendlyName": "Zimbabwe",
       "aliases": [
         "ZWE",

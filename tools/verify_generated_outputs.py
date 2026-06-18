@@ -123,6 +123,12 @@ def aliases(mapping: dict[str, object]) -> list[str]:
     return [item for item in list_value(mapping.get("aliases")) if isinstance(item, str)]
 
 
+def layered_display_name(mapping: dict[str, object], key: str, language: str) -> str:
+    names = object_value(mapping.get(key))
+    value = names.get(language)
+    return value if isinstance(value, str) else ""
+
+
 def region_by_name(region_map: dict[str, object], name: str) -> dict[str, object]:
     regions = list_value(region_map.get("regions"))
     for row in regions:
@@ -271,6 +277,13 @@ def main() -> int:
     require("Canada" in aliases(object_value(nations.get("CAN"))), "Canada alias missing")
     require("United States" in aliases(object_value(nations.get("USA"))), "USA shortened official alias missing")
     require(display_name(object_value(nations.get("CHN")), "en") == "China", "CHN official English display name missing")
+    idn_meta = object_value(nations.get("IDN"))
+    require(display_name(idn_meta, "en") == "Java", "IDN base display name should remain Java")
+    require(layered_display_name(idn_meta, "unionDisplayName", "en") == "Indonesia", "IDN union display name should be Indonesia")
+    require("Java" in aliases(idn_meta), "IDN Java alias missing")
+    require("Indonesia" in aliases(idn_meta), "IDN Indonesia alias missing")
+    idn_source = object_value(idn_meta.get("source"))
+    require("data/manual/nation_display_overrides.json" not in list_value(idn_source.get("localizationKeys")), "IDN should not depend on manual display override")
     require("Senegambia" not in aliases(object_value(nations.get("SEN"))), "SEN must not use region name as nation alias")
     require(display_name(object_value(claim_nation_meta.get("CAN")), "en") == "Canada", "claim map does not expose catalog nation metadata")
     require(display_name(object_value(claim_nation_meta.get("SAU")), "en") == "Saudi Arabia", "Saudi Arabia nation metadata missing")
