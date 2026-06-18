@@ -8,6 +8,7 @@ test-results/
 data/generated/region_outlines.raw.json
 .venv-wsl
 .wsl-build-bin/
+.chatgpt/
 
 # ChatGPT/Codex local task receipts, handoffs, and run manifests.
 .chatgpt/
