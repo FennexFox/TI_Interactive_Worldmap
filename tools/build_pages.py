@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
+# SPDX-License-Identifier: MIT
+
 """Build the static GitHub Pages site from generated map data and src assets."""
 from __future__ import annotations
 
@@ -15,6 +18,8 @@ from build_scenario_bundle import DEFAULT_SCENARIO, SCHEMA_VERSION, scenario_ent
 from catalog_utils import sanitize_data_value
 
 ROOT = Path(__file__).resolve().parents[1]
+DATA_BUNDLE_SPDX_HEADER = """// SPDX-License-Identifier: LicenseRef-Terra-Invicta-Data
+"""
 
 
 def load_json(path: Path) -> Any:
@@ -113,7 +118,7 @@ def build_pages() -> None:
     payload = json.dumps(packed, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     encoded = base64.b64encode(deterministic_gzip(payload, compresslevel=9)).decode("ascii")
     chunks = [encoded[i : i + 12000] for i in range(0, len(encoded), 12000)]
-    data_js = """
+    data_js = DATA_BUNDLE_SPDX_HEADER + """
 async function decodeGzipBase64(base64Text) {
   const binary = atob(base64Text);
   const bytes = new Uint8Array(binary.length);

@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors -->
+<!-- SPDX-License-Identifier: MIT -->
+
 # Terra Invicta Interactive Worldmap
 
 Standalone builder and GitHub Pages site for a Terra Invicta segmented world map.
@@ -199,3 +202,14 @@ The deploy helper only stages generated paths:
 - `docs/index.html`
 
 Other local changes are left untouched.
+
+## License
+
+Project-owned source code, build/test tooling, and documentation are licensed
+under the MIT License. See `LICENSE` and the SPDX metadata in `REUSE.toml`.
+
+Generated catalogs, region geometry, scenario bundles, the generated JS data
+bundle, and manual data normalization tables that contain Terra Invicta-derived
+identifiers or data are not covered by MIT. They are marked with
+`LicenseRef-Terra-Invicta-Data` in `REUSE.toml` and remain subject to the
+terms and ownership applicable to Terra Invicta and its rightsholders.

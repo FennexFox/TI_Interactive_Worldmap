@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
+# SPDX-License-Identifier: MIT
+
 """Scenario-aware filtering for Terra Invicta bilateral template rows."""
 from __future__ import annotations
 

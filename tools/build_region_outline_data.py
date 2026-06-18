@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
+# SPDX-License-Identifier: MIT
+
 """Compact and enrich Terra Invicta region outlines for browser rendering."""
 from __future__ import annotations
 

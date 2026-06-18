@@ -1,0 +1,15 @@
+version = 1
+SPDX-PackageName = "TI Interactive Worldmap"
+
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 TI Interactive Worldmap contributors"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = ["data/generated/**", "data/manual/**.json", "docs/assets/data.generated.js", "docs/data/**"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "Terra Invicta data and assets are copyright their respective rightsholders"
+SPDX-License-Identifier = "LicenseRef-Terra-Invicta-Data"
+SPDX-FileComment = "\n These files contain data, identifiers, localization, region geometry, catalog\n extracts, or generated bundles derived from a local Terra Invicta installation.\n They are not covered by the repository's MIT license for project-owned code."

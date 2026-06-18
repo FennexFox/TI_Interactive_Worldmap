@@ -1,1 +1,4 @@
+# SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
+# SPDX-License-Identifier: MIT
+
 UnityPy>=1.10

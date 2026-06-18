@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
+# SPDX-License-Identifier: MIT
+
 """Build a normalized Terra Invicta nation catalog for the worldmap app."""
 from __future__ import annotations
 

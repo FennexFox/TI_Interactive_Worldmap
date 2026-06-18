@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
+# SPDX-License-Identifier: MIT
+
 """Extract Terra Invicta region outline data from the Unity regionoutlines asset.
 
 This script uses UnityPy when reading the original Unity asset bundle. For test and
