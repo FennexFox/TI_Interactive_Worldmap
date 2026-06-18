@@ -253,21 +253,33 @@ test('claim grouped fills preserve per-region semantic outline paths', async ({ 
 
   const claimFillStats = await page.evaluate(() => {
     const fills = [...document.querySelectorAll('#claimOverlays .claim-fill-group')];
+    const hatches = [...document.querySelectorAll('#claimOverlays .claim-hatch-group')];
     const outlines = [...document.querySelectorAll('#claimOverlays .claim-overlay')];
     return {
       fillGroupCount: fills.length,
+      hatchGroupCount: hatches.length,
       outlineCount: outlines.length,
       fillGroupsWithRegion: fills.filter(fill => !!fill.dataset.region).length,
       groupedRegions: fills.reduce((sum, fill) => sum + Number(fill.dataset.visualGroupSize || 0), 0),
+      hatchedRegions: hatches.reduce((sum, hatch) => sum + Number(hatch.dataset.visualGroupSize || 0), 0),
       ownedFillGroups: fills.filter(fill => fill.classList.contains('owned-territory')).length,
       ownedOutlines: outlines.filter(outline => outline.classList.contains('owned-territory')).length,
       peacefulOutlines: outlines.filter(outline => outline.classList.contains('peaceful')).length,
       hostileOutlines: outlines.filter(outline => outline.classList.contains('hostile')).length,
       allOutlinesFillNone: outlines.every(outline => outline.getAttribute('fill') === 'none'),
+      hostileHatchesHaveLines: hatches
+        .filter(hatch => hatch.classList.contains('hostile'))
+        .every(hatch => hatch.querySelectorAll('.claim-hatch-line').length === 1 && hatch.querySelectorAll('.claim-hatch-line-shadow').length === 0),
+      peacefulHatches: hatches.filter(hatch => hatch.classList.contains('peaceful')).length,
+      ownedHatches: hatches.filter(hatch => hatch.classList.contains('owned-territory')).length,
+      hostileOutlinesUseRetiredRedStroke: outlines
+        .filter(outline => outline.classList.contains('hostile'))
+        .some(outline => getComputedStyle(outline).stroke === 'rgb(255, 180, 168)'),
     };
   });
 
   expect(claimFillStats.fillGroupCount).toBeGreaterThan(0);
+  expect(claimFillStats.hatchGroupCount).toBeGreaterThan(0);
   expect(claimFillStats.fillGroupCount).toBeLessThan(claimFillStats.outlineCount);
   expect(claimFillStats.fillGroupsWithRegion).toBe(0);
   expect(claimFillStats.groupedRegions).toBe(claimFillStats.outlineCount);
@@ -276,10 +288,41 @@ test('claim grouped fills preserve per-region semantic outline paths', async ({ 
   expect(claimFillStats.peacefulOutlines).toBeGreaterThan(0);
   expect(claimFillStats.hostileOutlines).toBeGreaterThan(0);
   expect(claimFillStats.allOutlinesFillNone).toBe(true);
+  expect(claimFillStats.hatchedRegions).toBe(claimFillStats.hostileOutlines);
+  expect(claimFillStats.hostileHatchesHaveLines).toBe(true);
+  expect(claimFillStats.peacefulHatches).toBe(0);
+  expect(claimFillStats.ownedHatches).toBe(0);
+  expect(claimFillStats.hostileOutlinesUseRetiredRedStroke).toBe(false);
 
   await regionHit(page, 'Amazonia').hover();
   await expect(page.locator('#hoverPill')).toHaveText('Hover: BRA · Manaus');
   await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
+});
+
+test('project-specific hostile claims render hatch and follow claim kind filters', async ({ page }) => {
+  await waitForSingleCopyMap(page);
+
+  await chooseNation(page, 'China', 'CHN');
+  await page.selectOption('#projectSel', 'Project_GreaterPanAsia');
+  await expect(page.locator('#claimMode')).toHaveValue('project');
+  await expect(page.locator('#claimKind')).toHaveValue('all');
+  await expect(page.locator('#claimOverlays .claim-overlay.hostile')).toHaveCount(5);
+  await expect(page.locator('#claimOverlays .claim-overlay.peaceful')).toHaveCount(25);
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile')).toHaveCount(5);
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile[data-region="Hokkaido"] .claim-hatch-line')).toHaveCount(1);
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile[data-region="NorthHonshu"] .claim-hatch-line')).toHaveCount(1);
+  await expect(page.locator('#claimOverlays .claim-overlay.hostile[data-region="Hokkaido"]')).toHaveCount(1);
+  await expect(page.locator('#claimOverlays .claim-overlay.hostile[data-region="NorthHonshu"]')).toHaveCount(1);
+
+  await page.selectOption('#claimKind', 'peaceful');
+  await expect(page.locator('#claimOverlays .claim-overlay.hostile')).toHaveCount(0);
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile')).toHaveCount(0);
+  await expect(page.locator('#claimOverlays .claim-overlay.peaceful')).toHaveCount(25);
+
+  await page.selectOption('#claimKind', 'hostile');
+  await expect(page.locator('#claimOverlays .claim-overlay.hostile')).toHaveCount(5);
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile')).toHaveCount(5);
+  await expect(page.locator('#claimOverlays .claim-overlay.peaceful')).toHaveCount(0);
 });
 
 test('baseline selected overlays stay canonical across hover and claim controls', async ({ page }) => {

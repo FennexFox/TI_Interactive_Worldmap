@@ -810,6 +810,7 @@ const claimLabelDescriptorCache = new Map();
 const foreignHoverDescriptorCache = new Map();
 const manualEnvelopeModelCache = new Map();
 const reachableCapitalCandidateDescriptorCache = new Map();
+const claimHatchPathCache = new Map();
 const CLAIM_OVERLAY_EMPTY_RENDER_KEY = 'claim-overlay-paths:empty';
 const CLAIM_LABEL_EMPTY_RENDER_KEY = 'claim-labels:empty';
 const FOREIGN_HOVER_EMPTY_RENDER_KEY = 'foreign-hover:empty';
@@ -826,6 +827,8 @@ const pinnedRegionMarkerLayerRenderKeys = new WeakMap();
 const reachableCapitalCandidateLayerRenderKeys = new WeakMap();
 const claimOverlayBufferStates = new WeakMap();
 const claimLabelBufferStates = new WeakMap();
+const CLAIM_HATCH_SPACING = 0.055;
+const CLAIM_HATCH_PADDING = 0.06;
 const MAP_PAN_DRAG_THRESHOLD_PX = 4;
 const MAP_ZOOM_BUTTON_FACTOR = 1.25;
 const MAP_WHEEL_ZOOM_FACTOR = 1.18;
@@ -3260,13 +3263,16 @@ function claimOverlayPathDescriptors(model) {
       const claim = entry.claims?.[rn] || {};
       const claimClassName = (entry.project ? 'research-claim ' : 'basic-claim ') + (claim.hostileClaim ? 'hostile' : 'peaceful') + (claim.capitalClaim ? ' capital' : '') + (claim.gatedClaim ? ' gated' : '');
       const fillCategory = entry.project ? `research:${entry.project}` : 'basic';
+      const claimFillClassName = (entry.project ? 'research-claim' : 'basic-claim') + (claim.gatedClaim ? ' gated' : '');
       descriptors.push({
         region: rn,
         className: 'claim-overlay ' + claimClassName,
-        fillClassName: 'claim-fill-group ' + (entry.project ? 'research-claim' : 'basic-claim') + (claim.gatedClaim ? ' gated' : ''),
+        fillClassName: 'claim-fill-group ' + claimFillClassName,
         fillKey: `${fillCategory}:${color}:${claim.gatedClaim ? 'gated' : 'normal'}`,
         fillOpacity: claim.gatedClaim ? 0.72 : '',
         fill: color,
+        hatchClassName: claim.hostileClaim ? 'claim-hatch-group hostile ' + claimFillClassName : '',
+        hatchKey: claim.hostileClaim ? `${fillCategory}:hostile-hatch:${claim.gatedClaim ? 'gated' : 'normal'}` : '',
         project: entry.project || 'base',
       });
     }
@@ -3991,8 +3997,59 @@ function claimLabelRenderKey(model, descriptorSet, copyContexts = worldCopyConte
     descriptorKey: descriptorSet?.cacheKey || '',
   });
 }
+function formatHatchNumber(value) {
+  return Number(value).toFixed(6);
+}
+function pathBounds(path = '') {
+  const numbers = String(path || '').match(/-?\d+(?:\.\d+)?/g)?.map(Number) || [];
+  if (numbers.length < 4) return null;
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (let index = 0; index < numbers.length - 1; index += 2) {
+    const x = numbers[index];
+    const y = numbers[index + 1];
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
+  }
+  if (![minX, maxX, minY, maxY].every(Number.isFinite)) return null;
+  return {minX, maxX, minY, maxY};
+}
+function hostileClaimHatchPath(region) {
+  const cacheKey = region?.regionName || region?.name || region?.path || '';
+  if (cacheKey && claimHatchPathCache.has(cacheKey)) return claimHatchPathCache.get(cacheKey);
+  const bounds = pathBounds(region?.path || '');
+  if (!bounds) return '';
+  const {minX, maxX, minY, maxY} = bounds;
+  const width = maxX - minX;
+  const height = maxY - minY;
+  const diagonal = width + height + CLAIM_HATCH_PADDING * 2;
+  const start = Math.floor((minX + minY - diagonal) / CLAIM_HATCH_SPACING) * CLAIM_HATCH_SPACING;
+  const end = Math.ceil((maxX + maxY + diagonal) / CLAIM_HATCH_SPACING) * CLAIM_HATCH_SPACING;
+  const parts = [];
+  for (let sum = start; sum <= end; sum += CLAIM_HATCH_SPACING) {
+    const x1 = sum - (maxY + CLAIM_HATCH_PADDING);
+    const y1 = maxY + CLAIM_HATCH_PADDING;
+    const x2 = sum - (minY - CLAIM_HATCH_PADDING);
+    const y2 = minY - CLAIM_HATCH_PADDING;
+    parts.push(`M ${formatHatchNumber(x1)} ${formatHatchNumber(y1)} L ${formatHatchNumber(x2)} ${formatHatchNumber(y2)}`);
+  }
+  const hatchPath = parts.join(' ');
+  if (cacheKey) claimHatchPathCache.set(cacheKey, hatchPath);
+  return hatchPath;
+}
+function hatchClipId(descriptor, copyContext, index) {
+  const region = String(descriptor.region || 'region').replace(/[^A-Za-z0-9_-]/g, '-');
+  const copy = String(copyContext.copyIndex).replace(/[^A-Za-z0-9_-]/g, '-');
+  return `hostile-claim-hatch-${copy}-${index}-${region}`;
+}
 function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyContexts} = {}) {
   const fillDescriptors = [];
+  const hatchDescriptors = [];
   for (const descriptor of descriptors) {
     const r = regionByName[descriptor.region];
     if (!r) continue;
@@ -4007,6 +4064,19 @@ function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyCont
         project: descriptor.project,
       },
     });
+    if (descriptor.hatchClassName) {
+      hatchDescriptors.push({
+        region: descriptor.region,
+        regionPath: r.path,
+        hatchPath: hostileClaimHatchPath(r),
+        className: descriptor.hatchClassName,
+        fillOpacity: descriptor.fillOpacity,
+        dataset: {
+          hatchKey: descriptor.hatchKey || descriptor.project || '',
+          project: descriptor.project,
+        },
+      });
+    }
   }
   const fillGroups = buildVisualFillGroups(fillDescriptors);
   return createProjectedCopyFragment(copyContexts, 'claim-overlay-copy', copyContext => {
@@ -4024,6 +4094,30 @@ function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyCont
         ...copyData,
       }));
     }
+    hatchDescriptors.forEach((descriptor, index) => {
+      if (!descriptor.hatchPath) return;
+      const clipId = hatchClipId(descriptor, copyContext, index);
+      const defs = createSvgElement('defs');
+      const clipPath = createSvgElement('clipPath', {id: clipId});
+      clipPath.appendChild(createSvgElement('path', {d: descriptor.regionPath}));
+      defs.appendChild(clipPath);
+      frag.appendChild(defs);
+      const group = createSvgElement('g', {
+        class: descriptor.className,
+        'clip-path': `url(#${clipId})`,
+        opacity: descriptor.fillOpacity === '' ? null : descriptor.fillOpacity,
+      }, {
+        ...descriptor.dataset,
+        region: descriptor.region,
+        visualGroupSize: 1,
+        ...copyData,
+      });
+      group.appendChild(createSvgElement('path', {
+        d: descriptor.hatchPath,
+        class: 'claim-hatch-line',
+      }));
+      frag.appendChild(group);
+    });
     for (const descriptor of descriptors) {
       const r = regionByName[descriptor.region];
       if (!r) continue;
