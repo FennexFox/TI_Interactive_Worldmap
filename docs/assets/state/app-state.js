@@ -2,8 +2,12 @@ function normalizeId(value) {
   return String(value || '');
 }
 
-function normalizeIds(values = []) {
-  return [...new Set([...values].map(normalizeId).filter(Boolean))];
+/**
+ * @param {Iterable<unknown>} [values]
+ * @returns {string[]}
+ */
+function normalizeIds(values) {
+  return [...new Set([...(values || [])].map(normalizeId).filter(Boolean))];
 }
 
 export function createAppState({activeScenarioId = ''} = {}) {
@@ -43,7 +47,11 @@ export function setSelectedNation(state, nationId = '', {locked = false, clearHo
   return state;
 }
 
-export function setSelectedRegions(state, regionIds = []) {
+/**
+ * @param {object} state
+ * @param {Iterable<unknown>} [regionIds]
+ */
+export function setSelectedRegions(state, regionIds) {
   state.selectedRegionIds.clear();
   for (const normalized of normalizeIds(regionIds || [])) state.selectedRegionIds.add(normalized);
   return state;
@@ -54,7 +62,11 @@ export function setFocusedRegion(state, regionId = '') {
   return state;
 }
 
-export function setPinnedRegions(state, regionIds = []) {
+/**
+ * @param {object} state
+ * @param {Iterable<unknown>} [regionIds]
+ */
+export function setPinnedRegions(state, regionIds) {
   if (!state.pinnedRegionIds) state.pinnedRegionIds = new Set();
   if (!state.pinnedCapitalClaimants) state.pinnedCapitalClaimants = new Map();
   state.pinnedRegionIds.clear();
@@ -63,7 +75,20 @@ export function setPinnedRegions(state, regionIds = []) {
   return state;
 }
 
-export function pinRegion(state, regionId = '', {capitalClaimant, capitalClaimantId} = {}) {
+/**
+ * @typedef {object} PinRegionOptions
+ * @property {unknown} [capitalClaimant]
+ * @property {unknown} [capitalClaimantId]
+ */
+
+/**
+ * @param {object} state
+ * @param {unknown} [regionId]
+ * @param {PinRegionOptions} [options]
+ */
+export function pinRegion(state, regionId = '', options) {
+  const pinOptions = /** @type {PinRegionOptions} */ (options || {});
+  const {capitalClaimant, capitalClaimantId} = pinOptions;
   const normalized = normalizeId(regionId);
   if (!normalized) return state;
   if (!state.pinnedRegionIds) state.pinnedRegionIds = new Set();
@@ -151,7 +176,7 @@ export function setClaimFilters(state, filters = {}) {
 export function clearSelectionState(state) {
   state.selectedNationId = '';
   state.lockedNationId = '';
-  setSelectedRegions(state);
+  setSelectedRegions(state, []);
   setFocusedRegion(state);
   clearPinnedRegions(state);
   setActiveIncomingClaim(state);
@@ -165,15 +190,26 @@ export function clearTransientClaimState(state) {
   return state;
 }
 
-export function reconcileScenarioState(
-  state,
-  {
+/**
+ * @typedef {object} ScenarioStateReconciliationInput
+ * @property {Iterable<unknown>} [regionIds]
+ * @property {Iterable<unknown>} [nationIds]
+ * @property {Iterable<unknown>} [projectIds]
+ * @property {Iterable<unknown>} [incomingClaimKeys]
+ */
+
+/**
+ * @param {object} state
+ * @param {ScenarioStateReconciliationInput} [input]
+ */
+export function reconcileScenarioState(state, input) {
+  const reconciliationInput = /** @type {ScenarioStateReconciliationInput} */ (input || {});
+  const {
     regionIds = [],
     nationIds = [],
     projectIds = [],
     incomingClaimKeys = [],
-  } = {},
-) {
+  } = reconciliationInput;
   const regionSet = new Set(normalizeIds(regionIds));
   const nationSet = new Set(normalizeIds(nationIds));
   const projectSet = new Set(normalizeIds(projectIds));
