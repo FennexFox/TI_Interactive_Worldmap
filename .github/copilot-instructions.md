@@ -21,3 +21,12 @@ When these files change, review the generator scripts and source data instead:
 - tools/build_research_catalog.py
 - data/manual/**
 - src/**
+
+Also do not review tool-state or temporary planning artifacts as product code:
+- graphify-out/**
+- .serena/**
+- .chatgpt/**
+- .codex/**
+- dev-docs/plan/**
+
+Use these only as navigation or handoff context when explicitly relevant.

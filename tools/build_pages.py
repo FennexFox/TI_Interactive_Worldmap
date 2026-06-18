@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import base64
 import gzip
+import io
 import json
 import shutil
 from pathlib import Path
@@ -37,6 +38,13 @@ def copy_js_modules(src_dir: Path, dest_dir: Path) -> None:
         existing.unlink()
     for source in src_dir.glob("*.js"):
         shutil.copyfile(source, dest_dir / source.name)
+
+
+def deterministic_gzip(data: bytes, compresslevel: int = 9) -> bytes:
+    buffer = io.BytesIO()
+    with gzip.GzipFile(filename="", mode="wb", fileobj=buffer, compresslevel=compresslevel, mtime=0) as stream:
+        stream.write(data)
+    return buffer.getvalue()
 
 
 def default_scenario_bundle(
@@ -103,7 +111,7 @@ def build_pages() -> None:
         "catalogs": {"nations": nation_catalog, "research": research_catalog},
     }
     payload = json.dumps(packed, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    encoded = base64.b64encode(gzip.compress(payload, compresslevel=9)).decode("ascii")
+    encoded = base64.b64encode(deterministic_gzip(payload, compresslevel=9)).decode("ascii")
     chunks = [encoded[i : i + 12000] for i in range(0, len(encoded), 12000)]
     data_js = """
 async function decodeGzipBase64(base64Text) {

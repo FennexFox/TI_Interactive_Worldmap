@@ -114,9 +114,20 @@ def load_nation_localizations(
     languages: list[str],
     scenario_year: str = DEFAULT_SCENARIO_YEAR,
 ) -> dict[str, dict[str, str]]:
+    layers = load_nation_localization_layers(templates_dir, languages, scenario_year)
+    return {
+        tag: dict(sorted((values.get("scenario") or values.get("base") or {}).items()))
+        for tag, values in sorted(layers.items())
+    }
+
+
+def load_nation_localization_layers(
+    templates_dir: Path,
+    languages: list[str],
+    scenario_year: str = DEFAULT_SCENARIO_YEAR,
+) -> dict[str, dict[str, dict[str, str]]]:
     root = templates_dir.parent / "Localization"
-    localizations: dict[str, dict[str, str]] = {}
-    priorities: dict[str, dict[str, int]] = {}
+    localizations: dict[str, dict[str, dict[str, str]]] = {}
     for language in languages:
         values = read_localization_file(root / language / f"TINationTemplate.{language}")
         for key, value in values.items():
@@ -128,13 +139,14 @@ def load_nation_localizations(
             if not tag:
                 continue
             priority = nation_localization_priority(data_name, tag, scenario_year)
-            if priority <= 0:
-                continue
-            current_priority = priorities.setdefault(tag, {}).get(language, -1)
-            if priority > current_priority:
-                localizations.setdefault(tag, {})[language] = value
-                priorities[tag][language] = priority
-    return {tag: dict(sorted(values.items())) for tag, values in sorted(localizations.items())}
+            if priority == 2:
+                localizations.setdefault(tag, {}).setdefault("scenario", {})[language] = value
+            elif priority == 1:
+                localizations.setdefault(tag, {}).setdefault("base", {})[language] = value
+    return {
+        tag: {kind: dict(sorted(names.items())) for kind, names in sorted(values.items())}
+        for tag, values in sorted(localizations.items())
+    }
 
 
 def load_scenario_nations(templates_dir: Path, scenario_year: str) -> dict[str, dict[str, Any]]:
@@ -189,19 +201,23 @@ def load_nation_display_names(
     scenario_year: str,
     nation_display_overrides: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, str]:
-    localizations = load_nation_localizations(templates_dir, languages, scenario_year)
+    localization_layers = load_nation_localization_layers(templates_dir, languages, scenario_year)
     display_overrides = nation_display_overrides or {}
     display_names: dict[str, str] = {}
     for tag, template in load_scenario_nations(templates_dir, scenario_year).items():
-        localized = localizations.get(tag, {})
+        layers = localization_layers.get(tag, {})
+        scenario_localized = layers.get("scenario") or {}
+        base_localized = layers.get("base") or {}
         override = display_overrides.get(tag, {})
         override_display_name = override.get("displayName") if isinstance(override.get("displayName"), dict) else {}
         display_name = (
             override_display_name.get("en")
             or next(iter(override_display_name.values()), "")
-            or localized.get("en")
-            or next(iter(localized.values()), "")
+            or scenario_localized.get("en")
+            or next(iter(scenario_localized.values()), "")
             or norm_id(template.get("friendlyName"))
+            or base_localized.get("en")
+            or next(iter(base_localized.values()), "")
             or tag
         )
         display_names[tag] = clean_data_string(str(display_name))

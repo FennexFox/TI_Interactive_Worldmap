@@ -31,6 +31,14 @@ __pycache__/
 # Keep data/manual/ visible; generated catalogs should live under data/generated/.
 /data/generated/
 
+# Tool state and repo-local handoff artifacts
+.serena/
+.chatgpt/
+.codex/
+
+# Temporary planning docs; keep durable human-authored docs visible.
+dev-docs/plan/
+
 # GitHub/process metadata noise
 .github/
 

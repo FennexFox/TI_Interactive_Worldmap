@@ -9,6 +9,9 @@ data/generated/region_outlines.raw.json
 .venv-wsl
 .wsl-build-bin/
 
+# ChatGPT/Codex local task receipts, handoffs, and run manifests.
+.chatgpt/
+
 # graphify local metadata and cache; keep portable graph outputs trackable.
 graphify-out/*
 !graphify-out/GRAPH_REPORT.md

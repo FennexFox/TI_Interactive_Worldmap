@@ -265,7 +265,7 @@ class CatalogBuilderTests(unittest.TestCase):
             self.assertTrue(catalog["nations"]["SEN"]["isBreakaway"])
             self.assertNotIn("Senegambia", catalog["nations"]["SEN"]["aliases"])
 
-    def test_nation_catalog_prefers_matching_scenario_localization(self):
+    def test_nation_catalog_preserves_base_and_union_labels(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             templates_dir = root / "Templates"
@@ -289,8 +289,83 @@ class CatalogBuilderTests(unittest.TestCase):
             catalog = nc.build_catalog(templates_dir, ["en"], scenario_year="2026")
 
             self.assertEqual(catalog["nations"]["INO"]["displayName"]["en"], "Indonesia")
+            self.assertEqual(catalog["nations"]["INO"]["baseDisplayName"]["en"], "Java")
+            self.assertEqual(catalog["nations"]["INO"]["unionDisplayName"], {})
             self.assertIn("Indonesia", catalog["nations"]["INO"]["aliases"])
-            self.assertNotIn("Java", catalog["nations"]["INO"]["aliases"])
+            self.assertIn("Java", catalog["nations"]["INO"]["aliases"])
+
+    def test_nation_catalog_derives_union_label_from_scenario_template(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            templates_dir = root / "Templates"
+            write_json(
+                templates_dir / "TINationTemplate.json",
+                [
+                    {"dataName": "IDN", "friendlyName": "Java"},
+                    {"dataName": "2026_IDN", "friendlyName": "2026_Indonesia"},
+                ],
+            )
+            write_text(
+                root / "Localization" / "en" / "TINationTemplate.en",
+                "TINationTemplate.displayName.IDN=Java\n",
+            )
+
+            catalog = nc.build_catalog(templates_dir, ["en"], scenario_year="2026")
+            entry = catalog["nations"]["IDN"]
+
+            self.assertEqual(entry["displayName"]["en"], "Java")
+            self.assertEqual(entry["baseDisplayName"]["en"], "Java")
+            self.assertEqual(entry["unionDisplayName"]["en"], "Indonesia")
+            self.assertIn("Java", entry["aliases"])
+            self.assertIn("Indonesia", entry["aliases"])
+            self.assertNotIn("data/manual/nation_display_overrides.json", entry["source"]["localizationKeys"])
+
+    def test_nation_catalog_preserves_explicit_union_localization_families(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            templates_dir = root / "Templates"
+            write_json(
+                templates_dir / "TINationTemplate.json",
+                [
+                    {"dataName": "TST", "friendlyName": "Test Base"},
+                    {"dataName": "2026_TST", "friendlyName": "2026_Test Scenario"},
+                ],
+            )
+            write_text(
+                root / "Localization" / "en" / "TINationTemplate.en",
+                "\n".join(
+                    [
+                        "TINationTemplate.displayName.TST=Test Base",
+                        "TINationTemplate.displayName.2026_TST=Test Scenario",
+                        "TINationTemplate.displayNameWithArticle.TST=the Test Base",
+                        "TINationTemplate.displayNameWithArticle.2026_TST=the Test Scenario",
+                        "TINationTemplate.nationAdjective.TST=Base Test",
+                        "TINationTemplate.nationAdjective.2026_TST=Scenario Test",
+                        "TINationTemplate.unionDisplayName.TST=Explicit Test Union",
+                        "TINationTemplate.unionDisplayNameWithArticle.TST=the Explicit Test Union",
+                        "TINationTemplate.unionAdjective.TST=Union Test",
+                    ]
+                ),
+            )
+
+            catalog = nc.build_catalog(templates_dir, ["en"], scenario_year="2026")
+            entry = catalog["nations"]["TST"]
+
+            self.assertEqual(entry["displayName"]["en"], "Test Scenario")
+            self.assertEqual(entry["baseDisplayName"]["en"], "Test Base")
+            self.assertEqual(entry["displayNameWithArticle"]["en"], "the Test Scenario")
+            self.assertEqual(entry["nationAdjective"]["en"], "Scenario Test")
+            self.assertEqual(entry["unionDisplayName"]["en"], "Explicit Test Union")
+            self.assertEqual(entry["unionDisplayNameWithArticle"]["en"], "the Explicit Test Union")
+            self.assertEqual(entry["unionAdjective"]["en"], "Union Test")
+            self.assertIn("Explicit Test Union", entry["aliases"])
+            self.assertIn("TINationTemplate.displayName.TST", entry["source"]["localizationKeys"])
+            self.assertIn("TINationTemplate.displayName.2026_TST", entry["source"]["localizationKeys"])
+            self.assertIn("TINationTemplate.unionDisplayName.TST", entry["source"]["localizationKeys"])
+            self.assertIn("TINationTemplate.displayNameWithArticle.2026_TST", entry["source"]["localizationKeys"])
+            self.assertIn("TINationTemplate.nationAdjective.2026_TST", entry["source"]["localizationKeys"])
+            self.assertIn("TINationTemplate.unionDisplayNameWithArticle.TST", entry["source"]["localizationKeys"])
+            self.assertIn("TINationTemplate.unionAdjective.TST", entry["source"]["localizationKeys"])
 
     def test_region_outline_owner_name_prefers_matching_scenario_localization(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -348,32 +423,30 @@ class CatalogBuilderTests(unittest.TestCase):
             self.assertEqual(row["displayName"]["en"], "Jakarta")
             self.assertEqual(row["ownerName"], "Indonesia")
 
-    def test_manual_nation_display_override_replaces_template_display_name(self):
+    def test_manual_nation_display_override_is_nonessential_for_union_label(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             templates_dir = root / "Templates"
             write_json(
                 templates_dir / "TINationTemplate.json",
-                [{"dataName": "IDN", "friendlyName": "Java"}],
+                [
+                    {"dataName": "IDN", "friendlyName": "Java"},
+                    {"dataName": "2026_IDN", "friendlyName": "2026_Indonesia"},
+                ],
             )
             write_text(
                 root / "Localization" / "en" / "TINationTemplate.en",
                 "TINationTemplate.displayName.IDN=Java\n",
             )
-            override = {
-                "IDN": {
-                    "displayName": {"en": "Indonesia"},
-                    "aliases": ["Indonesia"],
-                }
-            }
 
-            catalog = nc.build_catalog(templates_dir, ["en"], nation_display_overrides=override)
-            display_names = ro.load_nation_display_names(templates_dir, ["en"], "2026", override)
+            catalog = nc.build_catalog(templates_dir, ["en"], nation_display_overrides={})
+            display_names = ro.load_nation_display_names(templates_dir, ["en"], "2026", {})
 
-            self.assertEqual(catalog["nations"]["IDN"]["displayName"]["en"], "Indonesia")
+            self.assertEqual(catalog["nations"]["IDN"]["displayName"]["en"], "Java")
+            self.assertEqual(catalog["nations"]["IDN"]["unionDisplayName"]["en"], "Indonesia")
             self.assertEqual(display_names["IDN"], "Indonesia")
             self.assertIn("Indonesia", catalog["nations"]["IDN"]["aliases"])
-            self.assertNotIn("Java", catalog["nations"]["IDN"]["aliases"])
+            self.assertIn("Java", catalog["nations"]["IDN"]["aliases"])
 
     def test_research_catalog_records_claim_granting_projects(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -440,8 +513,10 @@ class CatalogBuilderTests(unittest.TestCase):
                 "CAN": {
                     "tag": "CAN",
                     "displayName": {"en": "Canada"},
+                    "baseDisplayName": {"en": "Canada"},
+                    "unionDisplayName": {"en": "Dominion of Canada"},
                     "friendlyName": "Canada",
-                    "aliases": ["CAN", "Canada"],
+                    "aliases": ["CAN", "Canada", "Dominion of Canada"],
                 },
                 "SEN": {"tag": "SEN", "aliases": ["SEN"]},
             }
@@ -484,6 +559,7 @@ class CatalogBuilderTests(unittest.TestCase):
         )
 
         self.assertEqual(data["nationMeta"]["CAN"]["displayName"]["en"], "Canada")
+        self.assertEqual(data["nationMeta"]["CAN"]["unionDisplayName"]["en"], "Dominion of Canada")
         self.assertEqual(data["nationMeta"]["SEN"]["aliases"], ["SEN"])
         self.assertEqual(data["projects"]["Project_TestClaim"]["label"], "Test Claim Project")
         self.assertEqual(data["projects"]["Project_TestClaim"]["prerequisiteNodes"], ["Tech_Alpha"])
