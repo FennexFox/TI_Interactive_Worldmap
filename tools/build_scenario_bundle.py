@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
+# SPDX-License-Identifier: MIT
+
 """Assemble scenario-aware generated worldmap data from per-scenario outputs."""
 from __future__ import annotations
 

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
+// SPDX-License-Identifier: MIT
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const DEFAULT_COPY_CONTEXT = Object.freeze({copyIndex: 0, xOffset: 0, isCanonical: true});
 

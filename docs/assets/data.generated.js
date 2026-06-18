@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: LicenseRef-Terra-Invicta-Data
 
 async function decodeGzipBase64(base64Text) {
   const binary = atob(base64Text);

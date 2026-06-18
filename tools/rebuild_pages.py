@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
+# SPDX-License-Identifier: MIT
+
 """Rebuild Terra Invicta worldmap pages from local game data and optionally push.
 
 This mirrors the TI_Engine_Charts workflow: build generated data, build docs/, run

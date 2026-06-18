@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
+// SPDX-License-Identifier: MIT
+
 import { defineConfig } from '@playwright/test';
 
 const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;

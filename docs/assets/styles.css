@@ -1,3 +1,6 @@
+/* SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors */
+/* SPDX-License-Identifier: MIT */
+
   :root {
     --bg:#0b1020; --panel:#121a2b; --panel2:#0e1525; --text:#e8eefc; --muted:#98a6bd;
     --line:rgba(255,255,255,.12); --soft:rgba(255,255,255,.055); --accent:#91b7ff;

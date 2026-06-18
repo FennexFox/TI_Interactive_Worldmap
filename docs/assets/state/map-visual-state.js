@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
+// SPDX-License-Identifier: MIT
+
 export function createMapVisualState() {
   return {
     selectedRegionIds: new Set(),
