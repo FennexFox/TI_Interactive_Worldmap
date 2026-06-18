@@ -186,9 +186,11 @@
   .claim-overlay { pointer-events:none; stroke:rgba(255,255,255,.55); stroke-width:.012; vector-effect:non-scaling-stroke; mix-blend-mode:screen; }
   svg.claims-active .claim-overlay { mix-blend-mode:normal; filter: none; opacity: 1;}
   .claim-fill-group { pointer-events:none; stroke:none; mix-blend-mode:normal; filter:none; opacity:1; }
+  .claim-hatch-group { pointer-events:none; fill:none; stroke:none; mix-blend-mode:normal; filter:none; opacity:1; }
   .claim-fill-group.gated { opacity:.72; }
+  .claim-hatch-group.gated { opacity:.72; }
   .claim-overlay.peaceful { stroke:#9ee7ff; stroke-width:.015; }
-  .claim-overlay.hostile { stroke:var(--hostile); stroke-width:.023; }
+  .claim-hatch-line { fill:none; stroke:rgba(255,244,230,.96); stroke-width:1.5px; vector-effect:non-scaling-stroke; }
   .claim-overlay.capital { stroke-dasharray:.035 .018; stroke-width:.027; }
 
   #capitalMarkers { pointer-events:none; opacity:1; mix-blend-mode:normal; }
