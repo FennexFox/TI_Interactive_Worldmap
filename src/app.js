@@ -2796,13 +2796,11 @@ function updateMapViewControlsLabels() {
   const wrapLabel = controls.querySelector('[data-map-view-wrap-label]');
   const wrapTitle = t('mapWrap.warning');
   if (wrapToggle) {
-    wrapToggle.checked = worldWrapEnabled;
     wrapToggle.title = wrapTitle;
+    wrapToggle.setAttribute('aria-pressed', worldWrapEnabled ? 'true' : 'false');
     wrapToggle.setAttribute('aria-label', `${t('mapWrap.label')}. ${wrapTitle}`);
   }
   if (wrapLabel) wrapLabel.textContent = t('mapWrap.label');
-  const wrapControl = controls.querySelector('.mapViewWrapToggle');
-  if (wrapControl) wrapControl.title = wrapTitle;
 }
 function initMapViewControls() {
   if (!svgWrap || document.getElementById('mapViewControls')) return;
@@ -2813,18 +2811,17 @@ function initMapViewControls() {
     <button type="button" class="mapViewControl" data-map-view-action="zoomIn">+</button>
     <button type="button" class="mapViewControl" data-map-view-action="zoomOut">−</button>
     <button type="button" class="mapViewControl mapViewControlReset" data-map-view-action="reset">Reset</button>
-    <label class="mapViewWrapToggle">
-      <input type="checkbox" data-map-view-wrap-toggle>
+    <button type="button" class="mapViewControl mapViewWrapToggle" data-map-view-wrap-toggle aria-pressed="false">
       <span data-map-view-wrap-label></span>
-    </label>
+    </button>
   `;
-  controls.addEventListener('change', event => {
-    const toggle = event.target.closest('[data-map-view-wrap-toggle]');
-    if (!toggle) return;
-    setWorldWrapEnabled(toggle.checked);
-  });
   controls.addEventListener('click', event => {
-    if (event.target.closest('[data-map-view-wrap-toggle]')) return;
+    const wrapToggle = event.target.closest('[data-map-view-wrap-toggle]');
+    if (wrapToggle) {
+      event.preventDefault();
+      setWorldWrapEnabled(!worldWrapEnabled);
+      return;
+    }
     const button = event.target.closest('[data-map-view-action]');
     if (!button) return;
     event.preventDefault();

@@ -205,12 +205,12 @@ test('world-wrap defaults off and can be enabled from map controls', async ({ pa
   await expect(page.locator('#hitRegions .hit-copy')).toHaveCount(0);
   await expect(page.locator('#regions .region[data-region="Amazonia"]')).toHaveCount(1);
   const wrapToggle = page.locator('[data-map-view-wrap-toggle]');
-  await expect(wrapToggle).not.toBeChecked();
+  await expect(wrapToggle).toHaveAttribute('aria-pressed', 'false');
   await expect(wrapToggle).toHaveAttribute('title', /reduce performance/);
 
-  await wrapToggle.check();
+  await wrapToggle.click();
 
-  await expect(wrapToggle).toBeChecked();
+  await expect(wrapToggle).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#regions .region-copy')).toHaveCount(3);
   await expect(page.locator('#hitRegions .hit-copy')).toHaveCount(3);
   await expect(page.locator('#regions .region[data-region="Amazonia"]')).toHaveCount(3);
