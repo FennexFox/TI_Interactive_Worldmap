@@ -80,14 +80,14 @@
 
 ## Final Audit Checklist
 
-- [ ] Final diff reviewed against issue #62 and the user request.
-- [ ] Final diff reviewed against this master plan.
-- [ ] Phase acceptance criteria checked.
-- [ ] Validation results recorded.
-- [ ] Manual smoke test results recorded or explicitly deferred.
-- [ ] Generated-file policy followed.
-- [ ] Commit Audit completed.
-- [ ] Completion classification assigned honestly.
+- [x] Final diff reviewed against issue #62 and the user request.
+- [x] Final diff reviewed against this master plan.
+- [x] Phase acceptance criteria checked.
+- [x] Validation results recorded in phase docs, the issue #62 result document, and `.chatgpt/result.md`.
+- [x] Manual smoke test results explicitly deferred to focused Playwright and full e2e coverage; no separate manual browser smoke was recorded.
+- [x] Generated-file policy followed: forbidden generated outputs and measurement CSVs were not committed.
+- [x] Commit Audit completed.
+- [x] Completion classification assigned honestly: complete for the profiling contract, with no user-visible optimization kept.
 
 ## Commit Audit Requirements
 
