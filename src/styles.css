@@ -156,14 +156,48 @@
     color:#e8eefc;
     font-weight:800;
     box-shadow:0 6px 18px rgba(0,0,0,.26);
+    transition:background-color .12s ease, border-color .12s ease, color .12s ease, box-shadow .12s ease;
   }
   .mapViewControl:hover {
     background:rgba(34,48,82,.92);
     border-color:rgba(145,183,255,.38);
   }
+  .mapViewControl:active {
+    background:rgba(48,66,108,.96);
+    border-color:rgba(191,219,254,.7);
+    box-shadow:0 3px 10px rgba(0,0,0,.3);
+  }
   .mapViewControlReset {
     font-size:12px;
     font-weight:700;
+  }
+  .mapViewWrapToggle {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:64px;
+    font-size:12px;
+    font-weight:700;
+    white-space:nowrap;
+  }
+  .mapViewWrapToggle[aria-pressed="false"] {
+    background:rgba(11,16,32,.82);
+    border-color:rgba(255,255,255,.18);
+    color:#e8eefc;
+  }
+  .mapViewWrapToggle[aria-pressed="true"] {
+    background:#2563eb;
+    border-color:#93c5fd;
+    color:#f8fbff;
+    box-shadow:0 6px 18px rgba(37,99,235,.34), inset 0 0 0 1px rgba(255,255,255,.12);
+  }
+  .mapViewWrapToggle[aria-pressed="true"]:hover {
+    background:#1d4ed8;
+    border-color:#bfdbfe;
+  }
+  .mapViewWrapToggle[aria-pressed="true"]:active {
+    background:#1e40af;
+    border-color:#dbeafe;
   }
   svg { width:100%; height:100%; display:block; background: radial-gradient(circle at 50% 45%,#172033 0%,#0b1020 70%); }
   svg.world-wrap-enabled { cursor:grab; touch-action:none; user-select:none; }

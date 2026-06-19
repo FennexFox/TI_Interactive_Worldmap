@@ -14,14 +14,20 @@ const SEAM_CANDIDATES = [
   'SakhalinKurils',
 ];
 
-async function waitForSingleCopyMap(page, path = '/?worldWrap=0') {
+function pathWithQueryParam(path, name, value) {
+  const url = new URL(path, 'http://localhost');
+  url.searchParams.set(name, value);
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+async function waitForSingleCopyMap(page, path = '/') {
   await page.goto(path);
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
   await expect(page.locator('body')).not.toContainText('Failed to load generated Terra Invicta map data.');
 }
 
 async function waitForWrappedMap(page, path = '/') {
-  await page.goto(path);
+  await page.goto(pathWithQueryParam(path, 'worldWrap', '1'));
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
   await expect(page.locator('body')).not.toContainText('Failed to load generated Terra Invicta map data.');
 }
@@ -192,6 +198,50 @@ test('baseline hit layer resolves one canonical region for hover and click', asy
   await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
 });
 
+test('world-wrap defaults off and can be enabled from map controls', async ({ page }) => {
+  await waitForSingleCopyMap(page);
+
+  await expect(page.locator('#regions .region-copy')).toHaveCount(0);
+  await expect(page.locator('#hitRegions .hit-copy')).toHaveCount(0);
+  await expect(page.locator('#regions .region[data-region="Amazonia"]')).toHaveCount(1);
+  const wrapToggle = page.locator('[data-map-view-wrap-toggle]');
+  await expect(wrapToggle).toHaveAttribute('aria-pressed', 'false');
+  await expect(wrapToggle).toHaveAttribute('title', /reduce performance/);
+
+  await wrapToggle.click();
+
+  await expect(wrapToggle).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(async () => wrapToggle.evaluate(el => {
+    const color = getComputedStyle(el).backgroundColor;
+    const alphaMatch = color.match(/^rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)$/);
+    return alphaMatch ? Number(alphaMatch[1]) : 1;
+  })).toBeGreaterThan(0.8);
+  await expect(page.locator('#regions .region-copy')).toHaveCount(3);
+  await expect(page.locator('#hitRegions .hit-copy')).toHaveCount(3);
+  await expect(page.locator('#regions .region[data-region="Amazonia"]')).toHaveCount(3);
+  await expectProjectedCopies(page.locator('#hitRegions .region-hit[data-region="Amazonia"]'));
+});
+
+test('debug render stats reset preserves current world-wrap state', async ({ page }) => {
+  await waitForSingleCopyMap(page, '/?worldWrap=0&debugRenderStats=1');
+
+  const wrapToggle = page.locator('[data-map-view-wrap-toggle]');
+  await expect(wrapToggle).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#regions .region-copy')).toHaveCount(0);
+
+  await wrapToggle.click();
+  await expect(wrapToggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#regions .region-copy')).toHaveCount(3);
+
+  const stats = await page.evaluate(() => {
+    window.__TI_DEBUG_RENDER_STATS__.reset();
+    return {...window.__TI_DEBUG_RENDER_STATS__};
+  });
+
+  expect(stats.worldWrapDisabled).toBe(0);
+  expect(stats.worldCopyContextCount).toBe(3);
+});
+
 test('single-copy grouped base fills preserve region-specific hit paths and filtering', async ({ page }) => {
   await waitForSingleCopyMap(page);
 
@@ -323,6 +373,21 @@ test('project-specific hostile claims render hatch and follow claim kind filters
   await expect(page.locator('#claimOverlays .claim-overlay.hostile')).toHaveCount(5);
   await expect(page.locator('#claimOverlays .claim-hatch-group.hostile')).toHaveCount(5);
   await expect(page.locator('#claimOverlays .claim-overlay.peaceful')).toHaveCount(0);
+});
+
+test('hostile hatch can be disabled for performance diagnostics', async ({ page }) => {
+  await waitForSingleCopyMap(page, '/?worldWrap=0&debugRenderStats=1&disableHostileHatch=1');
+
+  await chooseNation(page, 'China', 'CHN');
+  await page.selectOption('#projectSel', 'Project_GreaterPanAsia');
+  await expect(page.locator('#claimOverlays .claim-overlay.hostile')).toHaveCount(5);
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile')).toHaveCount(0);
+  await expect(page.locator('#claimOverlays .claim-overlay.hostile[data-region="Hokkaido"]')).toHaveCount(1);
+  await expect(page.locator('#claimOverlays .claim-overlay.hostile[data-region="NorthHonshu"]')).toHaveCount(1);
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.hostileHatchDisabled).toBe(1);
+  expect(stats.worldWrapDisabled).toBe(1);
 });
 
 test('baseline selected overlays stay canonical across hover and claim controls', async ({ page }) => {
@@ -610,10 +675,12 @@ test('world-wrap default secondary capital hover projects foreign preview copies
   await waitForHoverPreviewFrame(page);
 
   await expect(page.locator('#claimPill')).toContainText('France');
-  await expectProjectedCopies(page.locator('#secondaryHoverOverlays .secondary-capital-preview[data-preview="secondary-capital"][data-nation="RUS"][data-region="Moskva"]'));
+  await expectProjectedCopies(page.locator('#secondaryHoverOverlays .secondary-capital-preview[data-preview="secondary-capital"][data-nation="RUS"][data-regions~="Moskva"]'));
   const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.overlayModelBuilds).toBe(0);
   expect(stats.secondaryHoverOverlayReplacements).toBeGreaterThan(0);
+  expect(stats.secondaryHoverOverlayPathCount).toBeGreaterThan(0);
+  expect(stats.secondaryHoverOverlayPathCount).toBeLessThan(stats.secondaryHoverOverlayRegionCount);
 });
 
 test('world-wrap default projects hover, selection, and foreign hover overlays', async ({ page }) => {
@@ -631,7 +698,7 @@ test('world-wrap default projects hover, selection, and foreign hover overlays',
   const copiedOntario = page.locator('#hitRegions .region-hit[data-region="Ontario"][data-wrap-copy="1"]');
   await copiedOntario.dispatchEvent('pointerover', { bubbles: true, clientX: 140, clientY: 140, pointerType: 'mouse' });
   await copiedOntario.dispatchEvent('pointermove', { bubbles: true, clientX: 146, clientY: 146, pointerType: 'mouse' });
-  await expectProjectedCopies(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="CAN"][data-region="Ontario"]'));
+  await expectProjectedCopies(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="CAN"][data-regions~="Ontario"]'));
 });
 
 test('world-wrap seam candidate geometry stays split into local subpaths', async ({ page }) => {

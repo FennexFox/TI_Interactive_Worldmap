@@ -34,6 +34,7 @@ Generated and derived paths include:
 - `docs/index.html`
 - `docs/assets/**`
 - `docs/data/**`
+- `graphify-out/**`
 - `node_modules/**`
 - `__pycache__/**`
 - `.pytest_cache/**`
@@ -55,6 +56,8 @@ For these paths:
 - It is acceptable to inspect a small targeted slice of a generated file only when debugging a failing generator or verifier. Keep the slice minimal and state why it was needed.
 
 When reporting changes, summarize generated artifact changes at a high level, for example: “rebuilt docs and generated catalogs from updated source,” rather than reviewing the generated diff.
+
+For `graphify-out/**`, summarize it as refreshed Graphify output when it changes. Do not review `graphify-out/graph.json`, `graphify-out/graph.html`, or `graphify-out/GRAPH_REPORT.md` as source changes; use them only as navigation aids and verify any findings against the real source files.
 
 ## Preferred Source Paths
 
