@@ -54,3 +54,20 @@ All verification passed, including the full Playwright suite with 75 passing tes
 - Verification for the follow-up pass: `npm run build`, `npm run measure:render-stats -- --repeats=5 --zoom-steps=0,2,4,6` before and after the kept change, `npm run verify`, `npx playwright test tests/map-wrap.spec.js`, and `npm run test:e2e`.
 - Manual/smoke coverage reported: default world-wrap off, wrap toggle on/off, claim overlays, hostile hatching, hover overlays, labels, pinned markers, and Korean/English language refresh.
 - Caveats and follow-ups: frame-time max values remain noisy, with a retained worst-row `wrap-on` max of 10.800 ms after the kept change. If future evidence shows overlay rebuild churn outside current pan/hover tests, extend `tools/measure_debug_render_stats.mjs` with rebuild-counter columns before changing render gating.
+
+## Baseline Overlay Profiling Run
+
+- Run ID: `2026-06-19T091000Z-baseline-overlay-profiling`
+- Commits created:
+  - `91c8e57` `Profile baseline overlay layers`
+  - current HEAD `Record baseline overlay profiling results`
+- Completion classification: preparation / instrumentation only.
+- Fresh baseline CSV: `.chatgpt/tool-tests/render-stats/debug-render-stats-2026-06-19T09-46-24-773Z.summary.csv`
+- Setup validation: 100 rows, all `setupOk=true`, all `setupFailures` empty.
+- Added render-stat coverage for claim fill/outline path and use counts, hatch groups/paths/clip paths, claim labels, hit paths, labels, hover overlays, selection outlines, manual envelope overlays, pinned markers, total clip paths, and overlay replacement counters.
+- Added `wrap-off-complex-overlays`, a single-copy scenario that selects China / Greater Pan-Asia, keeps extra pinned nations, enables labels, and primes hover overlays.
+- Baseline `wrap-off-complex-overlays`: median `panFrameMsMax=3.750 ms`, median `panFrameMsAvg=0.536 ms`, median `visibleSvgNodeCount=1315`.
+- Largest single-copy contributors: `hitPathCount=363`, `labelCount=363`, `claimOutlinePathCount=56`, `claimHatchGroupCount=5`, `claimClipPathCount=5`, `setupForeignHoverOverlayPathCount=3`.
+- Decision: no compound visual overlay optimization was kept. Existing helpers already group claim fills and foreign/secondary hover fills; the only meaningful visual candidate was grouping 56 per-region claim outlines, but tests and DOM semantics intentionally preserve those per-region outline nodes.
+- Verification: `npm run build`, `npm run measure:render-stats -- --repeats=5 --zoom-steps=0,2,4,6`, `npm run verify`, `npx playwright test tests/map-wrap.spec.js`, `npm run test:e2e`, and a focused Playwright smoke script for default wrap off, wrap toggle, claims, hostile hatch, hover overlays, labels, pinned panel, and Korean/English language refresh.
+- Follow-up recommendation: profile label rendering/toggling ergonomics next, or open a broader renderer-strategy investigation for labels and hybrid Canvas/SVG visuals while preserving hit paths and semantic overlays.
