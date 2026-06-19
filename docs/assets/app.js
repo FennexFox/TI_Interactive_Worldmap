@@ -274,6 +274,24 @@ function createDebugRenderStats(staticValues = {}) {
     'gridRebuildsDuringPan',
     'panSvgRectReads',
     'visibleSvgNodeCount',
+    'claimOverlayPathCount',
+    'claimOverlayUseCount',
+    'claimFillPathCount',
+    'claimFillUseCount',
+    'claimOutlinePathCount',
+    'claimOutlineUseCount',
+    'claimHatchGroupCount',
+    'claimHatchPathCount',
+    'claimClipPathCount',
+    'claimLabelCount',
+    'hitPathCount',
+    'labelCount',
+    'selectionOutlinePathCount',
+    'hoverOutlinePathCount',
+    'hoverClaimPreviewOverlayPathCount',
+    'manualEnvelopeOverlayPathCount',
+    'pinnedRegionMarkerCount',
+    'totalClipPathCount',
     'worldWrapDisabled',
     'worldCopyContextCount',
     'hostileHatchDisabled',
@@ -286,6 +304,9 @@ function createDebugRenderStats(staticValues = {}) {
   const resetStats = () => {
     for (const key of keys) stats[key] = 0;
     Object.assign(stats, staticValues);
+    stats.hostileHatchDisabled = hostileClaimHatchingDisabled ? 1 : 0;
+    stats.worldWrapDisabled = worldWrapEnabled ? 0 : 1;
+    stats.worldCopyContextCount = worldCopyContexts.length;
   };
   const defineDynamicStat = (key, getter) => {
     Object.defineProperty(stats, key, {
@@ -3060,9 +3081,33 @@ function measurePanViewportRect() {
   recordRenderStat('panSvgRectReads');
   return svg?.getBoundingClientRect();
 }
-function samplePanSvgNodeCount() {
+function sampleDebugSvgLayerCounts() {
   if (!debugRenderStats || !svg) return;
+  const count = selector => svg.querySelectorAll(selector).length;
   setRenderStat('visibleSvgNodeCount', svg.querySelectorAll('*').length);
+  setRenderStat('claimOverlayPathCount', count('#claimOverlays path'));
+  setRenderStat('claimOverlayUseCount', count('#claimOverlays use'));
+  setRenderStat('claimFillPathCount', count('#claimOverlays path.claim-fill-group'));
+  setRenderStat('claimFillUseCount', count('#claimOverlays use.claim-fill-group'));
+  setRenderStat('claimOutlinePathCount', count('#claimOverlays path.claim-overlay'));
+  setRenderStat('claimOutlineUseCount', count('#claimOverlays use.claim-overlay'));
+  setRenderStat('claimHatchGroupCount', count('#claimOverlays .claim-hatch-group'));
+  setRenderStat('claimHatchPathCount', count('#claimOverlays .claim-hatch-line'));
+  setRenderStat('claimClipPathCount', count('#claimOverlays clipPath'));
+  setRenderStat('claimLabelCount', count('#claimLabels text.claim-label'));
+  setRenderStat('hitPathCount', count('#hitRegions path.region-hit'));
+  setRenderStat('labelCount', count('#labels text.label'));
+  setRenderStat('selectionOutlinePathCount', count('#selectionOutlines path'));
+  setRenderStat('hoverOutlinePathCount', count('#hoverOutlines path'));
+  setRenderStat('hoverClaimPreviewOverlayPathCount', count('#hoverClaimPreviewOverlays path'));
+  setRenderStat('foreignHoverOverlayPathCount', count('#foreignHoverOverlays path'));
+  setRenderStat('secondaryHoverOverlayPathCount', count('#secondaryHoverOverlays path'));
+  setRenderStat('manualEnvelopeOverlayPathCount', count('#manualEnvelopeOverlays path'));
+  setRenderStat('pinnedRegionMarkerCount', count('#pinnedRegionMarkers .pinned-region-marker'));
+  setRenderStat('totalClipPathCount', count('clipPath'));
+}
+function samplePanSvgNodeCount() {
+  sampleDebugSvgLayerCounts();
 }
 function viewDeltaFromPointerDelta(deltaX, deltaY, rect = null) {
   const viewportRect = rect || measurePanViewportRect();

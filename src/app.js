@@ -304,6 +304,9 @@ function createDebugRenderStats(staticValues = {}) {
   const resetStats = () => {
     for (const key of keys) stats[key] = 0;
     Object.assign(stats, staticValues);
+    stats.hostileHatchDisabled = hostileClaimHatchingDisabled ? 1 : 0;
+    stats.worldWrapDisabled = worldWrapEnabled ? 0 : 1;
+    stats.worldCopyContextCount = worldCopyContexts.length;
   };
   const defineDynamicStat = (key, getter) => {
     Object.defineProperty(stats, key, {

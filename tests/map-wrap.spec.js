@@ -222,6 +222,26 @@ test('world-wrap defaults off and can be enabled from map controls', async ({ pa
   await expectProjectedCopies(page.locator('#hitRegions .region-hit[data-region="Amazonia"]'));
 });
 
+test('debug render stats reset preserves current world-wrap state', async ({ page }) => {
+  await waitForSingleCopyMap(page, '/?worldWrap=0&debugRenderStats=1');
+
+  const wrapToggle = page.locator('[data-map-view-wrap-toggle]');
+  await expect(wrapToggle).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#regions .region-copy')).toHaveCount(0);
+
+  await wrapToggle.click();
+  await expect(wrapToggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#regions .region-copy')).toHaveCount(3);
+
+  const stats = await page.evaluate(() => {
+    window.__TI_DEBUG_RENDER_STATS__.reset();
+    return {...window.__TI_DEBUG_RENDER_STATS__};
+  });
+
+  expect(stats.worldWrapDisabled).toBe(0);
+  expect(stats.worldCopyContextCount).toBe(3);
+});
+
 test('single-copy grouped base fills preserve region-specific hit paths and filtering', async ({ page }) => {
   await waitForSingleCopyMap(page);
 
