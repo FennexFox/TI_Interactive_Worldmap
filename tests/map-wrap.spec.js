@@ -14,14 +14,20 @@ const SEAM_CANDIDATES = [
   'SakhalinKurils',
 ];
 
-async function waitForSingleCopyMap(page, path = '/?worldWrap=0') {
+function pathWithQueryParam(path, name, value) {
+  const url = new URL(path, 'http://localhost');
+  url.searchParams.set(name, value);
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+async function waitForSingleCopyMap(page, path = '/') {
   await page.goto(path);
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
   await expect(page.locator('body')).not.toContainText('Failed to load generated Terra Invicta map data.');
 }
 
 async function waitForWrappedMap(page, path = '/') {
-  await page.goto(path);
+  await page.goto(pathWithQueryParam(path, 'worldWrap', '1'));
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
   await expect(page.locator('body')).not.toContainText('Failed to load generated Terra Invicta map data.');
 }
@@ -190,6 +196,25 @@ test('baseline hit layer resolves one canonical region for hover and click', asy
   await expect(page.locator('#search')).toHaveValue('');
   await expect(page.locator('#claimPill')).toHaveText('Claims: -');
   await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
+});
+
+test('world-wrap defaults off and can be enabled from map controls', async ({ page }) => {
+  await waitForSingleCopyMap(page);
+
+  await expect(page.locator('#regions .region-copy')).toHaveCount(0);
+  await expect(page.locator('#hitRegions .hit-copy')).toHaveCount(0);
+  await expect(page.locator('#regions .region[data-region="Amazonia"]')).toHaveCount(1);
+  const wrapToggle = page.locator('[data-map-view-wrap-toggle]');
+  await expect(wrapToggle).not.toBeChecked();
+  await expect(wrapToggle).toHaveAttribute('title', /reduce performance/);
+
+  await wrapToggle.check();
+
+  await expect(wrapToggle).toBeChecked();
+  await expect(page.locator('#regions .region-copy')).toHaveCount(3);
+  await expect(page.locator('#hitRegions .hit-copy')).toHaveCount(3);
+  await expect(page.locator('#regions .region[data-region="Amazonia"]')).toHaveCount(3);
+  await expectProjectedCopies(page.locator('#hitRegions .region-hit[data-region="Amazonia"]'));
 });
 
 test('single-copy grouped base fills preserve region-specific hit paths and filtering', async ({ page }) => {

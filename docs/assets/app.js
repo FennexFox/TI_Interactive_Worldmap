@@ -87,10 +87,10 @@ const appData = createAppData(generatedData || {});
 function shouldEnableWorldWrap() {
   try {
     const value = new URLSearchParams(window.location.search).get('worldWrap');
-    if (value === null) return true;
+    if (value === null) return false;
     return !['0', 'false', 'off'].includes(value.toLowerCase());
   } catch {
-    return true;
+    return false;
   }
 }
 function createWorldCopyContexts(mapView, {enabled = false} = {}) {
@@ -108,8 +108,8 @@ setActiveScenarioId(appState, appData.defaultScenario);
 const mapVisualState = createMapVisualState();
 let activeData = getActiveData(appData, appState.activeScenarioId);
 const mapView = initializeMapView(activeData);
-const worldWrapEnabled = shouldEnableWorldWrap();
-const worldCopyContexts = createWorldCopyContexts(mapView, {enabled: worldWrapEnabled});
+let worldWrapEnabled = shouldEnableWorldWrap();
+let worldCopyContexts = createWorldCopyContexts(mapView, {enabled: worldWrapEnabled});
 function copyContextRenderKey(copyContexts = worldCopyContexts) {
   return normalizeWorldCopyContexts(copyContexts)
     .map(context => `${context.copyIndex}:${context.xOffset}:${context.isCanonical ? 1 : 0}`)
@@ -325,6 +325,10 @@ function setRenderStat(key, value) {
   if (!debugRenderStats) return;
   debugRenderStats[key] = Number.isFinite(Number(value)) ? Number(value) : 0;
 }
+function syncWorldWrapDebugStats() {
+  setRenderStat('worldWrapDisabled', worldWrapEnabled ? 0 : 1);
+  setRenderStat('worldCopyContextCount', worldCopyContexts.length);
+}
 function recordRenderTiming(key, value) {
   if (!debugRenderStats) return;
   const ms = Math.max(0, Number(value) || 0);
@@ -357,6 +361,8 @@ const I18N = {
     'section.explore': '탐색 및 선택',
     'scenario.label': '시작 시나리오',
     'scenario.summary': '{scenario} · 지역 {regions}개 · 국가 {nations}개 · 영유권 행 {claims}개 · 프로젝트 {projects}개',
+    'mapWrap.label': '월드 랩',
+    'mapWrap.warning': '복잡한 오버레이가 보일 때 성능이 낮아질 수 있습니다.',
     'search.label': '국가/지역 검색 및 선택',
     'search.placeholder': '국가 태그, 지역명, 프로젝트명 입력: CHN, Korea, Greater India...',
     'search.help': '입력창을 클릭하면 국가 목록이 열립니다. 입력하면 국가, 지역, 영유권 프로젝트 목록이 필터링되고, 항목을 클릭하면 선택됩니다. 빈 지도 공간을 클릭하면 고정된 확장 노드와 선택이 함께 해제됩니다.',
@@ -492,6 +498,8 @@ const I18N = {
     'section.explore': 'Explore and Select',
     'scenario.label': 'Start scenario',
     'scenario.summary': '{scenario} · {regions} regions · {nations} nations · {claims} claim rows · {projects} projects',
+    'mapWrap.label': 'World wrap',
+    'mapWrap.warning': 'It may reduce performance when complex overlays are visible.',
     'search.label': 'Search and select nation/region',
     'search.placeholder': 'Enter a nation tag, region, or project: CHN, Korea, Greater India...',
     'search.help': 'Click the field to open the nation list. Typing filters nations, regions, and claim projects; click an item to select it. Click empty map space to clear the selection and pinned expansion nodes together.',
@@ -2704,6 +2712,29 @@ function renderRegions(renderContext = {}) {
   applyFilters();
   updateNationOverlay(getCurrentNation());
 }
+function rerenderWorldWrapLayers() {
+  if (!worldWrapEnabled) panMapView(mapView, {dx: 0, dy: 0, normalizeX: false});
+  applyMapViewToSvg();
+  resetScenarioRenderKeys();
+  renderGrid({mapView});
+  renderRegions({mapView});
+  renderSelectionOutlines();
+  renderPinnedRegionMarkers();
+  renderCapitalMarkers({force: true});
+  refreshReachableCapitalCandidateOutputs(currentOverlayModel);
+  applyFilters(true);
+  updateSelectedRegions();
+}
+function setWorldWrapEnabled(enabled) {
+  const nextEnabled = !!enabled;
+  if (worldWrapEnabled === nextEnabled) return;
+  worldWrapEnabled = nextEnabled;
+  worldCopyContexts = createWorldCopyContexts(mapView, {enabled: worldWrapEnabled});
+  svg?.classList.toggle('world-wrap-enabled', worldWrapEnabled);
+  syncWorldWrapDebugStats();
+  updateMapViewControlsLabels();
+  rerenderWorldWrapLayers();
+}
 function renderLabels(renderContext = {}) {
   renderLabelsLayer({
     layer: gLabels,
@@ -2760,6 +2791,17 @@ function updateMapViewControlsLabels() {
     button.setAttribute('aria-label', label);
     if (action === 'reset') button.textContent = currentLanguage === 'ko' ? '초기화' : 'Reset';
   });
+  const wrapToggle = controls.querySelector('[data-map-view-wrap-toggle]');
+  const wrapLabel = controls.querySelector('[data-map-view-wrap-label]');
+  const wrapTitle = t('mapWrap.warning');
+  if (wrapToggle) {
+    wrapToggle.checked = worldWrapEnabled;
+    wrapToggle.title = wrapTitle;
+    wrapToggle.setAttribute('aria-label', `${t('mapWrap.label')}. ${wrapTitle}`);
+  }
+  if (wrapLabel) wrapLabel.textContent = t('mapWrap.label');
+  const wrapControl = controls.querySelector('.mapViewWrapToggle');
+  if (wrapControl) wrapControl.title = wrapTitle;
 }
 function initMapViewControls() {
   if (!svgWrap || document.getElementById('mapViewControls')) return;
@@ -2770,8 +2812,18 @@ function initMapViewControls() {
     <button type="button" class="mapViewControl" data-map-view-action="zoomIn">+</button>
     <button type="button" class="mapViewControl" data-map-view-action="zoomOut">−</button>
     <button type="button" class="mapViewControl mapViewControlReset" data-map-view-action="reset">Reset</button>
+    <label class="mapViewWrapToggle">
+      <input type="checkbox" data-map-view-wrap-toggle>
+      <span data-map-view-wrap-label></span>
+    </label>
   `;
+  controls.addEventListener('change', event => {
+    const toggle = event.target.closest('[data-map-view-wrap-toggle]');
+    if (!toggle) return;
+    setWorldWrapEnabled(toggle.checked);
+  });
   controls.addEventListener('click', event => {
+    if (event.target.closest('[data-map-view-wrap-toggle]')) return;
     const button = event.target.closest('[data-map-view-action]');
     if (!button) return;
     event.preventDefault();
