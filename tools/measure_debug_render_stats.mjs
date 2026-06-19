@@ -399,10 +399,10 @@ async function main() {
     });
     const page = await browser.newPage({ viewport: { width: 1400, height: 950 } });
     const scenarios = [
-      { name: 'default', query: 'debugRenderStats=1' },
-      { name: 'disable-hatch', query: 'debugRenderStats=1&disableHostileHatch=1' },
-      { name: 'no-wrap', query: 'debugRenderStats=1&worldWrap=0' },
-      { name: 'no-wrap-disable-hatch', query: 'debugRenderStats=1&worldWrap=0&disableHostileHatch=1' },
+      { name: 'wrap-off', query: 'debugRenderStats=1&worldWrap=0' },
+      { name: 'wrap-off-disable-hatch', query: 'debugRenderStats=1&worldWrap=0&disableHostileHatch=1' },
+      { name: 'wrap-on', query: 'debugRenderStats=1&worldWrap=1' },
+      { name: 'wrap-on-disable-hatch', query: 'debugRenderStats=1&worldWrap=1&disableHostileHatch=1' },
     ];
     const results = [];
 
