@@ -1,12 +1,12 @@
-# SVG Overlay Optimization Iteration
+# SVG Overlay Optimization Follow-Up Pass
 
 ## Issue Target And Scope Summary
 
-- Issue target: issue 16 local performance loop
-- Title: SVG overlay performance optimization loop, one measured iteration
+- Issue target: issue 16 local performance loop follow-up run `2026-06-19T044000Z-svg-overlay-follow-up-e2e`
+- Title: SVG overlay performance optimization loop, follow-up pass
 - Source plan: `dev-docs/plan/issue_16/svg-overlay-optimization-loop-plan.md`
 - Work type: performance
-- Scope: perform one bounded measurement-driven optimization iteration, commit accepted work, and document before/after evidence.
+- Scope: run a fresh baseline from the current worktree, investigate the `wrap-on-disable-hatch` regression after the `<use>` optimization, then proceed through hostile hatch overhead and overlay rebuild gating phases with before/after CSV evidence.
 
 ## Plan Contract
 
@@ -16,49 +16,54 @@
 - Baseline metrics or gathering plan: gather baseline CSV before source optimization and use median values over repeats for noisy timing metrics.
 - Expected performance mechanism: reduce SVG overlay copy/path/node work in expensive claim/hostile/world-wrap scenarios while keeping pan mostly viewBox-only.
 - Before/after comparison method: compare baseline and after CSVs for median `panFrameMsMax`, `panFrameMsAvg`, `visibleSvgNodeCount`, and `setupClaimOverlayPathCount`, plus worst retained row as a secondary signal.
-- Non-success outcome: revert source optimization and document the iteration as not kept if metrics fail the threshold or correctness/verification fails.
-- Implementation scope: run baseline measurements, make one focused SVG overlay optimization, rerun equivalent measurements and required tests, keep only evidence-supported changes, and document results.
-- Non-goals: no renderer rewrite, no removal of hostile hatching, no removal of world-wrap support, no correctness tradeoff for faster rendering, no second optimization iteration without explicit follow-up.
-- Acceptance criteria that can fail: setup validation remains true, required tests pass, visual smoke is checked, and at least one primary metric meets the source plan's meaningful-improvement threshold without significant regression.
+- Non-success outcome: revert unsafe source optimizations or record no-safe-improvement outcomes with evidence when metrics are noisy, regress, or do not meet the loop threshold.
+- Implementation scope: run baseline measurements, investigate the follow-up regression, attempt hostile hatch overhead and overlay rebuild gating phases, rerun equivalent measurements for any candidate kept change, and document decisions.
+- Non-goals: no renderer rewrite, no removal of hostile hatching, no removal of hostile claims overlay, no removal of world-wrap support, no correctness tradeoff for faster rendering, no committing unrelated files or generated measurement artifacts.
+- Acceptance criteria that can fail: setup validation remains true, required tests pass for kept changes, visual smoke is checked, and each phase either has a kept evidence-supported change or an evidence-supported no-safe-improvement/follow-up decision.
 - Validation commands: `npm run build`; `npm run measure:render-stats -- --repeats=5 --zoom-steps=0,2,4,6`; `npm run verify`; `npx playwright test tests/map-wrap.spec.js`; final confidence with `npm run test:e2e` if the change is kept.
 - Manual smoke tests: default wrap off, enable wrap, pan across seam, select China Greater Pan-Asia, confirm hostile hatch/claims/pins/hover/labels, toggle wrap off/on, check Korean and English wrap warning text.
-- Files likely to change: `src/app.js`, `src/render/map-layers.js`, `tools/measure_debug_render_stats.mjs`, `tests/map-wrap.spec.js`, report markdown under `dev-docs/plan/issue_16/`, and rebuilt `docs/assets/**` only when source changes require it.
-- Files that must not change: generated/data catalogs unless a verifier requires them; external game-derived data; unrelated app behavior.
-- Generated artifact policy: edit source first, run `npm run build`, include rebuilt Pages assets only for changed source assets, and summarize generated changes rather than hand-reviewing generated output.
+- Files likely to change: `src/app.js`, `src/render/map-layers.js`, `tools/measure_debug_render_stats.mjs`, `tests/*.spec.js`, report markdown under `dev-docs/plan/issue_16/`, and this run's `.chatgpt/.../RESULT.md`.
+- Files that must not change: `docs/assets/**` in the final diff, committed measurement CSVs, external game-derived data, unrelated app behavior, unrelated `.chatgpt/**`.
+- Generated artifact policy: `npm run build` may be used to prepare local measurement assets, but checked-in `docs/assets/**` changes are forbidden for this prompt run and must be reverted from the final worktree unless explicitly requested later.
 - Stop conditions: three iterations attempted, metrics do not improve meaningfully, correctness becomes uncertain, the next likely improvement requires broad rewrite, or verification cost becomes disproportionate.
 
 ## Strategy
 
 - Use the source loop plan as the measurement and rollback contract.
-- Execute only Phase 1 in this goal.
-- Prefer small SVG node/path-count reductions in world-wrap or hostile overlay paths because the plan identifies those as the most likely cost centers.
-- Treat measurement evidence as authoritative; revert the source change if metrics or tests do not justify keeping it.
+- Treat `.chatgpt/codex-runs/2026-06-19T044000Z-svg-overlay-follow-up-e2e/PROMPT.md` as the prompt-run contract where it narrows commits and generated asset handling.
+- Re-run the full measurement matrix from the current worktree before source edits.
+- Start from the `wrap-on-disable-hatch` regression, then attempt Phase 2 hostile hatch overhead and Phase 3 overlay rebuild gating in order.
+- Prefer small, reversible changes with direct measurement evidence; record no-safe-improvement outcomes honestly.
 
 ## Phase Order
 
-1. [Phase 1: One measured optimization iteration](01-measured-optimization.md)
+1. [Phase 1: Prior measured optimization iteration](01-measured-optimization.md)
+2. [Phase 2: Follow-up regression and hostile hatch overhead](02-follow-up-regression-hostile-hatch.md)
+3. [Phase 3: Overlay rebuild gating](03-overlay-rebuild-gating.md)
 
 ## Phase Dependencies
 
-- Phase 1 depends on the source loop plan and the current measurement script emitting explicit wrap-on rows.
-- No later phase is planned for this objective.
+- Phase 2 depends on the prior `<use>` optimization and the current measurement script emitting explicit wrap-on rows.
+- Phase 3 depends on Phase 2 being completed or safely recorded with no kept change.
 
 ## Source Of Truth Decisions
 
 - `svg-overlay-optimization-loop-plan.md` remains the source of truth for loop rules, metrics, thresholds, smoke tests, and reporting format.
-- This phased plan exists to make the single requested iteration helper-gated and auditable.
+- `.chatgpt/codex-runs/2026-06-19T044000Z-svg-overlay-follow-up-e2e/PROMPT.md` is the source of truth for this run's commit and generated-asset constraints: keep relevant verified work in focused commits, but exclude unrelated files, generated measurement CSVs, and `docs/assets/**` unless explicitly requested.
+- This phased plan records how the existing issue 16 loop is extended for the follow-up prompt.
 - Current source and command output are authoritative over prior conversation context.
 
 ## Generated-file Policy
 
 - Do not hand-edit `docs/assets/**`.
-- Rebuild checked-in Pages assets with `npm run build` after source changes.
-- Include only expected generated app/style asset changes in the phase commit.
+- `npm run build` is required for local measurement setup.
+- Do not keep `docs/assets/**` changes in the final diff for this prompt run.
 
 ## Global Validation Expectations
 
 - Baseline and after CSVs must be recorded.
-- `npm run verify` must pass before a kept source change is committed.
+- Measurement CSVs are generated locally under `.chatgpt/tool-tests/render-stats/**` but must not be committed or edited manually.
+- `npm run verify` must pass before reporting a kept source change.
 - `npx playwright test tests/map-wrap.spec.js` must pass.
 - `npm run test:e2e` should pass for final confidence when a kept source change affects user-visible map behavior.
 
@@ -66,32 +71,31 @@
 
 - Browser timing measurements are noisy; compare median values over repeats and treat single worst rows as secondary evidence.
 - Reducing copied overlay layers can break seam correctness, so wrap tests and visual smoke matter as much as path counts.
-- The measurement scenario may reveal no keepable optimization in one iteration; that is a valid outcome if documented honestly.
+- Phase 2 or Phase 3 may reveal no safe measurable improvement; that is acceptable if documented with evidence.
+- `.chatgpt/result.md` and this run's `RESULT.md` may be updated as reporting files. Other `.chatgpt/**` files should not be edited manually, and generated measurement CSVs should not be committed.
 
 ## Completion Classification Rules
 
-- Complete: one iteration has baseline/after evidence, a justified kept or reverted decision, required validation, report documentation, and commits.
-- Partially complete: baseline and implementation happened but some required validation or documentation is missing.
+- Complete: fresh baseline exists; follow-up regression, Phase 2, and Phase 3 each have kept or no-safe-improvement decisions with evidence; required validation/smoke is recorded; final `RESULT.md` is written; final diff respects prompt path constraints.
+- Partially complete: baseline and some phases completed but some required validation, phase decision, or documentation is missing.
 - Preparation / instrumentation only: only measurement/reporting/planning changed, without demonstrated performance improvement.
 - Blocked: measurement or verification cannot run after repeated attempts due an external blocker.
 - Needs follow-up issue: the next improvement requires broader renderer redesign or additional investigation outside this iteration.
 
 ## Final Audit Checklist
 
-- [x] Final diff reviewed against objective and source loop plan.
-- [x] Final diff reviewed against this master plan.
-- [x] Phase acceptance criteria checked.
-- [x] Validation results recorded.
-- [x] Manual smoke test results recorded or explicitly deferred.
-- [x] Generated-file policy followed.
-- [x] Commit Audit completed.
-- [x] Completion classification assigned honestly.
-
-Completion classification: Complete. One measured iteration has baseline and after CSVs, a kept decision with caveat, required validation, smoke evidence, report documentation, and commits.
+- [ ] Final diff reviewed against objective and source loop plan.
+- [ ] Final diff reviewed against this master plan.
+- [ ] Phase acceptance criteria checked.
+- [ ] Validation results recorded.
+- [ ] Manual smoke test results recorded or explicitly deferred.
+- [ ] Generated-file policy followed.
+- [ ] Commit Audit completed.
+- [ ] Completion classification assigned honestly.
 
 ## Commit Audit Requirements
 
-- Phase-sized commits must exist for planning/reporting setup and for any kept implementation change.
-- Each commit must exclude unrelated work.
-- Generated Pages assets must be committed only when regenerated from source changes by `npm run build`.
-- If a source optimization is reverted because evidence does not justify it, commit only the report documentation and any accepted measurement/planning changes.
+- Kept, relevant source/test/planning/report changes should be staged and committed in focused local commits after verification.
+- Do not stage or commit unrelated files.
+- Do not commit generated measurement CSV files under `.chatgpt/tool-tests/render-stats/**`.
+- Generated Pages assets under `docs/assets/**` must not remain in the final diff unless explicitly requested later.
