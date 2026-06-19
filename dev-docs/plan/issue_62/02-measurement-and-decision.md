@@ -66,19 +66,29 @@
 
 ## Evidence
 
-- Baseline:
-- After:
-- Delta:
-- Interpretation:
+- Baseline: the measurement script compared wrap/overlay scenarios but did not provide label-on versus labels-suppressed A/B rows or interaction-specific label rebuild counters.
+- After: the script emits paired label scenarios for `worldWrap=0`, `worldWrap=0` complex overlays, `worldWrap=1`, and `worldWrap=1` complex overlays. It records label copy counts, wrapped label counts, label render/replacement counters, zoom counters, and interaction probes for hover, wrap toggle, and language refresh.
+- Delta: full measurement produced 160 rows at `.chatgpt/tool-tests/render-stats/debug-render-stats-2026-06-19T11-50-09-796Z.summary.csv`. Labels added 363 text nodes without wrap and 1089 text nodes with wrap; mean sampled pan cost rose by about 0.08-0.21 ms depending on scenario.
+- Interpretation: labels are measurable steady-state SVG node weight, but not a rebuild hotspot in the measured interactions. The evidence does not justify a user-visible label optimization in this pass.
 
 ## Progress
 
-- Pending Phase 1.
+- Completed.
 
 ## Decision log
 
-- Pending.
+- Kept the work instrumentation-only. The measured label cost is real but small in absolute pan-frame terms and does not identify labels as the primary bottleneck.
+- Preserved generated measurement CSV output as an uncommitted local artifact only.
 
 ## Outcomes / Retrospective
 
-- Pending.
+- Result document: `dev-docs/plan/issue_62/issue-62-label-rendering-profile-result.md`.
+- Validation:
+  - `rtk npm run build` passed; generated `docs/assets/app.js` was restored because `docs/assets/**` is excluded from this task.
+  - `rtk node --check tools/measure_debug_render_stats.mjs` passed.
+  - `rtk npm run measure:render-stats -- --repeats=1 --zoom-steps=0 --summary-json` passed as a smoke run.
+  - `rtk npm run measure:render-stats -- --repeats=5 --zoom-steps=0,2,4,6` passed.
+  - `rtk npm run verify` passed.
+  - `rtk npx playwright test tests/map-wrap.spec.js` passed.
+  - `rtk npx playwright test tests/language.spec.js` passed.
+  - `rtk npm run test:e2e` passed.
