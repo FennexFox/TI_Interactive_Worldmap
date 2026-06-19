@@ -78,14 +78,16 @@
 
 ## Final Audit Checklist
 
-- [ ] Final diff reviewed against objective and source loop plan.
-- [ ] Final diff reviewed against this master plan.
-- [ ] Phase acceptance criteria checked.
-- [ ] Validation results recorded.
-- [ ] Manual smoke test results recorded or explicitly deferred.
-- [ ] Generated-file policy followed.
-- [ ] Commit Audit completed.
-- [ ] Completion classification assigned honestly.
+- [x] Final diff reviewed against objective and source loop plan.
+- [x] Final diff reviewed against this master plan.
+- [x] Phase acceptance criteria checked.
+- [x] Validation results recorded.
+- [x] Manual smoke test results recorded or explicitly deferred.
+- [x] Generated-file policy followed.
+- [x] Commit Audit completed.
+- [x] Completion classification assigned honestly.
+
+Completion classification: Complete. One measured iteration has baseline and after CSVs, a kept decision with caveat, required validation, smoke evidence, report documentation, and commits.
 
 ## Commit Audit Requirements
 

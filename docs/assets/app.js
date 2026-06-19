@@ -818,6 +818,7 @@ function applyStaticTranslations() {
   document.querySelectorAll('[data-i18n-aria-label]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAriaLabel)); });
   if (languageSel) languageSel.value = currentLanguage;
   syncScenarioControls();
+  updateMapViewControlsLabels();
   updateReachableCapitalsButtonState();
   updateAsideCardControls();
 }
@@ -4175,6 +4176,10 @@ function hatchClipId(namespace, descriptor, copyContext, index) {
   const copy = String(copyContext.copyIndex).replace(/[^A-Za-z0-9_-]/g, '-');
   return `hostile-claim-hatch-${namespace}-${copy}-${index}-${region}`;
 }
+function claimOverlayReferenceId(namespace, kind, index, key = '') {
+  const safeKey = String(key || index).replace(/[^A-Za-z0-9_-]/g, '-');
+  return `claim-overlay-ref-${namespace}-${kind}-${index}-${safeKey}`;
+}
 function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyContexts} = {}) {
   const fillDescriptors = [];
   const hatchDescriptors = [];
@@ -4207,25 +4212,39 @@ function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyCont
     }
   }
   const fillGroups = buildVisualFillGroups(fillDescriptors);
-  const hatchClipNamespace = hatchDescriptors.length ? claimHatchClipIdSequence++ : 0;
+  const renderNamespace = claimHatchClipIdSequence++;
+  const fillReferenceIds = fillGroups.map((group, index) => claimOverlayReferenceId(renderNamespace, 'fill', index, group.key));
+  const outlineReferenceIds = descriptors.map((descriptor, index) => claimOverlayReferenceId(renderNamespace, 'outline', index, descriptor.region));
   return createProjectedCopyFragment(copyContexts, 'claim-overlay-copy', copyContext => {
     const frag = document.createDocumentFragment();
     const copyData = worldCopyDataset(copyContext);
-    for (const group of fillGroups) {
-      frag.appendChild(createSvgElement('path', {
-        d: group.paths.join(' '),
+    for (const [index, group] of fillGroups.entries()) {
+      const attrs = {
         class: group.className,
         fill: group.fill,
         'fill-opacity': group.fillOpacity === '' ? null : group.fillOpacity,
-      }, {
+      };
+      const dataset = {
         ...group.dataset,
         visualGroupSize: group.paths.length,
         ...copyData,
-      }));
+      };
+      if (copyContext.isCanonical) {
+        frag.appendChild(createSvgElement('path', {
+          id: fillReferenceIds[index],
+          d: group.paths.join(' '),
+          ...attrs,
+        }, dataset));
+      } else {
+        frag.appendChild(createSvgElement('use', {
+          href: `#${fillReferenceIds[index]}`,
+          ...attrs,
+        }, dataset));
+      }
     }
     hatchDescriptors.forEach((descriptor, index) => {
       if (!descriptor.hatchPath) return;
-      const clipId = hatchClipId(hatchClipNamespace, descriptor, copyContext, index);
+      const clipId = hatchClipId(renderNamespace, descriptor, copyContext, index);
       const defs = createSvgElement('defs');
       const clipPath = createSvgElement('clipPath', {id: clipId});
       clipPath.appendChild(createSvgElement('path', {d: descriptor.regionPath}));
@@ -4247,18 +4266,30 @@ function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyCont
       }));
       frag.appendChild(group);
     });
-    for (const descriptor of descriptors) {
+    for (const [index, descriptor] of descriptors.entries()) {
       const r = regionByName[descriptor.region];
       if (!r) continue;
-      frag.appendChild(createSvgElement('path', {
-        d: r.path,
+      const attrs = {
         class: descriptor.className,
         fill: 'none',
-      }, {
+      };
+      const dataset = {
         region: descriptor.region,
         project: descriptor.project,
         ...copyData,
-      }));
+      };
+      if (copyContext.isCanonical) {
+        frag.appendChild(createSvgElement('path', {
+          id: outlineReferenceIds[index],
+          d: r.path,
+          ...attrs,
+        }, dataset));
+      } else {
+        frag.appendChild(createSvgElement('use', {
+          href: `#${outlineReferenceIds[index]}`,
+          ...attrs,
+        }, dataset));
+      }
     }
     return frag;
   });
