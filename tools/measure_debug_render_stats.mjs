@@ -26,15 +26,58 @@ const SUMMARY_COLUMNS = [
   'panFrameMsMax',
   'mapViewApplyMsMax',
   'visibleSvgNodeCount',
+  'claimOverlayPathCount',
+  'claimOverlayUseCount',
+  'claimFillPathCount',
+  'claimFillUseCount',
+  'claimOutlinePathCount',
+  'claimOutlineUseCount',
+  'claimHatchGroupCount',
+  'claimHatchPathCount',
+  'claimClipPathCount',
+  'claimLabelCount',
+  'hitPathCount',
+  'labelCount',
+  'selectionOutlinePathCount',
+  'hoverOutlinePathCount',
+  'hoverClaimPreviewOverlayPathCount',
+  'foreignHoverOverlayPathCount',
+  'secondaryHoverOverlayPathCount',
+  'manualEnvelopeOverlayPathCount',
+  'pinnedRegionMarkerCount',
+  'totalClipPathCount',
   'worldCopyContextCount',
   'hostileHatchDisabled',
   'setupSelectionOutlinePathCount',
   'setupPinnedRegionMarkerCount',
   'setupPinnedRegionsPanelChildCount',
   'setupClaimOverlayPathCount',
+  'setupClaimOverlayUseCount',
+  'setupClaimFillPathCount',
+  'setupClaimFillUseCount',
+  'setupClaimOutlinePathCount',
+  'setupClaimOutlineUseCount',
+  'setupClaimHatchGroupCount',
+  'setupClaimHatchPathCount',
+  'setupClaimClipPathCount',
+  'setupClaimLabelCount',
+  'setupHitPathCount',
+  'setupLabelCount',
   'setupManualEnvelopeOverlayPathCount',
   'setupForeignHoverOverlayPathCount',
+  'setupForeignHoverOverlayUseCount',
   'setupSecondaryHoverOverlayPathCount',
+  'setupSecondaryHoverOverlayUseCount',
+  'setupHoverOutlinePathCount',
+  'setupHoverClaimPreviewOverlayPathCount',
+  'setupTotalClipPathCount',
+  'claimOverlayDomReplacements',
+  'claimOverlayInactiveBufferRebuilds',
+  'claimOverlayBufferSwaps',
+  'claimLabelDomReplacements',
+  'foreignHoverOverlayReplacements',
+  'secondaryHoverOverlayReplacements',
+  'hoverOutlineReplacements',
   'setupOk',
   'setupFailures',
 ];
@@ -282,6 +325,61 @@ async function configureClaimOverlay(page, { nation, project, extraNations = [] 
   return setup;
 }
 
+async function configureComplexOverlayState(page) {
+  const setup = [];
+  const labelResult = await page.evaluate(() => {
+    const button = document.querySelector('#showLabels');
+    const labels = document.querySelector('#labels');
+    if (!button || !labels) return { ok: false, selector: '#showLabels', reason: 'missing label toggle' };
+    if (!labels.querySelector('text.label')) button.click();
+    return { ok: true, selector: '#showLabels', label: 'labels enabled' };
+  });
+  setup.push(labelResult);
+  await page.waitForTimeout(180);
+  const hoverTarget = await primeHoverOverlay(page);
+  setup.push(hoverTarget);
+  return setup;
+}
+
+async function primeHoverOverlay(page) {
+  const candidates = ['Amazonia', 'FrenchGuiana', 'Hokkaido', 'NorthHonshu', 'Beijing'];
+  for (const region of candidates) {
+    const target = await page.evaluate(({ region }) => {
+      const selector = `#hitRegions .region-hit[data-region="${CSS.escape(region)}"][data-wrap-canonical="1"]`;
+      const el = document.querySelector(selector);
+      const rect = el?.getBoundingClientRect();
+      if (!rect || rect.width <= 0 || rect.height <= 0) {
+        return { ok: false, selector, region, reason: 'missing visible hover target' };
+      }
+      return { ok: true, selector, region, x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    }, { region });
+    if (!target.ok) continue;
+    await page.mouse.move(target.x, target.y);
+    await page.waitForTimeout(250);
+    const counts = await page.evaluate(() => ({
+      hoverOutlinePathCount: document.querySelectorAll('#hoverOutlines path').length,
+      hoverClaimPreviewOverlayPathCount: document.querySelectorAll('#hoverClaimPreviewOverlays path').length,
+      foreignHoverOverlayPathCount: document.querySelectorAll('#foreignHoverOverlays path').length,
+      secondaryHoverOverlayPathCount: document.querySelectorAll('#secondaryHoverOverlays path').length,
+    }));
+    const overlayPathCount = Object.values(counts).reduce((sum, value) => sum + Number(value || 0), 0);
+    if (overlayPathCount > 0) {
+      return {
+        ok: true,
+        selector: target.selector,
+        value: target.region,
+        label: `hover overlay primed (${overlayPathCount} paths)`,
+        ...counts,
+      };
+    }
+  }
+  return {
+    ok: false,
+    selector: '#hitRegions .region-hit',
+    reason: `no hover overlays after candidates: ${candidates.join(', ')}`,
+  };
+}
+
 async function resetStats(page) {
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__?.reset?.());
 }
@@ -333,9 +431,25 @@ async function captureSetupStats(page) {
       setupPinnedRegionMarkerCount: countVisible('#pinnedRegionsPanel [data-region], #pinnedRegionsPanel [data-regions], #pinnedRegionsPanel li, #pinnedRegionsPanel button'),
       setupPinnedRegionsPanelChildCount: panel ? panel.querySelectorAll('*').length : 0,
       setupClaimOverlayPathCount: count('#claimOverlay path, #claimOverlays path, #claimOverlayLayer path, .claim-overlay path, .claimOverlay path, [data-layer="claim-overlay"] path'),
+      setupClaimOverlayUseCount: count('#claimOverlays use, #claimOverlay use, #claimOverlayLayer use'),
+      setupClaimFillPathCount: count('#claimOverlays path.claim-fill-group, #claimOverlay path.claim-fill-group, #claimOverlayLayer path.claim-fill-group'),
+      setupClaimFillUseCount: count('#claimOverlays use.claim-fill-group, #claimOverlay use.claim-fill-group, #claimOverlayLayer use.claim-fill-group'),
+      setupClaimOutlinePathCount: count('#claimOverlays path.claim-overlay, #claimOverlay path.claim-overlay, #claimOverlayLayer path.claim-overlay'),
+      setupClaimOutlineUseCount: count('#claimOverlays use.claim-overlay, #claimOverlay use.claim-overlay, #claimOverlayLayer use.claim-overlay'),
+      setupClaimHatchGroupCount: count('#claimOverlays .claim-hatch-group, #claimOverlay .claim-hatch-group, #claimOverlayLayer .claim-hatch-group'),
+      setupClaimHatchPathCount: count('#claimOverlays .claim-hatch-line, #claimOverlay .claim-hatch-line, #claimOverlayLayer .claim-hatch-line'),
+      setupClaimClipPathCount: count('#claimOverlays clipPath, #claimOverlay clipPath, #claimOverlayLayer clipPath'),
+      setupClaimLabelCount: count('#claimLabels text.claim-label, #claimLabel text.claim-label, #claimLabelLayer text.claim-label'),
+      setupHitPathCount: count('#hitRegions path.region-hit'),
+      setupLabelCount: count('#labels text.label'),
       setupManualEnvelopeOverlayPathCount: count('#manualEnvelopeOverlay path, #manualEnvelopeOverlays path, .manual-envelope-overlay path, [data-layer="manual-envelope-overlay"] path'),
       setupForeignHoverOverlayPathCount: count('#foreignHoverOverlay path, #foreignHoverOverlays path, .foreign-hover-overlay path, [data-layer="foreign-hover-overlay"] path'),
+      setupForeignHoverOverlayUseCount: count('#foreignHoverOverlay use, #foreignHoverOverlays use'),
       setupSecondaryHoverOverlayPathCount: count('#secondaryHoverOverlay path, #secondaryHoverOverlays path, .secondary-hover-overlay path, [data-layer="secondary-hover-overlay"] path'),
+      setupSecondaryHoverOverlayUseCount: count('#secondaryHoverOverlay use, #secondaryHoverOverlays use'),
+      setupHoverOutlinePathCount: count('#hoverOutlines path'),
+      setupHoverClaimPreviewOverlayPathCount: count('#hoverClaimPreviewOverlays path'),
+      setupTotalClipPathCount: count('clipPath'),
     };
   });
 }
@@ -354,15 +468,58 @@ function summarize(results) {
     panFrameMsMax: item.stats?.panFrameMsMax,
     mapViewApplyMsMax: item.stats?.mapViewApplyMsMax,
     visibleSvgNodeCount: item.stats?.visibleSvgNodeCount,
+    claimOverlayPathCount: item.stats?.claimOverlayPathCount,
+    claimOverlayUseCount: item.stats?.claimOverlayUseCount,
+    claimFillPathCount: item.stats?.claimFillPathCount,
+    claimFillUseCount: item.stats?.claimFillUseCount,
+    claimOutlinePathCount: item.stats?.claimOutlinePathCount,
+    claimOutlineUseCount: item.stats?.claimOutlineUseCount,
+    claimHatchGroupCount: item.stats?.claimHatchGroupCount,
+    claimHatchPathCount: item.stats?.claimHatchPathCount,
+    claimClipPathCount: item.stats?.claimClipPathCount,
+    claimLabelCount: item.stats?.claimLabelCount,
+    hitPathCount: item.stats?.hitPathCount,
+    labelCount: item.stats?.labelCount,
+    selectionOutlinePathCount: item.stats?.selectionOutlinePathCount,
+    hoverOutlinePathCount: item.stats?.hoverOutlinePathCount,
+    hoverClaimPreviewOverlayPathCount: item.stats?.hoverClaimPreviewOverlayPathCount,
+    foreignHoverOverlayPathCount: item.stats?.foreignHoverOverlayPathCount,
+    secondaryHoverOverlayPathCount: item.stats?.secondaryHoverOverlayPathCount,
+    manualEnvelopeOverlayPathCount: item.stats?.manualEnvelopeOverlayPathCount,
+    pinnedRegionMarkerCount: item.stats?.pinnedRegionMarkerCount,
+    totalClipPathCount: item.stats?.totalClipPathCount,
     worldCopyContextCount: item.stats?.worldCopyContextCount,
     hostileHatchDisabled: item.stats?.hostileHatchDisabled,
     setupSelectionOutlinePathCount: item.setupStats?.setupSelectionOutlinePathCount,
     setupPinnedRegionMarkerCount: item.setupStats?.setupPinnedRegionMarkerCount,
     setupPinnedRegionsPanelChildCount: item.setupStats?.setupPinnedRegionsPanelChildCount,
     setupClaimOverlayPathCount: item.setupStats?.setupClaimOverlayPathCount,
+    setupClaimOverlayUseCount: item.setupStats?.setupClaimOverlayUseCount,
+    setupClaimFillPathCount: item.setupStats?.setupClaimFillPathCount,
+    setupClaimFillUseCount: item.setupStats?.setupClaimFillUseCount,
+    setupClaimOutlinePathCount: item.setupStats?.setupClaimOutlinePathCount,
+    setupClaimOutlineUseCount: item.setupStats?.setupClaimOutlineUseCount,
+    setupClaimHatchGroupCount: item.setupStats?.setupClaimHatchGroupCount,
+    setupClaimHatchPathCount: item.setupStats?.setupClaimHatchPathCount,
+    setupClaimClipPathCount: item.setupStats?.setupClaimClipPathCount,
+    setupClaimLabelCount: item.setupStats?.setupClaimLabelCount,
+    setupHitPathCount: item.setupStats?.setupHitPathCount,
+    setupLabelCount: item.setupStats?.setupLabelCount,
     setupManualEnvelopeOverlayPathCount: item.setupStats?.setupManualEnvelopeOverlayPathCount,
     setupForeignHoverOverlayPathCount: item.setupStats?.setupForeignHoverOverlayPathCount,
+    setupForeignHoverOverlayUseCount: item.setupStats?.setupForeignHoverOverlayUseCount,
     setupSecondaryHoverOverlayPathCount: item.setupStats?.setupSecondaryHoverOverlayPathCount,
+    setupSecondaryHoverOverlayUseCount: item.setupStats?.setupSecondaryHoverOverlayUseCount,
+    setupHoverOutlinePathCount: item.setupStats?.setupHoverOutlinePathCount,
+    setupHoverClaimPreviewOverlayPathCount: item.setupStats?.setupHoverClaimPreviewOverlayPathCount,
+    setupTotalClipPathCount: item.setupStats?.setupTotalClipPathCount,
+    claimOverlayDomReplacements: item.stats?.claimOverlayDomReplacements,
+    claimOverlayInactiveBufferRebuilds: item.stats?.claimOverlayInactiveBufferRebuilds,
+    claimOverlayBufferSwaps: item.stats?.claimOverlayBufferSwaps,
+    claimLabelDomReplacements: item.stats?.claimLabelDomReplacements,
+    foreignHoverOverlayReplacements: item.stats?.foreignHoverOverlayReplacements,
+    secondaryHoverOverlayReplacements: item.stats?.secondaryHoverOverlayReplacements,
+    hoverOutlineReplacements: item.stats?.hoverOutlineReplacements,
     setupOk: item.setup?.every(entry => entry?.ok !== false),
     setupFailures: item.setup?.filter(entry => entry?.ok === false).map(entry => `${entry.selector || entry.nation}: ${entry.reason}`).join(' | ') || '',
   }));
@@ -400,6 +557,7 @@ async function main() {
     const page = await browser.newPage({ viewport: { width: 1400, height: 950 } });
     const scenarios = [
       { name: 'wrap-off', query: 'debugRenderStats=1&worldWrap=0' },
+      { name: 'wrap-off-complex-overlays', query: 'debugRenderStats=1&worldWrap=0', complexOverlays: true },
       { name: 'wrap-off-disable-hatch', query: 'debugRenderStats=1&worldWrap=0&disableHostileHatch=1' },
       { name: 'wrap-on', query: 'debugRenderStats=1&worldWrap=1' },
       { name: 'wrap-on-disable-hatch', query: 'debugRenderStats=1&worldWrap=1&disableHostileHatch=1' },
@@ -412,6 +570,7 @@ async function main() {
           await page.goto(scenarioUrl(baseUrl, scenario.query), { waitUntil: 'networkidle' });
           await page.waitForFunction(() => Boolean(window.__TI_DEBUG_RENDER_STATS__), null, { timeout: 10_000 });
           const setup = await configureClaimOverlay(page, args);
+          if (scenario.complexOverlays) setup.push(...await configureComplexOverlayState(page));
           const setupStats = await captureSetupStats(page);
           await resetStats(page);
           const center = await zoomMap(page, zoomSteps);

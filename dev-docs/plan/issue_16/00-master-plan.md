@@ -40,16 +40,21 @@
 1. [Phase 1: Prior measured optimization iteration](01-measured-optimization.md)
 2. [Phase 2: Follow-up regression and hostile hatch overhead](02-follow-up-regression-hostile-hatch.md)
 3. [Phase 3: Overlay rebuild gating](03-overlay-rebuild-gating.md)
+4. [Phase 4: Baseline overlay profiling](04-baseline-overlay-profiling.md)
+5. [Phase 5: Compound visual overlay candidate](05-compound-visual-overlay-candidate.md)
 
 ## Phase Dependencies
 
 - Phase 2 depends on the prior `<use>` optimization and the current measurement script emitting explicit wrap-on rows.
 - Phase 3 depends on Phase 2 being completed or safely recorded with no kept change.
+- Phase 4 depends on the prior follow-up pass and targets baseline `worldWrap=0` complex overlay profiling with layer-level counters.
+- Phase 5 depends on Phase 4 baseline evidence identifying a visual-only SVG overlay bucket that can be safely grouped without changing hit paths or claim semantics.
 
 ## Source Of Truth Decisions
 
 - `svg-overlay-optimization-loop-plan.md` remains the source of truth for loop rules, metrics, thresholds, smoke tests, and reporting format.
 - `.chatgpt/codex-runs/2026-06-19T044000Z-svg-overlay-follow-up-e2e/PROMPT.md` is the source of truth for this run's commit and generated-asset constraints: keep relevant verified work in focused commits, but exclude unrelated files, generated measurement CSVs, and `docs/assets/**` unless explicitly requested.
+- `.chatgpt/codex-runs/2026-06-19T091000Z-baseline-overlay-profiling/PROMPT.md` is the source of truth for the baseline single-copy profiling run: improve layer-level counters, add/tune a `worldWrap=0` complex-claim scenario, run before/after measurements for at most one compound visual overlay candidate, and keep or revert based on evidence.
 - This phased plan records how the existing issue 16 loop is extended for the follow-up prompt.
 - Current source and command output are authoritative over prior conversation context.
 
@@ -89,9 +94,9 @@
 - [x] Phase acceptance criteria checked.
 - [x] Validation results recorded in phase docs and `.chatgpt/result.md`.
 - [x] Manual smoke test results recorded in `.chatgpt/result.md`.
-- [x] Generated-file policy followed: `docs/assets/**` has no final diff and measurement CSVs remain local ignored artifacts.
+- [x] Generated-file policy followed before final: `docs/assets/**` has no final diff and measurement CSVs remain local ignored artifacts.
 - [x] Commit Audit completed.
-- [x] Completion classification assigned honestly: complete, with residual timing-noise caveats and a future instrumentation follow-up.
+- [x] Completion classification assigned honestly for the baseline profiling run: preparation / instrumentation only, with `no-safe-measurable-improvement` recorded for Phase 5.
 
 ## Commit Audit Requirements
 
