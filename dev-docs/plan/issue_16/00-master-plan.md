@@ -84,14 +84,14 @@
 
 ## Final Audit Checklist
 
-- [ ] Final diff reviewed against objective and source loop plan.
-- [ ] Final diff reviewed against this master plan.
-- [ ] Phase acceptance criteria checked.
-- [ ] Validation results recorded.
-- [ ] Manual smoke test results recorded or explicitly deferred.
-- [ ] Generated-file policy followed.
-- [ ] Commit Audit completed.
-- [ ] Completion classification assigned honestly.
+- [x] Final diff reviewed against objective and source loop plan.
+- [x] Final diff reviewed against this master plan.
+- [x] Phase acceptance criteria checked.
+- [x] Validation results recorded in phase docs and `.chatgpt/result.md`.
+- [x] Manual smoke test results recorded in `.chatgpt/result.md`.
+- [x] Generated-file policy followed: `docs/assets/**` has no final diff and measurement CSVs remain local ignored artifacts.
+- [x] Commit Audit completed.
+- [x] Completion classification assigned honestly: complete, with residual timing-noise caveats and a future instrumentation follow-up.
 
 ## Commit Audit Requirements
 

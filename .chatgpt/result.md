@@ -33,3 +33,24 @@ All verification passed, including the full Playwright suite with 75 passing tes
 - Caveat: diagnostic `wrap-on-disable-hatch` median `panFrameMsMax` regressed from 4.650 to 5.400 ms, so this is recorded as a follow-up signal.
 - Fixed language refresh for the world-wrap warning title; Korean and English warning titles now update after changing the language selector.
 - Validation after the final source change passed: `npm run verify`, `npx playwright test tests/map-wrap.spec.js`, `npm run test:e2e`, plus a Playwright smoke script for default wrap off, wrap toggle, wrapped claim `<use>` copies, copied hover overlay, and localized warning titles.
+
+## SVG Overlay Optimization Follow-Up Pass
+
+- Commits created:
+  - `8eb288f` `Optimize SVG claim overlay rendering`
+  - `b781d05` `Document SVG overlay optimization follow-up phases`
+  - Final report commit: `Record SVG overlay follow-up evidence`
+- Fresh baseline CSV: `.chatgpt/tool-tests/render-stats/debug-render-stats-2026-06-19T04-55-58-854Z.summary.csv`
+- Phase 2 after CSV: `.chatgpt/tool-tests/render-stats/debug-render-stats-2026-06-19T05-08-48-468Z.summary.csv`
+- Setup validation: both follow-up CSVs contain 80 rows with `setupOk=true` and empty `setupFailures`.
+- Follow-up regression decision: the prior `wrap-on-disable-hatch` median `panFrameMsMax` was 5.400 ms; the fresh baseline remeasured it at 5.200 ms with unchanged median `setupClaimOverlayPathCount` of 58, so the signal is recorded as noisy/residual rather than a rollback trigger.
+- Kept Phase 2 optimization: hostile hatch clip paths now use `<use>` references to the already-emitted outline paths instead of duplicating each full region path inside the clip path.
+- Phase 2 metric comparisons, fresh baseline -> after:
+  - `wrap-off`: median `setupClaimOverlayPathCount` 68 -> 63 (-7.4%); median `panFrameMsMax` 2.950 -> 2.700 ms (-8.5%); worst `panFrameMsMax` 5.200 -> 3.400 ms.
+  - `wrap-off-disable-hatch`: median `setupClaimOverlayPathCount` 58 -> 58 (+0.0%); median `panFrameMsMax` 2.700 -> 2.500 ms (-7.4%); worst `panFrameMsMax` 6.200 -> 3.700 ms.
+  - `wrap-on`: median `setupClaimOverlayPathCount` 88 -> 73 (-17.0%); median `panFrameMsMax` 5.600 -> 5.100 ms (-8.9%); median `panFrameMsAvg` 0.479 -> 0.415 ms (-13.4%); worst `panFrameMsMax` 10.700 -> 10.800 ms.
+  - `wrap-on-disable-hatch`: median `setupClaimOverlayPathCount` 58 -> 58 (+0.0%); median `panFrameMsMax` 5.200 -> 5.200 ms (+0.0%); median `panFrameMsAvg` 0.469 -> 0.438 ms (-6.6%); worst `panFrameMsMax` 13.000 -> 8.600 ms.
+- Phase 3 decision: no additional rebuild-gating source change was kept. Existing claim overlay render keys already include copy plan, descriptor cache key, and hostile-hatch-disabled state, and `tests/map-wrap.spec.js` verifies that wrapped panning does not churn claim overlay DOM, labels, hover overlays, foreign hover overlays, or capital markers.
+- Verification for the follow-up pass: `npm run build`, `npm run measure:render-stats -- --repeats=5 --zoom-steps=0,2,4,6` before and after the kept change, `npm run verify`, `npx playwright test tests/map-wrap.spec.js`, and `npm run test:e2e`.
+- Manual/smoke coverage reported: default world-wrap off, wrap toggle on/off, claim overlays, hostile hatching, hover overlays, labels, pinned markers, and Korean/English language refresh.
+- Caveats and follow-ups: frame-time max values remain noisy, with a retained worst-row `wrap-on` max of 10.800 ms after the kept change. If future evidence shows overlay rebuild churn outside current pan/hover tests, extend `tools/measure_debug_render_stats.mjs` with rebuild-counter columns before changing render gating.
