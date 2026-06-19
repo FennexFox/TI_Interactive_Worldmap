@@ -118,9 +118,13 @@ export function buildVisualFillGroups(descriptors = []) {
         fillOpacity,
         dataset,
         paths: [],
+        regions: [],
       });
     }
-    groups.get(groupKey).paths.push(path);
+    const group = groups.get(groupKey);
+    group.paths.push(path);
+    const regionName = descriptor.regionName || descriptor.region?.regionName || '';
+    if (regionName) group.regions.push(regionName);
   }
   return [...groups.values()];
 }
@@ -145,6 +149,7 @@ export function createGroupedVisualFillFragment({
         }, {
           ...group.dataset,
           visualGroupSize: group.paths.length,
+          regions: group.regions.length ? group.regions.join(' ') : '',
           ...worldCopyDataset(copyContext),
         }));
       }

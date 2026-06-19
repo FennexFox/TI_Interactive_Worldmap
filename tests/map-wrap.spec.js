@@ -325,6 +325,21 @@ test('project-specific hostile claims render hatch and follow claim kind filters
   await expect(page.locator('#claimOverlays .claim-overlay.peaceful')).toHaveCount(0);
 });
 
+test('hostile hatch can be disabled for performance diagnostics', async ({ page }) => {
+  await waitForSingleCopyMap(page, '/?worldWrap=0&debugRenderStats=1&disableHostileHatch=1');
+
+  await chooseNation(page, 'China', 'CHN');
+  await page.selectOption('#projectSel', 'Project_GreaterPanAsia');
+  await expect(page.locator('#claimOverlays .claim-overlay.hostile')).toHaveCount(5);
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile')).toHaveCount(0);
+  await expect(page.locator('#claimOverlays .claim-overlay.hostile[data-region="Hokkaido"]')).toHaveCount(1);
+  await expect(page.locator('#claimOverlays .claim-overlay.hostile[data-region="NorthHonshu"]')).toHaveCount(1);
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.hostileHatchDisabled).toBe(1);
+  expect(stats.worldWrapDisabled).toBe(1);
+});
+
 test('baseline selected overlays stay canonical across hover and claim controls', async ({ page }) => {
   await waitForSingleCopyMap(page);
 
@@ -610,10 +625,12 @@ test('world-wrap default secondary capital hover projects foreign preview copies
   await waitForHoverPreviewFrame(page);
 
   await expect(page.locator('#claimPill')).toContainText('France');
-  await expectProjectedCopies(page.locator('#secondaryHoverOverlays .secondary-capital-preview[data-preview="secondary-capital"][data-nation="RUS"][data-region="Moskva"]'));
+  await expectProjectedCopies(page.locator('#secondaryHoverOverlays .secondary-capital-preview[data-preview="secondary-capital"][data-nation="RUS"][data-regions~="Moskva"]'));
   const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.overlayModelBuilds).toBe(0);
   expect(stats.secondaryHoverOverlayReplacements).toBeGreaterThan(0);
+  expect(stats.secondaryHoverOverlayPathCount).toBeGreaterThan(0);
+  expect(stats.secondaryHoverOverlayPathCount).toBeLessThan(stats.secondaryHoverOverlayRegionCount);
 });
 
 test('world-wrap default projects hover, selection, and foreign hover overlays', async ({ page }) => {
@@ -631,7 +648,7 @@ test('world-wrap default projects hover, selection, and foreign hover overlays',
   const copiedOntario = page.locator('#hitRegions .region-hit[data-region="Ontario"][data-wrap-copy="1"]');
   await copiedOntario.dispatchEvent('pointerover', { bubbles: true, clientX: 140, clientY: 140, pointerType: 'mouse' });
   await copiedOntario.dispatchEvent('pointermove', { bubbles: true, clientX: 146, clientY: 146, pointerType: 'mouse' });
-  await expectProjectedCopies(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="CAN"][data-region="Ontario"]'));
+  await expectProjectedCopies(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="CAN"][data-regions~="Ontario"]'));
 });
 
 test('world-wrap seam candidate geometry stays split into local subpaths', async ({ page }) => {

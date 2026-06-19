@@ -152,6 +152,22 @@ function syncRuntimeDataAliases() {
 const svg = document.getElementById('map');
 if (svg) svg.setAttribute('viewBox', formatViewBoxForMapView(mapView));
 svg?.classList.toggle('world-wrap-enabled', worldWrapEnabled);
+const DISABLE_HOSTILE_HATCH_QUERY_NAMES = ['disableHostileHatch', 'debugDisableHostileHatch'];
+function shouldDisableHostileHatching() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    for (const name of DISABLE_HOSTILE_HATCH_QUERY_NAMES) {
+      if (!params.has(name)) continue;
+      const value = String(params.get(name) || '1').toLowerCase();
+      return !['0', 'false', 'off'].includes(value);
+    }
+    return window.localStorage?.getItem('ti-disable-hostile-hatch') === '1';
+  } catch {
+    return false;
+  }
+}
+const hostileClaimHatchingDisabled = shouldDisableHostileHatching();
+svg?.classList.toggle('hostile-hatch-disabled', hostileClaimHatchingDisabled);
 const gRegions = document.getElementById('regions');
 const gNormalRegionColors = document.getElementById('normalRegionColors');
 const gHitRegions = document.getElementById('hitRegions');
@@ -199,7 +215,18 @@ function shouldEnableDebugRenderStats() {
   }
 }
 
-function createDebugRenderStats() {
+const debugInitialMapView = {
+  width: mapView.width,
+  height: mapView.height,
+  area: mapView.width * mapView.height,
+};
+
+function roundedDebugStat(value, digits = 4) {
+  if (!Number.isFinite(value)) return 0;
+  return Number(value.toFixed(digits));
+}
+
+function createDebugRenderStats(staticValues = {}) {
   const keys = [
     'fullVisualStateApplications',
     'boundedVisualStateApplications',
@@ -247,18 +274,47 @@ function createDebugRenderStats() {
     'gridRebuildsDuringPan',
     'panSvgRectReads',
     'visibleSvgNodeCount',
+    'worldWrapDisabled',
+    'worldCopyContextCount',
+    'hostileHatchDisabled',
+    'foreignHoverOverlayPathCount',
+    'foreignHoverOverlayRegionCount',
+    'secondaryHoverOverlayPathCount',
+    'secondaryHoverOverlayRegionCount',
   ];
   const stats = {};
-  for (const key of keys) stats[key] = 0;
+  const resetStats = () => {
+    for (const key of keys) stats[key] = 0;
+    Object.assign(stats, staticValues);
+  };
+  const defineDynamicStat = (key, getter) => {
+    Object.defineProperty(stats, key, {
+      enumerable: true,
+      configurable: true,
+      get: getter,
+    });
+  };
+  resetStats();
+  defineDynamicStat('mapViewX', () => roundedDebugStat(mapView.x, 3));
+  defineDynamicStat('mapViewY', () => roundedDebugStat(mapView.y, 3));
+  defineDynamicStat('mapViewWidth', () => roundedDebugStat(mapView.width, 3));
+  defineDynamicStat('mapViewHeight', () => roundedDebugStat(mapView.height, 3));
+  defineDynamicStat('mapViewArea', () => roundedDebugStat(mapView.width * mapView.height, 3));
+  defineDynamicStat('mapViewAspectRatio', () => roundedDebugStat(mapView.width / mapView.height, 4));
+  defineDynamicStat('mapZoomX', () => roundedDebugStat(debugInitialMapView.width / mapView.width, 4));
+  defineDynamicStat('mapZoomY', () => roundedDebugStat(debugInitialMapView.height / mapView.height, 4));
+  defineDynamicStat('mapZoomArea', () => roundedDebugStat(debugInitialMapView.area / (mapView.width * mapView.height), 4));
   Object.defineProperty(stats, 'reset', {
-    value: () => {
-      for (const key of keys) stats[key] = 0;
-    },
+    value: resetStats,
   });
   return stats;
 }
 
-const debugRenderStats = shouldEnableDebugRenderStats() ? createDebugRenderStats() : null;
+const debugRenderStats = shouldEnableDebugRenderStats() ? createDebugRenderStats({
+  hostileHatchDisabled: hostileClaimHatchingDisabled ? 1 : 0,
+  worldWrapDisabled: worldWrapEnabled ? 0 : 1,
+  worldCopyContextCount: worldCopyContexts.length,
+}) : null;
 if (debugRenderStats) window.__TI_DEBUG_RENDER_STATS__ = debugRenderStats;
 
 function recordRenderStat(key, amount = 1) {
@@ -2225,18 +2281,39 @@ function secondaryCapitalFillOpacity(fillOpacity) {
   if (!Number.isFinite(base)) return SECONDARY_CAPITAL_BASE_TERRITORY_OPACITY;
   return Math.min(SECONDARY_CAPITAL_BASE_TERRITORY_OPACITY, base + SECONDARY_CAPITAL_TIER_OPACITY_BOOST);
 }
-function appendForeignHoverRegion(frag, region, className, attrs={}, copyContext = defaultWorldCopyContext(), {variant='foreign'} = {}) {
-  if (!region?.path) return;
-  const {fillOpacity, ...dataAttrs} = attrs;
+function foreignHoverVisualDescriptors(descriptorSet, {variant='foreign'} = {}) {
+  const descriptors = [];
   const secondary = variant === 'secondary-capital';
-  const p = createRegionPath(region, {
-    class: `${className}${secondary ? ' secondary-capital-preview' : ''}`,
-    fill: secondary ? SECONDARY_CAPITAL_OVERLAY_COLOR : HOVER_NATION_OVERLAY_COLOR,
-    'fill-opacity': secondary
-      ? secondaryCapitalFillOpacity(fillOpacity)
-      : fillOpacity ?? HOVER_NATION_BASE_TERRITORY_OPACITY,
-  }, {id: null, nation: null, preview: variant, ...dataAttrs, ...worldCopyDataset(copyContext)});
-  frag.appendChild(p);
+  for (const descriptor of descriptorSet?.descriptors || []) {
+    const region = regionByName[descriptor.region];
+    if (!region?.path) continue;
+    const {fillOpacity, ...dataAttrs} = descriptor.attrs || {};
+    descriptors.push({
+      path: region.path,
+      regionName: descriptor.region,
+      className: `${descriptor.className}${secondary ? ' secondary-capital-preview' : ''}`,
+      fill: secondary ? SECONDARY_CAPITAL_OVERLAY_COLOR : HOVER_NATION_OVERLAY_COLOR,
+      fillOpacity: secondary
+        ? secondaryCapitalFillOpacity(fillOpacity)
+        : fillOpacity ?? HOVER_NATION_BASE_TERRITORY_OPACITY,
+      dataset: {preview: variant, ...dataAttrs},
+    });
+  }
+  return descriptors;
+}
+function createForeignHoverOverlayFragment(descriptorSet, {copyContexts=worldCopyContexts, variant='foreign', statPrefix='foreignHoverOverlay'} = {}) {
+  const descriptors = foreignHoverVisualDescriptors(descriptorSet, {variant});
+  if (debugRenderStats) {
+    const groups = buildVisualFillGroups(descriptors);
+    const copyCount = normalizeWorldCopyContexts(copyContexts).length;
+    setRenderStat(`${statPrefix}PathCount`, groups.length * copyCount);
+    setRenderStat(`${statPrefix}RegionCount`, descriptors.length * copyCount);
+  }
+  return createGroupedVisualFillFragment({
+    descriptors,
+    copyContexts,
+    copyGroupClassName: variant === 'secondary-capital' ? 'secondary-hover-copy' : 'foreign-hover-copy',
+  });
 }
 function queueForeignHoverDescriptor(candidates, region, className, attrs={}) {
   if (!region?.path) return;
@@ -2305,16 +2382,15 @@ function getForeignHoverOverlayDescriptorSet(nation) {
     FOREIGN_HOVER_DESCRIPTOR_CACHE_LIMIT
   );
 }
-function appendForeignHoverNationOverlay(frag, descriptorSet, copyContext = defaultWorldCopyContext(), options = {}) {
-  for (const descriptor of descriptorSet?.descriptors || []) {
-    appendForeignHoverRegion(frag, regionByName[descriptor.region], descriptor.className, descriptor.attrs, copyContext, options);
-  }
-}
 function replaceForeignHoverOverlayForKey(nextKey, buildChildren, {force=false} = {}) {
   if (!gForeignHoverOverlays) return;
   if (!force && nextKey === foreignHoverVisualKey) return;
   foreignHoverVisualKey = nextKey;
   recordRenderStat('foreignHoverOverlayReplacements');
+  if (nextKey === FOREIGN_HOVER_EMPTY_RENDER_KEY) {
+    setRenderStat('foreignHoverOverlayPathCount', 0);
+    setRenderStat('foreignHoverOverlayRegionCount', 0);
+  }
   replaceLayerChildren(gForeignHoverOverlays, buildChildren());
 }
 function replaceSecondaryHoverOverlayForKey(nextKey, buildChildren, {force=false} = {}) {
@@ -2322,6 +2398,10 @@ function replaceSecondaryHoverOverlayForKey(nextKey, buildChildren, {force=false
   if (!force && nextKey === secondaryHoverVisualKey) return;
   secondaryHoverVisualKey = nextKey;
   recordRenderStat('secondaryHoverOverlayReplacements');
+  if (nextKey === SECONDARY_HOVER_EMPTY_RENDER_KEY) {
+    setRenderStat('secondaryHoverOverlayPathCount', 0);
+    setRenderStat('secondaryHoverOverlayRegionCount', 0);
+  }
   replaceLayerChildren(gSecondaryHoverOverlays, buildChildren());
 }
 function hoverClaimPreviewRenderKey(model, descriptorSet, copyContexts = worldCopyContexts) {
@@ -2374,19 +2454,11 @@ function renderHoverOutlines({force=false, copyContexts=worldCopyContexts} = {})
     : HOVER_OUTLINE_EMPTY_RENDER_KEY;
   replaceForeignHoverOverlayForKey(foreignKey, () => {
     if (!foreign) return document.createDocumentFragment();
-    return createProjectedCopyFragment(copyContexts, 'foreign-hover-copy', copyContext => {
-      const frag = document.createDocumentFragment();
-      appendForeignHoverNationOverlay(frag, foreignDescriptorSet, copyContext, {variant: 'foreign'});
-      return frag;
-    });
+    return createForeignHoverOverlayFragment(foreignDescriptorSet, {copyContexts, variant: 'foreign', statPrefix: 'foreignHoverOverlay'});
   }, {force});
   replaceSecondaryHoverOverlayForKey(secondaryKey, () => {
     if (!secondary) return document.createDocumentFragment();
-    return createProjectedCopyFragment(copyContexts, 'secondary-hover-copy', copyContext => {
-      const frag = document.createDocumentFragment();
-      appendForeignHoverNationOverlay(frag, secondaryDescriptorSet, copyContext, {variant: 'secondary-capital'});
-      return frag;
-    });
+    return createForeignHoverOverlayFragment(secondaryDescriptorSet, {copyContexts, variant: 'secondary-capital', statPrefix: 'secondaryHoverOverlay'});
   }, {force});
   replaceHoverOutlinesForKey(hoverKey, () => {
     if (hidden || foreign || secondary) return document.createDocumentFragment();
@@ -3988,6 +4060,7 @@ function claimOverlayPathRenderKey(model, descriptorSet, copyContexts = worldCop
     kind: 'claim-overlay-paths',
     copyPlan: copyContextRenderKey(copyContexts),
     descriptorKey: descriptorSet?.cacheKey || '',
+    hostileHatchDisabled: hostileClaimHatchingDisabled ? 1 : 0,
   });
 }
 function claimLabelRenderKey(model, descriptorSet, copyContexts = worldCopyContexts) {
@@ -4067,7 +4140,7 @@ function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyCont
         project: descriptor.project,
       },
     });
-    if (descriptor.hatchClassName) {
+    if (descriptor.hatchClassName && !hostileClaimHatchingDisabled) {
       hatchDescriptors.push({
         region: descriptor.region,
         regionPath: r.path,
