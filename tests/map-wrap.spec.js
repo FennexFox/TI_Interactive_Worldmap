@@ -211,6 +211,11 @@ test('world-wrap defaults off and can be enabled from map controls', async ({ pa
   await wrapToggle.click();
 
   await expect(wrapToggle).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(async () => wrapToggle.evaluate(el => {
+    const color = getComputedStyle(el).backgroundColor;
+    const alphaMatch = color.match(/^rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)$/);
+    return alphaMatch ? Number(alphaMatch[1]) : 1;
+  })).toBeGreaterThan(0.8);
   await expect(page.locator('#regions .region-copy')).toHaveCount(3);
   await expect(page.locator('#hitRegions .hit-copy')).toHaveCount(3);
   await expect(page.locator('#regions .region[data-region="Amazonia"]')).toHaveCount(3);
