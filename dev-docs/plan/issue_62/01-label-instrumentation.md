@@ -56,19 +56,24 @@
 
 ## Evidence
 
-- Baseline:
-- After:
-- Delta:
-- Interpretation:
+- Baseline: debug render stats already exposed `labelCount` and `visibleSvgNodeCount`, but did not expose label copy counts, wrapped label copy counts, label render/replacement counters, or a labels-disabled A/B control.
+- After: `debugDisableLabels=1` prevents map label nodes from rendering even after the existing label toggle is clicked. Debug stats now expose `labelCopyGroupCount`, `wrappedLabelCopyCount`, `labelRenderCalls`, `labelDomReplacements`, `labelRenderSkippedByDebug`, label render timing counters, `labelVisibleState`, and `debugLabelsDisabled`.
+- Delta: normal label behavior is unchanged; the new path is query-controlled and measurement-only.
+- Interpretation: Phase 2 can compare labels-enabled and labels-disabled scenarios without introducing a user-facing optimization.
 
 ## Progress
 
-- Pending implementation.
+- Completed.
 
 ## Decision log
 
-- Pending.
+- Kept the label disable option debug-only and query-driven so it can support A/B profiling without adding permanent UI behavior.
+- Counted label DOM replacements at the app render boundary because both full region renders and label-only renders replace label layer children.
 
 ## Outcomes / Retrospective
 
-- Pending.
+- Validation:
+  - `rtk node --check src/app.js` passed.
+  - `rtk npm run build` passed; generated `docs/assets/app.js` was restored because `docs/assets/**` is excluded from this task.
+  - `rtk npx playwright test tests/language.spec.js` passed.
+  - `rtk npx playwright test tests/map-wrap.spec.js` initially failed because the new test used checkbox semantics for a button; after correcting the assertion, it passed.

@@ -168,6 +168,16 @@ function shouldDisableHostileHatching() {
 }
 const hostileClaimHatchingDisabled = shouldDisableHostileHatching();
 svg?.classList.toggle('hostile-hatch-disabled', hostileClaimHatchingDisabled);
+function shouldDebugDisableLabels() {
+  try {
+    const value = new URLSearchParams(window.location.search).get('debugDisableLabels');
+    if (value === null) return false;
+    return !['0', 'false', 'off'].includes(value.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+const debugLabelsDisabled = shouldDebugDisableLabels();
 const gRegions = document.getElementById('regions');
 const gNormalRegionColors = document.getElementById('normalRegionColors');
 const gHitRegions = document.getElementById('hitRegions');
@@ -286,6 +296,16 @@ function createDebugRenderStats(staticValues = {}) {
     'claimLabelCount',
     'hitPathCount',
     'labelCount',
+    'labelCopyGroupCount',
+    'wrappedLabelCopyCount',
+    'labelRenderCalls',
+    'labelDomReplacements',
+    'labelRenderSkippedByDebug',
+    'labelRenderMsCount',
+    'labelRenderMsTotal',
+    'labelRenderMsMax',
+    'labelVisibleState',
+    'debugLabelsDisabled',
     'selectionOutlinePathCount',
     'hoverOutlinePathCount',
     'hoverClaimPreviewOverlayPathCount',
@@ -335,6 +355,7 @@ const debugRenderStats = shouldEnableDebugRenderStats() ? createDebugRenderStats
   hostileHatchDisabled: hostileClaimHatchingDisabled ? 1 : 0,
   worldWrapDisabled: worldWrapEnabled ? 0 : 1,
   worldCopyContextCount: worldCopyContexts.length,
+  debugLabelsDisabled: debugLabelsDisabled ? 1 : 0,
 }) : null;
 if (debugRenderStats) window.__TI_DEBUG_RENDER_STATS__ = debugRenderStats;
 
@@ -2710,8 +2731,22 @@ function renderNormalRegionColors(renderContext = {}) {
 function syncNormalRegionColorVisibility() {
   renderNormalRegionColors();
 }
+function labelsEnabledForRender() {
+  return labelsVisible && !debugLabelsDisabled;
+}
+function recordLabelRenderResult(startedAt) {
+  recordRenderStat('labelDomReplacements');
+  setRenderStat('labelVisibleState', labelsVisible ? 1 : 0);
+  setRenderStat('debugLabelsDisabled', debugLabelsDisabled ? 1 : 0);
+  recordRenderTiming('labelRenderMs', performance.now() - startedAt);
+  sampleDebugSvgLayerCounts();
+}
 function renderRegions(renderContext = {}) {
+  const labelStartedAt = performance.now();
+  recordRenderStat('labelRenderCalls');
+  if (labelsVisible && debugLabelsDisabled) recordRenderStat('labelRenderSkippedByDebug');
   renderRegionLayers({
+    ...renderContext,
     layer: gRegions,
     hitLayer: gHitRegions,
     labelLayer: gLabels,
@@ -2724,12 +2759,12 @@ function renderRegions(renderContext = {}) {
     hitPathInstancesByRegion,
     hitPathElements,
     labelTextElements,
-    labelsVisible,
+    labelsVisible: labelsEnabledForRender(),
     colorFor: () => MUTED_NON_CLAIM_COLOR,
     labelPosition,
     localizedRegionName,
-    ...renderContext,
   });
+  recordLabelRenderResult(labelStartedAt);
   renderNormalRegionColors(renderContext);
   applyFilters();
   updateNationOverlay(getCurrentNation());
@@ -2758,16 +2793,20 @@ function setWorldWrapEnabled(enabled) {
   rerenderWorldWrapLayers();
 }
 function renderLabels(renderContext = {}) {
+  const startedAt = performance.now();
+  recordRenderStat('labelRenderCalls');
+  if (labelsVisible && debugLabelsDisabled) recordRenderStat('labelRenderSkippedByDebug');
   renderLabelsLayer({
+    ...renderContext,
     layer: gLabels,
     labelTextElements,
-    labelsVisible,
+    labelsVisible: labelsEnabledForRender(),
     regions: REGIONS,
     labelPosition,
     localizedRegionName,
     copyContexts: renderContext.copyContexts || worldCopyContexts,
-    ...renderContext,
   });
+  recordLabelRenderResult(startedAt);
 }
 function mapPointFromClientPoint(clientX, clientY) {
   const rect = svg.getBoundingClientRect();
@@ -3097,6 +3136,10 @@ function sampleDebugSvgLayerCounts() {
   setRenderStat('claimLabelCount', count('#claimLabels text.claim-label'));
   setRenderStat('hitPathCount', count('#hitRegions path.region-hit'));
   setRenderStat('labelCount', count('#labels text.label'));
+  setRenderStat('labelCopyGroupCount', count('#labels .label-copy'));
+  setRenderStat('wrappedLabelCopyCount', count('#labels text.label[data-wrap-canonical="0"]'));
+  setRenderStat('labelVisibleState', labelsVisible ? 1 : 0);
+  setRenderStat('debugLabelsDisabled', debugLabelsDisabled ? 1 : 0);
   setRenderStat('selectionOutlinePathCount', count('#selectionOutlines path'));
   setRenderStat('hoverOutlinePathCount', count('#hoverOutlines path'));
   setRenderStat('hoverClaimPreviewOverlayPathCount', count('#hoverClaimPreviewOverlays path'));

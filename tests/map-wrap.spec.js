@@ -444,6 +444,25 @@ test('world-wrap default renders base, grid, label, and hit copies', async ({ pa
   await expect(page.locator('#labels .label[data-region="Amazonia"]')).toHaveCount(3);
 });
 
+test('debug label-disable flag suppresses rendered label nodes', async ({ page }) => {
+  await waitForSingleCopyMap(page, '/?worldWrap=0&debugRenderStats=1&debugDisableLabels=1');
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await page.locator('#showLabels').click();
+
+  await expect(page.locator('#labels text.label')).toHaveCount(0);
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.debugLabelsDisabled).toBe(1);
+  expect(stats.labelVisibleState).toBe(1);
+  expect(stats.labelCount).toBe(0);
+  expect(stats.labelCopyGroupCount).toBe(0);
+  expect(stats.wrappedLabelCopyCount).toBe(0);
+  expect(stats.labelRenderCalls).toBeGreaterThan(0);
+  expect(stats.labelDomReplacements).toBeGreaterThan(0);
+  expect(stats.labelRenderSkippedByDebug).toBeGreaterThan(0);
+});
+
 test('world-wrap default projects grouped base and claim fill copies', async ({ page }) => {
   await waitForWrappedMap(page);
 
