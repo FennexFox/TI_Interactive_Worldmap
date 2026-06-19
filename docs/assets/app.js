@@ -4180,7 +4180,9 @@ function claimOverlayReferenceId(namespace, kind, index, key = '') {
 function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyContexts} = {}) {
   const fillDescriptors = [];
   const hatchDescriptors = [];
-  for (const descriptor of descriptors) {
+  const renderNamespace = claimHatchClipIdSequence++;
+  const outlineReferenceIds = descriptors.map((descriptor, index) => claimOverlayReferenceId(renderNamespace, 'outline', index, descriptor.region));
+  for (const [descriptorIndex, descriptor] of descriptors.entries()) {
     const r = regionByName[descriptor.region];
     if (!r) continue;
     fillDescriptors.push({
@@ -4197,7 +4199,7 @@ function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyCont
     if (descriptor.hatchClassName && !hostileClaimHatchingDisabled) {
       hatchDescriptors.push({
         region: descriptor.region,
-        regionPath: r.path,
+        clipReferenceId: outlineReferenceIds[descriptorIndex],
         hatchPath: hostileClaimHatchPath(r),
         className: descriptor.hatchClassName,
         fillOpacity: descriptor.fillOpacity,
@@ -4209,9 +4211,7 @@ function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyCont
     }
   }
   const fillGroups = buildVisualFillGroups(fillDescriptors);
-  const renderNamespace = claimHatchClipIdSequence++;
   const fillReferenceIds = fillGroups.map((group, index) => claimOverlayReferenceId(renderNamespace, 'fill', index, group.key));
-  const outlineReferenceIds = descriptors.map((descriptor, index) => claimOverlayReferenceId(renderNamespace, 'outline', index, descriptor.region));
   return createProjectedCopyFragment(copyContexts, 'claim-overlay-copy', copyContext => {
     const frag = document.createDocumentFragment();
     const copyData = worldCopyDataset(copyContext);
@@ -4244,7 +4244,7 @@ function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyCont
       const clipId = hatchClipId(renderNamespace, descriptor, copyContext, index);
       const defs = createSvgElement('defs');
       const clipPath = createSvgElement('clipPath', {id: clipId});
-      clipPath.appendChild(createSvgElement('path', {d: descriptor.regionPath}));
+      clipPath.appendChild(createSvgElement('use', {href: `#${descriptor.clipReferenceId}`}));
       defs.appendChild(clipPath);
       frag.appendChild(defs);
       const group = createSvgElement('g', {
