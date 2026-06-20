@@ -60,7 +60,7 @@
 ## Evidence
 
 - Baseline: existing debug stats expose `visibleSvgNodeCount` and `hitPathCount` but not path-data bytes or hit/base path/use distinctions.
-- After: debug stats now expose base visual region path/use counts, hit path/use counts, wrapped-copy base/hit path/use counts, base and hit `d` byte totals, total region `d` bytes, and canonical base/hit counts/bytes. The measurement summary also records matching setup and final-row columns.
+- After: debug stats now expose base visual region path/use counts, hit path/use counts, wrapped-copy base/hit path/use counts, base and hit `d` byte totals, total region `d` bytes, and canonical base/hit counts/bytes. The measurement summary also records matching setup and final-row columns. Heavy path-data aggregation is cached at layer sampling boundaries and reused during pan-frame sampling.
 - Delta: instrumentation distinguishes the current all-`path` implementation from a future `<use>` candidate without changing render behavior.
 - Interpretation: Phase 3 can now measure duplicated region geometry separately from DOM node count and pan timing.
 
@@ -73,6 +73,7 @@
 - Keep instrumentation in `sampleDebugSvgLayerCounts()` so it samples the actual served SVG DOM.
 - Count `d` bytes from rendered DOM attributes. This intentionally measures duplicated geometry currently present in the SVG, not source catalog size.
 - Keep single-copy and wrapped assertions focused on counter correctness and current all-`path` behavior; candidate behavior will need separate tests if Phase 4 runs.
+- A first full measurement attempt was interrupted after the renderer stayed CPU-bound for several minutes. The cause was per-pan-frame `d` byte aggregation; the sampler now caches geometry stats so Phase 3 can measure pan without recomputing path-data bytes every frame.
 
 ## Outcomes / Retrospective
 
@@ -82,4 +83,6 @@
   - `rtk npm run build` passed and regenerated `docs/assets/app.js`.
   - `rtk npx playwright test tests/map-wrap.spec.js -g "region geometry"` passed.
   - `rtk npm run verify` passed.
+  - After caching the geometry stats, `rtk npx playwright test tests/map-wrap.spec.js -g "region geometry"` passed again.
+  - After caching the geometry stats, `rtk npm run verify` passed again.
 - Manual smoke tests: deferred for this instrumentation-only phase; focused Playwright verifies the new counters against the served SVG DOM in single-copy and world-wrap modes.

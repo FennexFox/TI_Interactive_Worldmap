@@ -917,6 +917,7 @@ let panHoverRefreshFrame = 0;
 let pendingPanHoverPoint = null;
 let mapPanState = null;
 let suppressMapClick = false;
+let cachedRegionGeometryStats = {};
 const nationChoiceByValue = new Map();
 let incomingClaimsByRegion = derivedIndices.incomingClaimsByRegion;
 const regionCenterCache = new Map();
@@ -3135,13 +3136,34 @@ function measurePanViewportRect() {
   recordRenderStat('panSvgRectReads');
   return svg?.getBoundingClientRect();
 }
-function sampleDebugSvgLayerCounts() {
-  if (!debugRenderStats || !svg) return;
+function collectRegionGeometryStats() {
   const count = selector => svg.querySelectorAll(selector).length;
   const dBytes = selector => [...svg.querySelectorAll(selector)]
     .reduce((sum, element) => sum + String(element.getAttribute('d') || '').length, 0);
   const baseRegionPathDBytes = dBytes('#regions path.region');
   const hitPathDBytes = dBytes('#hitRegions path.region-hit');
+  return {
+    baseRegionPathCount: count('#regions path.region'),
+    baseRegionUseCount: count('#regions use.region'),
+    hitPathCount: count('#hitRegions path.region-hit'),
+    hitUseCount: count('#hitRegions use.region-hit'),
+    worldCopyBasePathCount: count('#regions path.region[data-wrap-canonical="0"]'),
+    worldCopyBaseUseCount: count('#regions use.region[data-wrap-canonical="0"]'),
+    worldCopyHitPathCount: count('#hitRegions path.region-hit[data-wrap-canonical="0"]'),
+    worldCopyHitUseCount: count('#hitRegions use.region-hit[data-wrap-canonical="0"]'),
+    baseRegionPathDBytes,
+    hitPathDBytes,
+    totalRegionPathDBytes: baseRegionPathDBytes + hitPathDBytes,
+    canonicalRegionPathCount: count('#regions path.region[data-wrap-canonical="1"]'),
+    canonicalRegionPathDBytes: dBytes('#regions path.region[data-wrap-canonical="1"]'),
+    canonicalHitPathCount: count('#hitRegions path.region-hit[data-wrap-canonical="1"]'),
+    canonicalHitPathDBytes: dBytes('#hitRegions path.region-hit[data-wrap-canonical="1"]'),
+  };
+}
+function sampleDebugSvgLayerCounts({includeGeometry=true} = {}) {
+  if (!debugRenderStats || !svg) return;
+  const count = selector => svg.querySelectorAll(selector).length;
+  if (includeGeometry) cachedRegionGeometryStats = collectRegionGeometryStats();
   setRenderStat('visibleSvgNodeCount', svg.querySelectorAll('*').length);
   setRenderStat('claimOverlayPathCount', count('#claimOverlays path'));
   setRenderStat('claimOverlayUseCount', count('#claimOverlays use'));
@@ -3153,21 +3175,7 @@ function sampleDebugSvgLayerCounts() {
   setRenderStat('claimHatchPathCount', count('#claimOverlays .claim-hatch-line'));
   setRenderStat('claimClipPathCount', count('#claimOverlays clipPath'));
   setRenderStat('claimLabelCount', count('#claimLabels text.claim-label'));
-  setRenderStat('baseRegionPathCount', count('#regions path.region'));
-  setRenderStat('baseRegionUseCount', count('#regions use.region'));
-  setRenderStat('hitPathCount', count('#hitRegions path.region-hit'));
-  setRenderStat('hitUseCount', count('#hitRegions use.region-hit'));
-  setRenderStat('worldCopyBasePathCount', count('#regions path.region[data-wrap-canonical="0"]'));
-  setRenderStat('worldCopyBaseUseCount', count('#regions use.region[data-wrap-canonical="0"]'));
-  setRenderStat('worldCopyHitPathCount', count('#hitRegions path.region-hit[data-wrap-canonical="0"]'));
-  setRenderStat('worldCopyHitUseCount', count('#hitRegions use.region-hit[data-wrap-canonical="0"]'));
-  setRenderStat('baseRegionPathDBytes', baseRegionPathDBytes);
-  setRenderStat('hitPathDBytes', hitPathDBytes);
-  setRenderStat('totalRegionPathDBytes', baseRegionPathDBytes + hitPathDBytes);
-  setRenderStat('canonicalRegionPathCount', count('#regions path.region[data-wrap-canonical="1"]'));
-  setRenderStat('canonicalRegionPathDBytes', dBytes('#regions path.region[data-wrap-canonical="1"]'));
-  setRenderStat('canonicalHitPathCount', count('#hitRegions path.region-hit[data-wrap-canonical="1"]'));
-  setRenderStat('canonicalHitPathDBytes', dBytes('#hitRegions path.region-hit[data-wrap-canonical="1"]'));
+  for (const [key, value] of Object.entries(cachedRegionGeometryStats)) setRenderStat(key, value);
   setRenderStat('labelCount', count('#labels text.label'));
   setRenderStat('labelCopyGroupCount', count('#labels .label-copy'));
   setRenderStat('wrappedLabelCopyCount', count('#labels text.label[data-wrap-canonical="0"]'));
@@ -3183,7 +3191,7 @@ function sampleDebugSvgLayerCounts() {
   setRenderStat('totalClipPathCount', count('clipPath'));
 }
 function samplePanSvgNodeCount() {
-  sampleDebugSvgLayerCounts();
+  sampleDebugSvgLayerCounts({includeGeometry: false});
 }
 function viewDeltaFromPointerDelta(deltaX, deltaY, rect = null) {
   const viewportRect = rect || measurePanViewportRect();
