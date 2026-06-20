@@ -203,6 +203,18 @@ The deploy helper only stages generated paths:
 
 Other local changes are left untouched.
 
+## Documentation and planning notes
+
+The repository uses `docs/` as the generated GitHub Pages output. Do not use `docs/` for planning documentation and do not hand-edit generated `docs/**` artifacts as source.
+
+Durable project guidance lives in:
+
+- `README.md` for setup, build, deploy, and user-facing scope;
+- `AGENTS.md` for contributor and agent workflow rules;
+- `.github/**` for issue, PR, review, and automation guidance.
+
+Temporary implementation plans and profiling notes live in `dev-docs/plan/**`. Those folders may be deleted after the related PR is merged, closed, or abandoned. Before deleting a plan folder, promote only still-useful decisions or validated findings into durable documentation or the relevant GitHub issue.
+
 ## License
 
 Project-owned source code, build/test tooling, and documentation are licensed
