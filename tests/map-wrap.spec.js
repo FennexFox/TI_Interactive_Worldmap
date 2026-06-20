@@ -323,6 +323,52 @@ test('debug render stats sample wrapped region geometry counters', async ({ page
   expect(counters.stats.hitPathDBytes).toBeGreaterThan(counters.actual.canonicalHitPathDBytes);
 });
 
+test('debug canonical hit paths preserve single-copy hover and click', async ({ page }) => {
+  await waitForSingleCopyMap(page, '/?worldWrap=0&debugRenderStats=1&debugUseCanonicalHitPaths=1');
+
+  await expect(page.locator('#hitRegions path.region-hit')).toHaveCount(0);
+  const hitUses = page.locator('#hitRegions use.region-hit');
+  await expect(hitUses.first()).toBeVisible();
+  await expect(page.locator('#hitRegions path.region-hit-geometry')).toHaveCount(await hitUses.count());
+
+  const amazon = page.locator('#hitRegions .region-hit[data-region="Amazonia"][data-wrap-canonical="1"]');
+  await amazon.hover();
+  await expect(page.locator('#hoverPill')).toHaveText('Hover: BRA · Manaus');
+
+  await amazon.dispatchEvent('click', { bubbles: true });
+  await expect(page.locator('#search')).toHaveValue(/Brazil/);
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.debugCanonicalHitPaths).toBe(1);
+  expect(stats.hitPathCount).toBe(0);
+  expect(stats.hitUseCount).toBeGreaterThan(300);
+  expect(stats.hitGeometryDefPathCount).toBe(stats.hitUseCount);
+  expect(stats.hitGeometryDefPathDBytes).toBeGreaterThan(0);
+  expect(stats.totalHitGeometryDBytes).toBe(stats.hitGeometryDefPathDBytes);
+});
+
+test('debug canonical hit paths preserve wrapped seam hover and click', async ({ page }) => {
+  await waitForWrappedMap(page, '/?debugRenderStats=1&debugUseCanonicalHitPaths=1');
+
+  await expectProjectedCopies(page.locator('#hitRegions .region-hit[data-region="Amazonia"]'));
+  await expect(page.locator('#hitRegions path.region-hit')).toHaveCount(0);
+  await expect(page.locator('#hitRegions use.region-hit[data-region="Amazonia"]')).toHaveCount(3);
+
+  const copiedAmazonia = page.locator('#hitRegions .region-hit[data-region="Amazonia"][data-wrap-copy="-1"]');
+  await hoverWrappedRegion(page, 'Amazonia', '-1');
+  await expect(page.locator('#hoverPill')).toHaveText('Hover: BRA · Manaus');
+
+  await dispatchPointerClick(copiedAmazonia);
+  await expect(page.locator('#search')).toHaveValue(/Brazil/);
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.debugCanonicalHitPaths).toBe(1);
+  expect(stats.worldCopyHitPathCount).toBe(0);
+  expect(stats.worldCopyHitUseCount).toBeGreaterThan(0);
+  expect(stats.hitGeometryDefPathCount).toBeGreaterThan(300);
+  expect(stats.totalHitGeometryDBytes).toBeLessThan(stats.baseRegionPathDBytes);
+});
+
 test('single-copy grouped base fills preserve region-specific hit paths and filtering', async ({ page }) => {
   await waitForSingleCopyMap(page);
 

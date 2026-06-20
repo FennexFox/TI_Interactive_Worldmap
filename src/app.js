@@ -189,6 +189,17 @@ function shouldDebugDisableLabels() {
   }
 }
 const debugLabelsDisabled = shouldDebugDisableLabels();
+function shouldDebugUseCanonicalHitPaths() {
+  if (!shouldEnableDebugRenderStats()) return false;
+  try {
+    const value = new URLSearchParams(window.location.search).get('debugUseCanonicalHitPaths');
+    if (value === null) return false;
+    return !['0', 'false', 'off'].includes(value.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+const debugCanonicalHitPaths = shouldDebugUseCanonicalHitPaths();
 const gRegions = document.getElementById('regions');
 const gNormalRegionColors = document.getElementById('normalRegionColors');
 const gHitRegions = document.getElementById('hitRegions');
@@ -299,6 +310,9 @@ function createDebugRenderStats(staticValues = {}) {
     'baseRegionUseCount',
     'hitPathCount',
     'hitUseCount',
+    'hitGeometryDefPathCount',
+    'hitGeometryDefPathDBytes',
+    'totalHitGeometryDBytes',
     'worldCopyBasePathCount',
     'worldCopyBaseUseCount',
     'worldCopyHitPathCount',
@@ -321,6 +335,7 @@ function createDebugRenderStats(staticValues = {}) {
     'labelRenderMsMax',
     'labelVisibleState',
     'debugLabelsDisabled',
+    'debugCanonicalHitPaths',
     'selectionOutlinePathCount',
     'hoverOutlinePathCount',
     'hoverClaimPreviewOverlayPathCount',
@@ -371,6 +386,7 @@ const debugRenderStats = shouldEnableDebugRenderStats() ? createDebugRenderStats
   worldWrapDisabled: worldWrapEnabled ? 0 : 1,
   worldCopyContextCount: worldCopyContexts.length,
   debugLabelsDisabled: debugLabelsDisabled ? 1 : 0,
+  debugCanonicalHitPaths: debugCanonicalHitPaths ? 1 : 0,
 }) : null;
 if (debugRenderStats) window.__TI_DEBUG_RENDER_STATS__ = debugRenderStats;
 
@@ -2779,6 +2795,7 @@ function renderRegions(renderContext = {}) {
     colorFor: () => MUTED_NON_CLAIM_COLOR,
     labelPosition,
     localizedRegionName,
+    useCanonicalHitPaths: debugCanonicalHitPaths,
   });
   recordLabelRenderResult(labelStartedAt);
   renderNormalRegionColors(renderContext);
@@ -3142,18 +3159,23 @@ function collectRegionGeometryStats() {
     .reduce((sum, element) => sum + String(element.getAttribute('d') || '').length, 0);
   const baseRegionPathDBytes = dBytes('#regions path.region');
   const hitPathDBytes = dBytes('#hitRegions path.region-hit');
+  const hitGeometryDefPathDBytes = dBytes('#hitRegions path.region-hit-geometry');
+  const totalHitGeometryDBytes = hitPathDBytes + hitGeometryDefPathDBytes;
   return {
     baseRegionPathCount: count('#regions path.region'),
     baseRegionUseCount: count('#regions use.region'),
     hitPathCount: count('#hitRegions path.region-hit'),
     hitUseCount: count('#hitRegions use.region-hit'),
+    hitGeometryDefPathCount: count('#hitRegions path.region-hit-geometry'),
+    hitGeometryDefPathDBytes,
+    totalHitGeometryDBytes,
     worldCopyBasePathCount: count('#regions path.region[data-wrap-canonical="0"]'),
     worldCopyBaseUseCount: count('#regions use.region[data-wrap-canonical="0"]'),
     worldCopyHitPathCount: count('#hitRegions path.region-hit[data-wrap-canonical="0"]'),
     worldCopyHitUseCount: count('#hitRegions use.region-hit[data-wrap-canonical="0"]'),
     baseRegionPathDBytes,
     hitPathDBytes,
-    totalRegionPathDBytes: baseRegionPathDBytes + hitPathDBytes,
+    totalRegionPathDBytes: baseRegionPathDBytes + totalHitGeometryDBytes,
     canonicalRegionPathCount: count('#regions path.region[data-wrap-canonical="1"]'),
     canonicalRegionPathDBytes: dBytes('#regions path.region[data-wrap-canonical="1"]'),
     canonicalHitPathCount: count('#hitRegions path.region-hit[data-wrap-canonical="1"]'),

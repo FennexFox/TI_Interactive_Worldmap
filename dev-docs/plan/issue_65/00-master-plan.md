@@ -92,16 +92,16 @@
 
 ## Final Audit Checklist
 
-- [ ] Final diff reviewed against issue body and user request.
-- [ ] Final diff reviewed against this master plan.
-- [ ] Phase acceptance criteria checked.
-- [ ] Validation results recorded.
-- [ ] Manual smoke test results recorded or explicitly deferred.
-- [ ] Generated-file policy followed.
-- [ ] Phase-sized commit flow audited.
-- [ ] Commit blockers documented when phase-sized commits were skipped.
-- [ ] Commit-flow classification assigned.
-- [ ] Completion classification assigned honestly.
+- [x] Final diff reviewed against issue body and user request.
+- [x] Final diff reviewed against this master plan.
+- [x] Phase acceptance criteria checked.
+- [x] Validation results recorded in `05-report.md` and `issue-65-region-hit-path-profile-result.md`.
+- [x] Manual smoke tests explicitly deferred to automated coverage in `05-report.md`.
+- [x] Generated-file policy followed: Pages assets rebuilt from source; `.chatgpt/**` measurement outputs ignored and untracked.
+- [x] Phase-sized commit flow audited.
+- [x] Commit blockers documented when phase-sized commits were skipped: no blockers were encountered.
+- [x] Commit-flow classification assigned: compliant with phase-sized commits.
+- [x] Completion classification assigned honestly: `Preparation / instrumentation only`.
 
 ## Commit Audit Requirements
 

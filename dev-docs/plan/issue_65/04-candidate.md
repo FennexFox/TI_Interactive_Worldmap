@@ -68,19 +68,38 @@
 
 ## Evidence
 
-- Baseline: pending Phase 3 decision.
-- After: pending candidate.
-- Delta: pending candidate.
-- Interpretation: pending candidate.
+- Baseline: `.chatgpt/tool-tests/render-stats/debug-render-stats-2026-06-20T02-19-00-121Z.summary.csv`, 160 rows, 160 setup-valid rows, no setup failures.
+- Candidate: `.chatgpt/tool-tests/render-stats/debug-render-stats-2026-06-20T01-50-21-942Z.summary.csv`, 160 rows, 160 setup-valid rows, no setup failures, run with `--canonical-hit-paths-only`.
+- Single-copy delta: candidate changes `hitPathCount=363` to `hitPathCount=0`, `hitUseCount=363`, and `hitGeometryDefPathCount=363`; total hit geometry bytes and total region path bytes remain unchanged because one canonical hit definition replaces one direct hit path copy. Visible SVG nodes increase by 364 in the single-copy scenarios.
+- World-wrap delta: candidate changes `hitPathCount=1089` to `hitPathCount=0`, `hitUseCount=1089`, and `hitGeometryDefPathCount=363`; total hit geometry bytes drop from 3,212,946 to 1,070,982 (-66.7%), and total region path bytes drop from 6,425,892 to 4,283,928 (-33.3%). Visible SVG nodes increase by 364 in the wrapped scenarios.
+- Timing delta: median `panFrameMsAvg` is worse in every candidate scenario in this run, including `wrap-on-labels` 0.406 -> 0.5705 and `wrap-on-labels-disabled` 0.338 -> 0.4915. `panFrameMsMax` is also worse in every candidate scenario.
+- Interpretation: canonical hit geometry reuse proves the duplicated byte cost is real and can be measured, but the tested SVG `<use>` form trades path-data bytes for more DOM nodes and slower median pan samples. It should stay behind `debugRenderStats=1&debugUseCanonicalHitPaths=1` and must not become the default behavior in this issue.
 
 ## Progress
 
-- Not started.
+- Completed.
 
 ## Decision log
 
 - Skip this phase if Phase 3 evidence does not justify the candidate.
+- Phase 3 justified an A/B candidate because hit paths duplicated base region path-data bytes.
+- Keep the candidate as a debug-only measurement control.
+- Do not enable canonical hit paths by default because the measured candidate did not improve pan timing and increased visible SVG node counts.
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- Implemented a guarded `debugUseCanonicalHitPaths=1` mode that emits canonical hit geometry definitions and interactive `<use class="region-hit">` instances while preserving region identity datasets.
+- Updated render-stat counters and measurement columns to distinguish direct hit paths, hit `<use>` nodes, canonical hit definition path bytes, and total hit geometry bytes.
+- Added focused Playwright coverage for single-copy hover/click and wrapped seam hover/click under the guarded mode.
+- Validation:
+  - `rtk node --check src/render/map-layers.js` passed.
+  - `rtk node --check src/app.js` passed.
+  - `rtk node --check tools/measure_debug_render_stats.mjs` passed.
+  - `rtk npm run build` passed.
+  - `rtk npm run measure:render-stats -- --repeats=5 --zoom-steps=0,2,4,6 --canonical-hit-paths-only` passed and wrote `.chatgpt/tool-tests/render-stats/debug-render-stats-2026-06-20T01-50-21-942Z.summary.csv`.
+  - `rtk npm run measure:render-stats -- --repeats=5 --zoom-steps=0,2,4,6` passed and wrote `.chatgpt/tool-tests/render-stats/debug-render-stats-2026-06-20T02-19-00-121Z.summary.csv`.
+  - `rtk npx playwright test tests/map-wrap.spec.js` passed.
+  - `rtk npx playwright test tests/language.spec.js` passed.
+  - `rtk npm run test:e2e` passed.
+- Manual smoke tests: explicitly deferred to automated Playwright coverage for hover/click, wrapped seam behavior, labels, claim overlays, pinned regions, and language refresh.
+- Commit blocker: none.
