@@ -168,7 +168,18 @@ function shouldDisableHostileHatching() {
 }
 const hostileClaimHatchingDisabled = shouldDisableHostileHatching();
 svg?.classList.toggle('hostile-hatch-disabled', hostileClaimHatchingDisabled);
+const DEBUG_RENDER_STATS_QUERY = 'debugRenderStats';
+function shouldEnableDebugRenderStats() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return params.has(DEBUG_RENDER_STATS_QUERY) || window.localStorage?.getItem('ti-debug-render-stats') === '1';
+  } catch {
+    return false;
+  }
+}
+
 function shouldDebugDisableLabels() {
+  if (!shouldEnableDebugRenderStats()) return false;
   try {
     const value = new URLSearchParams(window.location.search).get('debugDisableLabels');
     if (value === null) return false;
@@ -214,16 +225,6 @@ const svgWrap = document.querySelector('.svgwrap');
 const regionPathElements = [];
 const hitPathElements = [];
 const labelTextElements = [];
-
-const DEBUG_RENDER_STATS_QUERY = 'debugRenderStats';
-function shouldEnableDebugRenderStats() {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    return params.has(DEBUG_RENDER_STATS_QUERY) || window.localStorage?.getItem('ti-debug-render-stats') === '1';
-  } catch {
-    return false;
-  }
-}
 
 const debugInitialMapView = {
   width: mapView.width,

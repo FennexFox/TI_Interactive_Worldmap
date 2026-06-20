@@ -463,6 +463,15 @@ test('debug label-disable flag suppresses rendered label nodes', async ({ page }
   expect(stats.labelRenderSkippedByDebug).toBeGreaterThan(0);
 });
 
+test('debug label-disable flag is inert outside debug render stats mode', async ({ page }) => {
+  await waitForSingleCopyMap(page, '/?worldWrap=0&debugDisableLabels=1');
+
+  await page.locator('#showLabels').click();
+
+  await expect(page.locator('#labels text.label')).not.toHaveCount(0);
+  expect(await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__)).toBeUndefined();
+});
+
 test('world-wrap default projects grouped base and claim fill copies', async ({ page }) => {
   await waitForWrappedMap(page);
 
