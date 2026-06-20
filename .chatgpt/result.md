@@ -71,3 +71,22 @@ All verification passed, including the full Playwright suite with 75 passing tes
 - Decision: no compound visual overlay optimization was kept. Existing helpers already group claim fills and foreign/secondary hover fills; the only meaningful visual candidate was grouping 56 per-region claim outlines, but tests and DOM semantics intentionally preserve those per-region outline nodes.
 - Verification: `npm run build`, `npm run measure:render-stats -- --repeats=5 --zoom-steps=0,2,4,6`, `npm run verify`, `npx playwright test tests/map-wrap.spec.js`, `npm run test:e2e`, and a focused Playwright smoke script for default wrap off, wrap toggle, claims, hostile hatch, hover overlays, labels, pinned panel, and Korean/English language refresh.
 - Follow-up recommendation: profile label rendering/toggling ergonomics next, or open a broader renderer-strategy investigation for labels and hybrid Canvas/SVG visuals while preserving hit paths and semantic overlays.
+
+## Issue #62 Label Rendering Profiling Run
+
+- Run ID: `2026-06-19T103500Z-label-rendering-performance`
+- Commits created:
+  - `3500337` `Plan issue 62 label profiling`
+  - `443deb7` `Instrument label render profiling`
+  - `42fa628` `Profile label rendering performance`
+  - `6c84b61` `update dev-docs`
+- Completion classification: complete for the profiling contract; no user-visible label optimization kept.
+- Fresh measurement CSV: `.chatgpt/tool-tests/render-stats/debug-render-stats-2026-06-19T11-50-09-796Z.summary.csv`
+- Measurement command: `npm run measure:render-stats -- --repeats=5 --zoom-steps=0,2,4,6`
+- Added label render-stat coverage for label copies, wrapped label copies, label render calls, DOM replacements, render timing, debug-disabled state, and interaction probes for pan, zoom, hover, wrap toggle, and language refresh.
+- Added `debugDisableLabels=1` as a debug-only A/B control; normal label behavior remains unchanged.
+- Measurement result: labels add 363 SVG text nodes without wrap and 1089 SVG text nodes with world wrap. Measured `panFrameMsAvg` deltas were about +0.08 to +0.21 ms depending on scenario.
+- Rebuild result: labels did not rebuild during pan, zoom, hover, or language refresh in the measured paths; wrap toggle rebuilt the label layer once.
+- Decision: keep instrumentation and the debug A/B flag, but do not ship a user-visible label optimization in issue #62.
+- Verification: `npm run build`, `node --check src/app.js`, `node --check tools/measure_debug_render_stats.mjs`, the full measurement command, `npm run verify`, `npx playwright test tests/map-wrap.spec.js`, `npx playwright test tests/language.spec.js`, and `npm run test:e2e`.
+- Follow-up recommendation: reduce overlay and world-wrap replicated SVG node pressure first; revisit label virtualization or label visibility culling only if later profiles show labels dominating frame time.

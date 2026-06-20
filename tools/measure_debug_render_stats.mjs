@@ -38,6 +38,16 @@ const SUMMARY_COLUMNS = [
   'claimLabelCount',
   'hitPathCount',
   'labelCount',
+  'labelCopyGroupCount',
+  'wrappedLabelCopyCount',
+  'labelRenderCalls',
+  'labelDomReplacements',
+  'labelRenderSkippedByDebug',
+  'labelRenderMsCount',
+  'labelRenderMsTotal',
+  'labelRenderMsMax',
+  'labelVisibleState',
+  'debugLabelsDisabled',
   'selectionOutlinePathCount',
   'hoverOutlinePathCount',
   'hoverClaimPreviewOverlayPathCount',
@@ -63,6 +73,10 @@ const SUMMARY_COLUMNS = [
   'setupClaimLabelCount',
   'setupHitPathCount',
   'setupLabelCount',
+  'setupLabelCopyGroupCount',
+  'setupWrappedLabelCopyCount',
+  'setupLabelVisibleState',
+  'setupDebugLabelsDisabled',
   'setupManualEnvelopeOverlayPathCount',
   'setupForeignHoverOverlayPathCount',
   'setupForeignHoverOverlayUseCount',
@@ -78,6 +92,20 @@ const SUMMARY_COLUMNS = [
   'foreignHoverOverlayReplacements',
   'secondaryHoverOverlayReplacements',
   'hoverOutlineReplacements',
+  'zoomLabelRenderCalls',
+  'zoomLabelDomReplacements',
+  'zoomLabelRenderSkippedByDebug',
+  'zoomLabelCount',
+  'zoomWrappedLabelCopyCount',
+  'hoverLabelRenderCalls',
+  'hoverLabelDomReplacements',
+  'hoverLabelRenderSkippedByDebug',
+  'wrapToggleLabelRenderCalls',
+  'wrapToggleLabelDomReplacements',
+  'wrapToggleLabelRenderSkippedByDebug',
+  'languageRefreshLabelRenderCalls',
+  'languageRefreshLabelDomReplacements',
+  'languageRefreshLabelRenderSkippedByDebug',
   'setupOk',
   'setupFailures',
 ];
@@ -327,18 +355,25 @@ async function configureClaimOverlay(page, { nation, project, extraNations = [] 
 
 async function configureComplexOverlayState(page) {
   const setup = [];
+  const hoverTarget = await primeHoverOverlay(page);
+  setup.push(hoverTarget);
+  return setup;
+}
+
+async function configureLabelState(page, enabled) {
+  if (!enabled) {
+    return { ok: true, selector: '#showLabels', value: 'off', label: 'labels left at default off' };
+  }
   const labelResult = await page.evaluate(() => {
     const button = document.querySelector('#showLabels');
     const labels = document.querySelector('#labels');
     if (!button || !labels) return { ok: false, selector: '#showLabels', reason: 'missing label toggle' };
-    if (!labels.querySelector('text.label')) button.click();
+    const stats = window.__TI_DEBUG_RENDER_STATS__;
+    if (stats?.labelVisibleState !== 1) button.click();
     return { ok: true, selector: '#showLabels', label: 'labels enabled' };
   });
-  setup.push(labelResult);
   await page.waitForTimeout(180);
-  const hoverTarget = await primeHoverOverlay(page);
-  setup.push(hoverTarget);
-  return setup;
+  return labelResult;
 }
 
 async function primeHoverOverlay(page) {
@@ -417,6 +452,53 @@ async function captureStats(page) {
   });
 }
 
+async function captureInteractionStats(page, action) {
+  await resetStats(page);
+  const setup = await action();
+  await page.waitForTimeout(220);
+  return {
+    setup,
+    stats: await captureStats(page),
+  };
+}
+
+async function captureInteractionProbes(page, scenario) {
+  const hover = await captureInteractionStats(page, () => primeHoverOverlay(page));
+  const languageRefresh = await captureInteractionStats(page, async () => page.evaluate(() => {
+    const select = document.querySelector('#languageSel');
+    if (!select) return { ok: false, selector: '#languageSel', reason: 'missing language select' };
+    select.value = select.value === 'ko' ? 'en' : 'ko';
+    select.dispatchEvent(new Event('input', { bubbles: true }));
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    return { ok: true, selector: '#languageSel', value: select.value, label: 'language changed' };
+  }));
+  await page.evaluate(() => {
+    const select = document.querySelector('#languageSel');
+    if (!select || select.value === 'en') return;
+    select.value = 'en';
+    select.dispatchEvent(new Event('input', { bubbles: true }));
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await page.waitForTimeout(220);
+  const wrapToggle = await captureInteractionStats(page, async () => page.evaluate(() => {
+    const button = document.querySelector('[data-map-view-wrap-toggle]');
+    if (!button) return { ok: false, selector: '[data-map-view-wrap-toggle]', reason: 'missing wrap toggle' };
+    button.click();
+    return { ok: true, selector: '[data-map-view-wrap-toggle]', label: 'world wrap toggled' };
+  }));
+  await page.evaluate(({ restoreEnabled }) => {
+    const button = document.querySelector('[data-map-view-wrap-toggle]');
+    const currentlyEnabled = button?.getAttribute('aria-pressed') === 'true';
+    if (button && currentlyEnabled !== restoreEnabled) button.click();
+  }, { restoreEnabled: scenario.query.includes('worldWrap=1') });
+  await page.waitForTimeout(220);
+  return {
+    hover,
+    languageRefresh,
+    wrapToggle,
+  };
+}
+
 async function captureSetupStats(page) {
   return page.evaluate(() => {
     const count = selector => document.querySelectorAll(selector).length;
@@ -442,6 +524,10 @@ async function captureSetupStats(page) {
       setupClaimLabelCount: count('#claimLabels text.claim-label, #claimLabel text.claim-label, #claimLabelLayer text.claim-label'),
       setupHitPathCount: count('#hitRegions path.region-hit'),
       setupLabelCount: count('#labels text.label'),
+      setupLabelCopyGroupCount: count('#labels .label-copy'),
+      setupWrappedLabelCopyCount: count('#labels text.label[data-wrap-canonical="0"]'),
+      setupLabelVisibleState: window.__TI_DEBUG_RENDER_STATS__?.labelVisibleState || 0,
+      setupDebugLabelsDisabled: window.__TI_DEBUG_RENDER_STATS__?.debugLabelsDisabled || 0,
       setupManualEnvelopeOverlayPathCount: count('#manualEnvelopeOverlay path, #manualEnvelopeOverlays path, .manual-envelope-overlay path, [data-layer="manual-envelope-overlay"] path'),
       setupForeignHoverOverlayPathCount: count('#foreignHoverOverlay path, #foreignHoverOverlays path, .foreign-hover-overlay path, [data-layer="foreign-hover-overlay"] path'),
       setupForeignHoverOverlayUseCount: count('#foreignHoverOverlay use, #foreignHoverOverlays use'),
@@ -455,6 +541,8 @@ async function captureSetupStats(page) {
 }
 
 function summarize(results) {
+  const stat = (source, key) => source?.[key];
+  const probeStat = (item, probe, key) => stat(item.interactionStats?.[probe]?.stats, key);
   return results.map(item => ({
     scenario: item.scenario,
     repeat: item.repeat,
@@ -480,6 +568,16 @@ function summarize(results) {
     claimLabelCount: item.stats?.claimLabelCount,
     hitPathCount: item.stats?.hitPathCount,
     labelCount: item.stats?.labelCount,
+    labelCopyGroupCount: item.stats?.labelCopyGroupCount,
+    wrappedLabelCopyCount: item.stats?.wrappedLabelCopyCount,
+    labelRenderCalls: item.stats?.labelRenderCalls,
+    labelDomReplacements: item.stats?.labelDomReplacements,
+    labelRenderSkippedByDebug: item.stats?.labelRenderSkippedByDebug,
+    labelRenderMsCount: item.stats?.labelRenderMsCount,
+    labelRenderMsTotal: item.stats?.labelRenderMsTotal,
+    labelRenderMsMax: item.stats?.labelRenderMsMax,
+    labelVisibleState: item.stats?.labelVisibleState,
+    debugLabelsDisabled: item.stats?.debugLabelsDisabled,
     selectionOutlinePathCount: item.stats?.selectionOutlinePathCount,
     hoverOutlinePathCount: item.stats?.hoverOutlinePathCount,
     hoverClaimPreviewOverlayPathCount: item.stats?.hoverClaimPreviewOverlayPathCount,
@@ -505,6 +603,10 @@ function summarize(results) {
     setupClaimLabelCount: item.setupStats?.setupClaimLabelCount,
     setupHitPathCount: item.setupStats?.setupHitPathCount,
     setupLabelCount: item.setupStats?.setupLabelCount,
+    setupLabelCopyGroupCount: item.setupStats?.setupLabelCopyGroupCount,
+    setupWrappedLabelCopyCount: item.setupStats?.setupWrappedLabelCopyCount,
+    setupLabelVisibleState: item.setupStats?.setupLabelVisibleState,
+    setupDebugLabelsDisabled: item.setupStats?.setupDebugLabelsDisabled,
     setupManualEnvelopeOverlayPathCount: item.setupStats?.setupManualEnvelopeOverlayPathCount,
     setupForeignHoverOverlayPathCount: item.setupStats?.setupForeignHoverOverlayPathCount,
     setupForeignHoverOverlayUseCount: item.setupStats?.setupForeignHoverOverlayUseCount,
@@ -520,6 +622,20 @@ function summarize(results) {
     foreignHoverOverlayReplacements: item.stats?.foreignHoverOverlayReplacements,
     secondaryHoverOverlayReplacements: item.stats?.secondaryHoverOverlayReplacements,
     hoverOutlineReplacements: item.stats?.hoverOutlineReplacements,
+    zoomLabelRenderCalls: stat(item.zoomStats, 'labelRenderCalls'),
+    zoomLabelDomReplacements: stat(item.zoomStats, 'labelDomReplacements'),
+    zoomLabelRenderSkippedByDebug: stat(item.zoomStats, 'labelRenderSkippedByDebug'),
+    zoomLabelCount: stat(item.zoomStats, 'labelCount'),
+    zoomWrappedLabelCopyCount: stat(item.zoomStats, 'wrappedLabelCopyCount'),
+    hoverLabelRenderCalls: probeStat(item, 'hover', 'labelRenderCalls'),
+    hoverLabelDomReplacements: probeStat(item, 'hover', 'labelDomReplacements'),
+    hoverLabelRenderSkippedByDebug: probeStat(item, 'hover', 'labelRenderSkippedByDebug'),
+    wrapToggleLabelRenderCalls: probeStat(item, 'wrapToggle', 'labelRenderCalls'),
+    wrapToggleLabelDomReplacements: probeStat(item, 'wrapToggle', 'labelDomReplacements'),
+    wrapToggleLabelRenderSkippedByDebug: probeStat(item, 'wrapToggle', 'labelRenderSkippedByDebug'),
+    languageRefreshLabelRenderCalls: probeStat(item, 'languageRefresh', 'labelRenderCalls'),
+    languageRefreshLabelDomReplacements: probeStat(item, 'languageRefresh', 'labelDomReplacements'),
+    languageRefreshLabelRenderSkippedByDebug: probeStat(item, 'languageRefresh', 'labelRenderSkippedByDebug'),
     setupOk: item.setup?.every(entry => entry?.ok !== false),
     setupFailures: item.setup?.filter(entry => entry?.ok === false).map(entry => `${entry.selector || entry.nation}: ${entry.reason}`).join(' | ') || '',
   }));
@@ -556,11 +672,14 @@ async function main() {
     });
     const page = await browser.newPage({ viewport: { width: 1400, height: 950 } });
     const scenarios = [
-      { name: 'wrap-off', query: 'debugRenderStats=1&worldWrap=0' },
-      { name: 'wrap-off-complex-overlays', query: 'debugRenderStats=1&worldWrap=0', complexOverlays: true },
-      { name: 'wrap-off-disable-hatch', query: 'debugRenderStats=1&worldWrap=0&disableHostileHatch=1' },
-      { name: 'wrap-on', query: 'debugRenderStats=1&worldWrap=1' },
-      { name: 'wrap-on-disable-hatch', query: 'debugRenderStats=1&worldWrap=1&disableHostileHatch=1' },
+      { name: 'wrap-off-labels', query: 'debugRenderStats=1&worldWrap=0', labels: true },
+      { name: 'wrap-off-labels-disabled', query: 'debugRenderStats=1&worldWrap=0&debugDisableLabels=1', labels: true },
+      { name: 'wrap-off-complex-overlays-labels', query: 'debugRenderStats=1&worldWrap=0', labels: true, complexOverlays: true },
+      { name: 'wrap-off-complex-overlays-labels-disabled', query: 'debugRenderStats=1&worldWrap=0&debugDisableLabels=1', labels: true, complexOverlays: true },
+      { name: 'wrap-on-labels', query: 'debugRenderStats=1&worldWrap=1', labels: true },
+      { name: 'wrap-on-labels-disabled', query: 'debugRenderStats=1&worldWrap=1&debugDisableLabels=1', labels: true },
+      { name: 'wrap-on-complex-overlays-labels', query: 'debugRenderStats=1&worldWrap=1', labels: true, complexOverlays: true },
+      { name: 'wrap-on-complex-overlays-labels-disabled', query: 'debugRenderStats=1&worldWrap=1&debugDisableLabels=1', labels: true, complexOverlays: true },
     ];
     const results = [];
 
@@ -570,10 +689,13 @@ async function main() {
           await page.goto(scenarioUrl(baseUrl, scenario.query), { waitUntil: 'networkidle' });
           await page.waitForFunction(() => Boolean(window.__TI_DEBUG_RENDER_STATS__), null, { timeout: 10_000 });
           const setup = await configureClaimOverlay(page, args);
+          setup.push(await configureLabelState(page, scenario.labels));
           if (scenario.complexOverlays) setup.push(...await configureComplexOverlayState(page));
           const setupStats = await captureSetupStats(page);
+          const interactionStats = await captureInteractionProbes(page, scenario);
           await resetStats(page);
           const center = await zoomMap(page, zoomSteps);
+          const zoomStats = await captureStats(page);
           await resetStats(page);
           await panMap(page, center, args.panSteps);
           const stats = await captureStats(page);
@@ -587,6 +709,8 @@ async function main() {
             viewBox,
             setup,
             setupStats,
+            interactionStats,
+            zoomStats,
             stats,
           });
         }
