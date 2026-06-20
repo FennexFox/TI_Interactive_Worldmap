@@ -49,19 +49,26 @@
 
 ## Evidence
 
-- Baseline: pending measurement.
+- Baseline: full measurement CSV `.chatgpt/tool-tests/render-stats/debug-render-stats-2026-06-20T01-17-28-846Z.summary.csv` contains 160 rows across the eight existing label-enabled/disabled single-copy, complex single-copy, world-wrap, and complex world-wrap scenarios. All rows have `setupOk=true` and empty `setupFailures`.
 - After: no source optimization in this phase.
-- Delta: pending measurement.
-- Interpretation: pending measurement.
+- Delta: median single-copy rows have `baseRegionPathCount=363`, `hitPathCount=363`, `baseRegionPathDBytes=1070982`, and `hitPathDBytes=1070982`. Median world-wrap rows have `baseRegionPathCount=1089`, `hitPathCount=1089`, `worldCopyBasePathCount=726`, `worldCopyHitPathCount=726`, `baseRegionPathDBytes=3212946`, and `hitPathDBytes=3212946`.
+- Interpretation: hit paths duplicate the same path-data volume as base visual region paths. The duplicated hit geometry is meaningful enough to proceed to Phase 4 with a guarded canonical hit-path candidate. Timing remains noisy and is not yet evidence of improvement because no candidate has been measured.
 
 ## Progress
 
-- Not started.
+- Completed.
 
 ## Decision log
 
 - Candidate must be skipped if instrumentation shows little or no duplicated hit-path geometry to reduce.
+- Phase 3 found meaningful duplicated hit-path geometry, so proceed to a guarded `debugUseCanonicalHitPaths=1` experiment in Phase 4.
+- Treat the candidate as an A/B profiling control first; do not make it default unless interaction tests and before/after evidence support doing so.
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- Validation:
+  - `rtk npm run measure:render-stats -- --repeats=5 --zoom-steps=0,2,4,6` passed and wrote `.chatgpt/tool-tests/render-stats/debug-render-stats-2026-06-20T01-17-28-846Z.summary.csv`.
+- Manual smoke tests: not run for this measurement-only phase.
+- Notes:
+  - Two earlier full-run attempts were interrupted while validating instrumentation overhead and runtime expectations; a smaller smoke run passed and wrote `.chatgpt/tool-tests/render-stats/debug-render-stats-2026-06-20T00-51-46-685Z.summary.csv`.
+  - The successful full run took substantially longer than focused tests, so future full A/B candidate runs should allow enough time.
