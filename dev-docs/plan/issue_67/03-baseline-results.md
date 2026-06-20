@@ -83,7 +83,7 @@
   - Full 5x4 measurement command: attempted and interrupted due multi-hour projected runtime.
   - Bounded repeated/zoomed measurements: passed and produced ignored summary/raw artifacts.
 - Manual smoke tests: Not run separately outside automation. `npm run test:e2e` covered world-wrap, hover/click selection, labels, capital hover overlays, pinned/capital markers, and debug render stats; the measurement harness also exercised hover probes, selected claim overlay setup, wrap toggle probes, and label toggles.
-- Commit: Pending.
+- Commit: `2afb89d` (`Record renderer bottleneck measurements`).
 - Commit blocker: None known.
 
 ## Progress

@@ -76,7 +76,7 @@ Deferred to Phase 03 / final audit because Phase 02 changes only the measurement
   - Smoke summary parse: passed; 20 rows, expected initial and canonical scenario names, initial no-selection rows had zero selected/claim overlay setup counts, and hover probe summary fields were present.
   - `npm run verify`: passed; generated output verifier passed and Python tests reported 17 tests OK.
 - Manual smoke tests: Not run separately in a visible browser during Phase 02. The measurement smoke exercised browser loading, label toggles, selected claim overlay setup, hover probes, wrap toggle probes, and canonical hit-path debug scenarios. Full manual/e2e behavior validation remains for Phase 03/final audit.
-- Commit: Pending.
+- Commit: `7783f6a` (`Expand renderer measurement coverage`).
 - Commit blocker: None known.
 
 ## Progress

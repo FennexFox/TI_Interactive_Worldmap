@@ -61,7 +61,7 @@
   - The current scenario matrix configures a selected claim overlay before every measured scenario, so it does not include a true default/no-selection initial map state.
 - Delta: Phase 02 should focus on the measurement script, not normal app behavior: add explicit no-selection initial scenarios and surface hover-probe overlay counters/replacement counts in the summary.
 - Interpretation: Existing app instrumentation is sufficient for #67's first diagnosis without adding intrusive hover/selection timing inside `src/app.js`. Hover response timing remains "if measurable"; the safer near-term proxy is probe-specific overlay counts/rebuilds plus existing pan/map/label timing.
-- Commit: Pending.
+- Commit: `20e7102` (`Plan renderer bottleneck audit`).
 - Commit blocker: None known.
 
 ## Progress

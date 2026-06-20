@@ -81,16 +81,16 @@
 
 ## Final Audit Checklist
 
-- [ ] Final diff reviewed against issue body and user request.
-- [ ] Final diff reviewed against this master plan.
-- [ ] Phase acceptance criteria checked.
-- [ ] Validation results recorded.
-- [ ] Manual smoke test results recorded or explicitly deferred.
-- [ ] Generated-file policy followed.
-- [ ] Phase-sized commit flow audited.
-- [ ] Commit blockers documented when phase-sized commits were skipped.
-- [ ] Commit-flow classification assigned.
-- [ ] Completion classification assigned honestly.
+- [x] Final diff reviewed against issue body and user request.
+- [x] Final diff reviewed against this master plan.
+- [x] Phase acceptance criteria checked.
+- [x] Validation results recorded.
+- [x] Manual smoke test results recorded or explicitly deferred.
+- [x] Generated-file policy followed.
+- [x] Phase-sized commit flow audited.
+- [x] Commit blockers documented when phase-sized commits were skipped.
+- [x] Commit-flow classification assigned.
+- [x] Completion classification assigned honestly.
 
 ## Commit Audit Requirements
 
@@ -100,3 +100,39 @@
 - Commit blocker policy: document blocker in the relevant phase plan and final report before proceeding without a phase commit.
 - Generated artifact policy: include generated artifacts only when repository policy requires them.
 - Commit-flow non-compliance outcome: report separately in Final Audit even if implementation works.
+
+## Final Audit
+
+- Completion classification: Complete for #67 as a measurement/audit issue; no renderer speedup was implemented or claimed.
+- Completed:
+  - Added gated phase plan artifacts and issue context under `dev-docs/plan/issue_67/`.
+  - Expanded `tools/measure_debug_render_stats.mjs` with true no-selection initial scenarios and hover-probe overlay summary columns.
+  - Collected bounded renderer measurements covering wrap on/off, labels on/off, selected overlays, complex hover setup, canonical hit-path A/B, no-selection initial state, and zoomed-in label state.
+  - Documented bottleneck diagnosis and recommendation in `04-recommendation.md`.
+- Not completed / deferred:
+  - The exact 5-repeat x 4-zoom full measurement matrix was attempted but stopped after projecting to a multi-hour run in this environment. Bounded replacement runs are documented in Phase 03.
+  - No optimization implementation was attempted.
+- Validation:
+  - `npm run build`: passed.
+  - `npm run verify`: passed.
+  - `npm run test:e2e`: passed.
+  - Phase 02 smoke measurement and Phase 03 bounded measurements passed.
+- Manual smoke tests:
+  - Separate manual browser smoke was not run; equivalent world-wrap, hover/click, labels, capital hover, pinned/capital markers, and debug-stat behavior was covered by e2e tests and measurement automation.
+- Generated-file policy:
+  - No generated artifacts were hand-edited or committed. Raw measurement files remain ignored under `.chatgpt/`.
+- Commit audit:
+  - Phase-sized commits made: yes.
+  - Plan / baseline committed before source implementation: yes, `20e7102`.
+  - Implementation/tooling committed separately: yes, `7783f6a`.
+  - Results committed separately: yes, `2afb89d`.
+  - Recommendation committed separately: yes, `0f550fd`.
+  - Generated artifacts policy followed: yes.
+  - Unrelated changes excluded: yes; only ignored `.chatgpt/` files remain untracked/ignored.
+  - Commit-flow classification: compliant.
+- Known risks:
+  - Browser timing is local-machine dependent.
+  - Measurements infer SVG/DOM pressure but do not directly separate paint, style/layout, and hit testing.
+  - The full suggested matrix is too slow after scenario expansion and should be split into bounded commands for routine use.
+- Follow-up recommendation:
+  - Prioritize label level-of-detail / label copy policy, especially wrapped label copies and dense-label states. Keep labels enabled by default and leave canonical hit paths debug-only.

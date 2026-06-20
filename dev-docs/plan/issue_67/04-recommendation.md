@@ -89,7 +89,7 @@
   - Measurement replacement commands passed and produced ignored raw/summary artifacts.
 - Manual smoke tests: Covered by e2e and measurement automation rather than a separate manual browser session. Relevant passing coverage includes world-wrap, hover/click selection, labels, capital hover overlays, pinned/capital markers, and debug render stats.
 - Completion classification: Complete for #67 as a measurement/audit issue, with the explicit caveat that the originally suggested full 5x4 benchmark was replaced by bounded measurements because the expanded full matrix was not practical in this environment.
-- Commit: Pending.
+- Commit: `0f550fd` (`Recommend renderer optimization target`).
 - Commit blocker: None known.
 
 ## Progress
