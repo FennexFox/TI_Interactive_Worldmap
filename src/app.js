@@ -295,7 +295,21 @@ function createDebugRenderStats(staticValues = {}) {
     'claimHatchPathCount',
     'claimClipPathCount',
     'claimLabelCount',
+    'baseRegionPathCount',
+    'baseRegionUseCount',
     'hitPathCount',
+    'hitUseCount',
+    'worldCopyBasePathCount',
+    'worldCopyBaseUseCount',
+    'worldCopyHitPathCount',
+    'worldCopyHitUseCount',
+    'baseRegionPathDBytes',
+    'hitPathDBytes',
+    'totalRegionPathDBytes',
+    'canonicalRegionPathCount',
+    'canonicalRegionPathDBytes',
+    'canonicalHitPathCount',
+    'canonicalHitPathDBytes',
     'labelCount',
     'labelCopyGroupCount',
     'wrappedLabelCopyCount',
@@ -3124,6 +3138,10 @@ function measurePanViewportRect() {
 function sampleDebugSvgLayerCounts() {
   if (!debugRenderStats || !svg) return;
   const count = selector => svg.querySelectorAll(selector).length;
+  const dBytes = selector => [...svg.querySelectorAll(selector)]
+    .reduce((sum, element) => sum + String(element.getAttribute('d') || '').length, 0);
+  const baseRegionPathDBytes = dBytes('#regions path.region');
+  const hitPathDBytes = dBytes('#hitRegions path.region-hit');
   setRenderStat('visibleSvgNodeCount', svg.querySelectorAll('*').length);
   setRenderStat('claimOverlayPathCount', count('#claimOverlays path'));
   setRenderStat('claimOverlayUseCount', count('#claimOverlays use'));
@@ -3135,7 +3153,21 @@ function sampleDebugSvgLayerCounts() {
   setRenderStat('claimHatchPathCount', count('#claimOverlays .claim-hatch-line'));
   setRenderStat('claimClipPathCount', count('#claimOverlays clipPath'));
   setRenderStat('claimLabelCount', count('#claimLabels text.claim-label'));
+  setRenderStat('baseRegionPathCount', count('#regions path.region'));
+  setRenderStat('baseRegionUseCount', count('#regions use.region'));
   setRenderStat('hitPathCount', count('#hitRegions path.region-hit'));
+  setRenderStat('hitUseCount', count('#hitRegions use.region-hit'));
+  setRenderStat('worldCopyBasePathCount', count('#regions path.region[data-wrap-canonical="0"]'));
+  setRenderStat('worldCopyBaseUseCount', count('#regions use.region[data-wrap-canonical="0"]'));
+  setRenderStat('worldCopyHitPathCount', count('#hitRegions path.region-hit[data-wrap-canonical="0"]'));
+  setRenderStat('worldCopyHitUseCount', count('#hitRegions use.region-hit[data-wrap-canonical="0"]'));
+  setRenderStat('baseRegionPathDBytes', baseRegionPathDBytes);
+  setRenderStat('hitPathDBytes', hitPathDBytes);
+  setRenderStat('totalRegionPathDBytes', baseRegionPathDBytes + hitPathDBytes);
+  setRenderStat('canonicalRegionPathCount', count('#regions path.region[data-wrap-canonical="1"]'));
+  setRenderStat('canonicalRegionPathDBytes', dBytes('#regions path.region[data-wrap-canonical="1"]'));
+  setRenderStat('canonicalHitPathCount', count('#hitRegions path.region-hit[data-wrap-canonical="1"]'));
+  setRenderStat('canonicalHitPathDBytes', dBytes('#hitRegions path.region-hit[data-wrap-canonical="1"]'));
   setRenderStat('labelCount', count('#labels text.label'));
   setRenderStat('labelCopyGroupCount', count('#labels .label-copy'));
   setRenderStat('wrappedLabelCopyCount', count('#labels text.label[data-wrap-canonical="0"]'));

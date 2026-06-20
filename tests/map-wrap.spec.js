@@ -242,6 +242,87 @@ test('debug render stats reset preserves current world-wrap state', async ({ pag
   expect(stats.worldCopyContextCount).toBe(3);
 });
 
+test('debug render stats sample single-copy region geometry counters', async ({ page }) => {
+  await waitForSingleCopyMap(page, '/?worldWrap=0&debugRenderStats=1');
+
+  const counters = await page.evaluate(() => {
+    const count = selector => document.querySelectorAll(selector).length;
+    const dBytes = selector => [...document.querySelectorAll(selector)]
+      .reduce((sum, element) => sum + String(element.getAttribute('d') || '').length, 0);
+    const stats = {...window.__TI_DEBUG_RENDER_STATS__};
+    return {
+      stats,
+      actual: {
+        baseRegionPathCount: count('#regions path.region'),
+        baseRegionUseCount: count('#regions use.region'),
+        hitPathCount: count('#hitRegions path.region-hit'),
+        hitUseCount: count('#hitRegions use.region-hit'),
+        worldCopyBasePathCount: count('#regions path.region[data-wrap-canonical="0"]'),
+        worldCopyHitPathCount: count('#hitRegions path.region-hit[data-wrap-canonical="0"]'),
+        baseRegionPathDBytes: dBytes('#regions path.region'),
+        hitPathDBytes: dBytes('#hitRegions path.region-hit'),
+        canonicalRegionPathCount: count('#regions path.region[data-wrap-canonical="1"]'),
+        canonicalHitPathCount: count('#hitRegions path.region-hit[data-wrap-canonical="1"]'),
+      },
+    };
+  });
+
+  expect(counters.stats.baseRegionPathCount).toBe(counters.actual.baseRegionPathCount);
+  expect(counters.stats.baseRegionUseCount).toBe(0);
+  expect(counters.stats.hitPathCount).toBe(counters.actual.hitPathCount);
+  expect(counters.stats.hitUseCount).toBe(0);
+  expect(counters.stats.worldCopyBasePathCount).toBe(0);
+  expect(counters.stats.worldCopyHitPathCount).toBe(0);
+  expect(counters.stats.baseRegionPathCount).toBeGreaterThan(300);
+  expect(counters.stats.hitPathCount).toBe(counters.stats.baseRegionPathCount);
+  expect(counters.stats.baseRegionPathDBytes).toBe(counters.actual.baseRegionPathDBytes);
+  expect(counters.stats.hitPathDBytes).toBe(counters.actual.hitPathDBytes);
+  expect(counters.stats.totalRegionPathDBytes).toBe(counters.actual.baseRegionPathDBytes + counters.actual.hitPathDBytes);
+  expect(counters.stats.canonicalRegionPathCount).toBe(counters.actual.canonicalRegionPathCount);
+  expect(counters.stats.canonicalHitPathCount).toBe(counters.actual.canonicalHitPathCount);
+});
+
+test('debug render stats sample wrapped region geometry counters', async ({ page }) => {
+  await waitForWrappedMap(page, '/?debugRenderStats=1');
+
+  const counters = await page.evaluate(() => {
+    const count = selector => document.querySelectorAll(selector).length;
+    const dBytes = selector => [...document.querySelectorAll(selector)]
+      .reduce((sum, element) => sum + String(element.getAttribute('d') || '').length, 0);
+    const stats = {...window.__TI_DEBUG_RENDER_STATS__};
+    return {
+      stats,
+      actual: {
+        baseRegionPathCount: count('#regions path.region'),
+        baseRegionUseCount: count('#regions use.region'),
+        hitPathCount: count('#hitRegions path.region-hit'),
+        hitUseCount: count('#hitRegions use.region-hit'),
+        worldCopyBasePathCount: count('#regions path.region[data-wrap-canonical="0"]'),
+        worldCopyHitPathCount: count('#hitRegions path.region-hit[data-wrap-canonical="0"]'),
+        baseRegionPathDBytes: dBytes('#regions path.region'),
+        hitPathDBytes: dBytes('#hitRegions path.region-hit'),
+        canonicalRegionPathDBytes: dBytes('#regions path.region[data-wrap-canonical="1"]'),
+        canonicalHitPathDBytes: dBytes('#hitRegions path.region-hit[data-wrap-canonical="1"]'),
+      },
+    };
+  });
+
+  expect(counters.stats.worldCopyContextCount).toBe(3);
+  expect(counters.stats.baseRegionPathCount).toBe(counters.actual.baseRegionPathCount);
+  expect(counters.stats.baseRegionUseCount).toBe(0);
+  expect(counters.stats.hitPathCount).toBe(counters.actual.hitPathCount);
+  expect(counters.stats.hitUseCount).toBe(0);
+  expect(counters.stats.worldCopyBasePathCount).toBe(counters.actual.worldCopyBasePathCount);
+  expect(counters.stats.worldCopyHitPathCount).toBe(counters.actual.worldCopyHitPathCount);
+  expect(counters.stats.worldCopyBasePathCount).toBeGreaterThan(0);
+  expect(counters.stats.worldCopyHitPathCount).toBeGreaterThan(0);
+  expect(counters.stats.baseRegionPathDBytes).toBe(counters.actual.baseRegionPathDBytes);
+  expect(counters.stats.hitPathDBytes).toBe(counters.actual.hitPathDBytes);
+  expect(counters.stats.totalRegionPathDBytes).toBe(counters.actual.baseRegionPathDBytes + counters.actual.hitPathDBytes);
+  expect(counters.stats.baseRegionPathDBytes).toBeGreaterThan(counters.actual.canonicalRegionPathDBytes);
+  expect(counters.stats.hitPathDBytes).toBeGreaterThan(counters.actual.canonicalHitPathDBytes);
+});
+
 test('single-copy grouped base fills preserve region-specific hit paths and filtering', async ({ page }) => {
   await waitForSingleCopyMap(page);
 

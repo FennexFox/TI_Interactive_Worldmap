@@ -60,18 +60,26 @@
 ## Evidence
 
 - Baseline: existing debug stats expose `visibleSvgNodeCount` and `hitPathCount` but not path-data bytes or hit/base path/use distinctions.
-- After: pending implementation.
-- Delta: pending implementation.
-- Interpretation: pending implementation.
+- After: debug stats now expose base visual region path/use counts, hit path/use counts, wrapped-copy base/hit path/use counts, base and hit `d` byte totals, total region `d` bytes, and canonical base/hit counts/bytes. The measurement summary also records matching setup and final-row columns.
+- Delta: instrumentation distinguishes the current all-`path` implementation from a future `<use>` candidate without changing render behavior.
+- Interpretation: Phase 3 can now measure duplicated region geometry separately from DOM node count and pan timing.
 
 ## Progress
 
-- Not started.
+- Completed.
 
 ## Decision log
 
 - Keep instrumentation in `sampleDebugSvgLayerCounts()` so it samples the actual served SVG DOM.
+- Count `d` bytes from rendered DOM attributes. This intentionally measures duplicated geometry currently present in the SVG, not source catalog size.
+- Keep single-copy and wrapped assertions focused on counter correctness and current all-`path` behavior; candidate behavior will need separate tests if Phase 4 runs.
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- Validation:
+  - `rtk node --check src/app.js` passed.
+  - `rtk node --check tools/measure_debug_render_stats.mjs` passed.
+  - `rtk npm run build` passed and regenerated `docs/assets/app.js`.
+  - `rtk npx playwright test tests/map-wrap.spec.js -g "region geometry"` passed.
+  - `rtk npm run verify` passed.
+- Manual smoke tests: deferred for this instrumentation-only phase; focused Playwright verifies the new counters against the served SVG DOM in single-copy and world-wrap modes.
