@@ -36,7 +36,24 @@ const SUMMARY_COLUMNS = [
   'claimHatchPathCount',
   'claimClipPathCount',
   'claimLabelCount',
+  'baseRegionPathCount',
+  'baseRegionUseCount',
   'hitPathCount',
+  'hitUseCount',
+  'hitGeometryDefPathCount',
+  'hitGeometryDefPathDBytes',
+  'totalHitGeometryDBytes',
+  'worldCopyBasePathCount',
+  'worldCopyBaseUseCount',
+  'worldCopyHitPathCount',
+  'worldCopyHitUseCount',
+  'baseRegionPathDBytes',
+  'hitPathDBytes',
+  'totalRegionPathDBytes',
+  'canonicalRegionPathCount',
+  'canonicalRegionPathDBytes',
+  'canonicalHitPathCount',
+  'canonicalHitPathDBytes',
   'labelCount',
   'labelCopyGroupCount',
   'wrappedLabelCopyCount',
@@ -48,6 +65,7 @@ const SUMMARY_COLUMNS = [
   'labelRenderMsMax',
   'labelVisibleState',
   'debugLabelsDisabled',
+  'debugCanonicalHitPaths',
   'selectionOutlinePathCount',
   'hoverOutlinePathCount',
   'hoverClaimPreviewOverlayPathCount',
@@ -71,12 +89,30 @@ const SUMMARY_COLUMNS = [
   'setupClaimHatchPathCount',
   'setupClaimClipPathCount',
   'setupClaimLabelCount',
+  'setupBaseRegionPathCount',
+  'setupBaseRegionUseCount',
   'setupHitPathCount',
+  'setupHitUseCount',
+  'setupHitGeometryDefPathCount',
+  'setupHitGeometryDefPathDBytes',
+  'setupTotalHitGeometryDBytes',
+  'setupWorldCopyBasePathCount',
+  'setupWorldCopyBaseUseCount',
+  'setupWorldCopyHitPathCount',
+  'setupWorldCopyHitUseCount',
+  'setupBaseRegionPathDBytes',
+  'setupHitPathDBytes',
+  'setupTotalRegionPathDBytes',
+  'setupCanonicalRegionPathCount',
+  'setupCanonicalRegionPathDBytes',
+  'setupCanonicalHitPathCount',
+  'setupCanonicalHitPathDBytes',
   'setupLabelCount',
   'setupLabelCopyGroupCount',
   'setupWrappedLabelCopyCount',
   'setupLabelVisibleState',
   'setupDebugLabelsDisabled',
+  'setupDebugCanonicalHitPaths',
   'setupManualEnvelopeOverlayPathCount',
   'setupForeignHoverOverlayPathCount',
   'setupForeignHoverOverlayUseCount',
@@ -125,12 +161,16 @@ function parseArgs(argv) {
     project: 'Project_GreaterPanAsia',
     extraNations: null,
     panSteps: 24,
+    includeCanonicalHitPaths: false,
+    canonicalHitPathsOnly: false,
   };
   for (const arg of argv) {
     if (arg === '--build') args.build = true;
     else if (arg === '--no-server') args.noServer = true;
     else if (arg === '--raw-json') args.rawJson = true;
     else if (arg === '--summary-json') args.summaryJson = true;
+    else if (arg === '--include-canonical-hit-paths') args.includeCanonicalHitPaths = true;
+    else if (arg === '--canonical-hit-paths-only') args.canonicalHitPathsOnly = true;
     else if (arg.startsWith('--base-url=')) args.baseUrl = arg.slice('--base-url='.length).replace(/\/$/, '');
     else if (arg.startsWith('--port=')) args.port = Number(arg.slice('--port='.length));
     else if (arg.startsWith('--out=')) args.outDir = arg.slice('--out='.length);
@@ -188,6 +228,14 @@ function startServer(port) {
 
 function scenarioUrl(baseUrl, query) {
   return `${baseUrl}/?${query}`;
+}
+
+function canonicalHitPathScenario(scenario) {
+  return {
+    ...scenario,
+    name: `${scenario.name}-canonical-hit-paths`,
+    query: `${scenario.query}&debugUseCanonicalHitPaths=1`,
+  };
 }
 
 async function selectSearchResult(page, requestedValue) {
@@ -278,7 +326,7 @@ async function clickSelectedRegionOnMap(page, label) {
       ...Object.values(el.dataset || {}),
     ].filter(Boolean).join(' ');
     const wanted = String(label || '').trim().toLowerCase();
-    const visiblePaths = [...document.querySelectorAll('#selectionOutlines path, #hoverOutlines path, #hitRegions path')]
+    const visiblePaths = [...document.querySelectorAll('#selectionOutlines path, #hoverOutlines path, #hitRegions .region-hit')]
       .map(el => ({ el, rect: el.getBoundingClientRect(), text: describe(el).toLowerCase() }))
       .filter(item => item.rect.width > 0 && item.rect.height > 0);
     const scored = visiblePaths
@@ -308,7 +356,7 @@ async function clickSelectedRegionOnMap(page, label) {
     const y = selected.rect.top + selected.rect.height / 2;
     return {
       ok: true,
-      selector: `#${selected.group || 'unknown'} path`,
+      selector: `#${selected.group || 'unknown'} .region-hit`,
       value: label,
       x,
       y,
@@ -502,12 +550,18 @@ async function captureInteractionProbes(page, scenario) {
 async function captureSetupStats(page) {
   return page.evaluate(() => {
     const count = selector => document.querySelectorAll(selector).length;
+    const dBytes = selector => [...document.querySelectorAll(selector)]
+      .reduce((sum, element) => sum + String(element.getAttribute('d') || '').length, 0);
     const countVisible = selector => [...document.querySelectorAll(selector)]
       .filter(el => {
         const rect = el.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0;
       }).length;
     const panel = document.querySelector('#pinnedRegionsPanel');
+    const setupBaseRegionPathDBytes = dBytes('#regions path.region');
+    const setupHitPathDBytes = dBytes('#hitRegions path.region-hit');
+    const setupHitGeometryDefPathDBytes = dBytes('#hitRegions path.region-hit-geometry');
+    const setupTotalHitGeometryDBytes = setupHitPathDBytes + setupHitGeometryDefPathDBytes;
     return {
       setupSelectionOutlinePathCount: countVisible('#selectionOutlines path'),
       setupPinnedRegionMarkerCount: countVisible('#pinnedRegionsPanel [data-region], #pinnedRegionsPanel [data-regions], #pinnedRegionsPanel li, #pinnedRegionsPanel button'),
@@ -522,12 +576,30 @@ async function captureSetupStats(page) {
       setupClaimHatchPathCount: count('#claimOverlays .claim-hatch-line, #claimOverlay .claim-hatch-line, #claimOverlayLayer .claim-hatch-line'),
       setupClaimClipPathCount: count('#claimOverlays clipPath, #claimOverlay clipPath, #claimOverlayLayer clipPath'),
       setupClaimLabelCount: count('#claimLabels text.claim-label, #claimLabel text.claim-label, #claimLabelLayer text.claim-label'),
+      setupBaseRegionPathCount: count('#regions path.region'),
+      setupBaseRegionUseCount: count('#regions use.region'),
       setupHitPathCount: count('#hitRegions path.region-hit'),
+      setupHitUseCount: count('#hitRegions use.region-hit'),
+      setupHitGeometryDefPathCount: count('#hitRegions path.region-hit-geometry'),
+      setupHitGeometryDefPathDBytes,
+      setupTotalHitGeometryDBytes,
+      setupWorldCopyBasePathCount: count('#regions path.region[data-wrap-canonical="0"]'),
+      setupWorldCopyBaseUseCount: count('#regions use.region[data-wrap-canonical="0"]'),
+      setupWorldCopyHitPathCount: count('#hitRegions path.region-hit[data-wrap-canonical="0"]'),
+      setupWorldCopyHitUseCount: count('#hitRegions use.region-hit[data-wrap-canonical="0"]'),
+      setupBaseRegionPathDBytes,
+      setupHitPathDBytes,
+      setupTotalRegionPathDBytes: setupBaseRegionPathDBytes + setupTotalHitGeometryDBytes,
+      setupCanonicalRegionPathCount: count('#regions path.region[data-wrap-canonical="1"]'),
+      setupCanonicalRegionPathDBytes: dBytes('#regions path.region[data-wrap-canonical="1"]'),
+      setupCanonicalHitPathCount: count('#hitRegions path.region-hit[data-wrap-canonical="1"]'),
+      setupCanonicalHitPathDBytes: dBytes('#hitRegions path.region-hit[data-wrap-canonical="1"]'),
       setupLabelCount: count('#labels text.label'),
       setupLabelCopyGroupCount: count('#labels .label-copy'),
       setupWrappedLabelCopyCount: count('#labels text.label[data-wrap-canonical="0"]'),
       setupLabelVisibleState: window.__TI_DEBUG_RENDER_STATS__?.labelVisibleState || 0,
       setupDebugLabelsDisabled: window.__TI_DEBUG_RENDER_STATS__?.debugLabelsDisabled || 0,
+      setupDebugCanonicalHitPaths: window.__TI_DEBUG_RENDER_STATS__?.debugCanonicalHitPaths || 0,
       setupManualEnvelopeOverlayPathCount: count('#manualEnvelopeOverlay path, #manualEnvelopeOverlays path, .manual-envelope-overlay path, [data-layer="manual-envelope-overlay"] path'),
       setupForeignHoverOverlayPathCount: count('#foreignHoverOverlay path, #foreignHoverOverlays path, .foreign-hover-overlay path, [data-layer="foreign-hover-overlay"] path'),
       setupForeignHoverOverlayUseCount: count('#foreignHoverOverlay use, #foreignHoverOverlays use'),
@@ -566,7 +638,24 @@ function summarize(results) {
     claimHatchPathCount: item.stats?.claimHatchPathCount,
     claimClipPathCount: item.stats?.claimClipPathCount,
     claimLabelCount: item.stats?.claimLabelCount,
+    baseRegionPathCount: item.stats?.baseRegionPathCount,
+    baseRegionUseCount: item.stats?.baseRegionUseCount,
     hitPathCount: item.stats?.hitPathCount,
+    hitUseCount: item.stats?.hitUseCount,
+    hitGeometryDefPathCount: item.stats?.hitGeometryDefPathCount,
+    hitGeometryDefPathDBytes: item.stats?.hitGeometryDefPathDBytes,
+    totalHitGeometryDBytes: item.stats?.totalHitGeometryDBytes,
+    worldCopyBasePathCount: item.stats?.worldCopyBasePathCount,
+    worldCopyBaseUseCount: item.stats?.worldCopyBaseUseCount,
+    worldCopyHitPathCount: item.stats?.worldCopyHitPathCount,
+    worldCopyHitUseCount: item.stats?.worldCopyHitUseCount,
+    baseRegionPathDBytes: item.stats?.baseRegionPathDBytes,
+    hitPathDBytes: item.stats?.hitPathDBytes,
+    totalRegionPathDBytes: item.stats?.totalRegionPathDBytes,
+    canonicalRegionPathCount: item.stats?.canonicalRegionPathCount,
+    canonicalRegionPathDBytes: item.stats?.canonicalRegionPathDBytes,
+    canonicalHitPathCount: item.stats?.canonicalHitPathCount,
+    canonicalHitPathDBytes: item.stats?.canonicalHitPathDBytes,
     labelCount: item.stats?.labelCount,
     labelCopyGroupCount: item.stats?.labelCopyGroupCount,
     wrappedLabelCopyCount: item.stats?.wrappedLabelCopyCount,
@@ -578,6 +667,7 @@ function summarize(results) {
     labelRenderMsMax: item.stats?.labelRenderMsMax,
     labelVisibleState: item.stats?.labelVisibleState,
     debugLabelsDisabled: item.stats?.debugLabelsDisabled,
+    debugCanonicalHitPaths: item.stats?.debugCanonicalHitPaths,
     selectionOutlinePathCount: item.stats?.selectionOutlinePathCount,
     hoverOutlinePathCount: item.stats?.hoverOutlinePathCount,
     hoverClaimPreviewOverlayPathCount: item.stats?.hoverClaimPreviewOverlayPathCount,
@@ -601,12 +691,30 @@ function summarize(results) {
     setupClaimHatchPathCount: item.setupStats?.setupClaimHatchPathCount,
     setupClaimClipPathCount: item.setupStats?.setupClaimClipPathCount,
     setupClaimLabelCount: item.setupStats?.setupClaimLabelCount,
+    setupBaseRegionPathCount: item.setupStats?.setupBaseRegionPathCount,
+    setupBaseRegionUseCount: item.setupStats?.setupBaseRegionUseCount,
     setupHitPathCount: item.setupStats?.setupHitPathCount,
+    setupHitUseCount: item.setupStats?.setupHitUseCount,
+    setupHitGeometryDefPathCount: item.setupStats?.setupHitGeometryDefPathCount,
+    setupHitGeometryDefPathDBytes: item.setupStats?.setupHitGeometryDefPathDBytes,
+    setupTotalHitGeometryDBytes: item.setupStats?.setupTotalHitGeometryDBytes,
+    setupWorldCopyBasePathCount: item.setupStats?.setupWorldCopyBasePathCount,
+    setupWorldCopyBaseUseCount: item.setupStats?.setupWorldCopyBaseUseCount,
+    setupWorldCopyHitPathCount: item.setupStats?.setupWorldCopyHitPathCount,
+    setupWorldCopyHitUseCount: item.setupStats?.setupWorldCopyHitUseCount,
+    setupBaseRegionPathDBytes: item.setupStats?.setupBaseRegionPathDBytes,
+    setupHitPathDBytes: item.setupStats?.setupHitPathDBytes,
+    setupTotalRegionPathDBytes: item.setupStats?.setupTotalRegionPathDBytes,
+    setupCanonicalRegionPathCount: item.setupStats?.setupCanonicalRegionPathCount,
+    setupCanonicalRegionPathDBytes: item.setupStats?.setupCanonicalRegionPathDBytes,
+    setupCanonicalHitPathCount: item.setupStats?.setupCanonicalHitPathCount,
+    setupCanonicalHitPathDBytes: item.setupStats?.setupCanonicalHitPathDBytes,
     setupLabelCount: item.setupStats?.setupLabelCount,
     setupLabelCopyGroupCount: item.setupStats?.setupLabelCopyGroupCount,
     setupWrappedLabelCopyCount: item.setupStats?.setupWrappedLabelCopyCount,
     setupLabelVisibleState: item.setupStats?.setupLabelVisibleState,
     setupDebugLabelsDisabled: item.setupStats?.setupDebugLabelsDisabled,
+    setupDebugCanonicalHitPaths: item.setupStats?.setupDebugCanonicalHitPaths,
     setupManualEnvelopeOverlayPathCount: item.setupStats?.setupManualEnvelopeOverlayPathCount,
     setupForeignHoverOverlayPathCount: item.setupStats?.setupForeignHoverOverlayPathCount,
     setupForeignHoverOverlayUseCount: item.setupStats?.setupForeignHoverOverlayUseCount,
@@ -671,7 +779,7 @@ async function main() {
         : {}),
     });
     const page = await browser.newPage({ viewport: { width: 1400, height: 950 } });
-    const scenarios = [
+    const baseScenarios = [
       { name: 'wrap-off-labels', query: 'debugRenderStats=1&worldWrap=0', labels: true },
       { name: 'wrap-off-labels-disabled', query: 'debugRenderStats=1&worldWrap=0&debugDisableLabels=1', labels: true },
       { name: 'wrap-off-complex-overlays-labels', query: 'debugRenderStats=1&worldWrap=0', labels: true, complexOverlays: true },
@@ -681,6 +789,12 @@ async function main() {
       { name: 'wrap-on-complex-overlays-labels', query: 'debugRenderStats=1&worldWrap=1', labels: true, complexOverlays: true },
       { name: 'wrap-on-complex-overlays-labels-disabled', query: 'debugRenderStats=1&worldWrap=1&debugDisableLabels=1', labels: true, complexOverlays: true },
     ];
+    const canonicalHitPathScenarios = baseScenarios.map(canonicalHitPathScenario);
+    const scenarios = args.canonicalHitPathsOnly
+      ? canonicalHitPathScenarios
+      : args.includeCanonicalHitPaths
+        ? [...baseScenarios, ...canonicalHitPathScenarios]
+        : baseScenarios;
     const results = [];
 
     for (const scenario of scenarios) {

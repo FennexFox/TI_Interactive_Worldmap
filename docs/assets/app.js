@@ -189,6 +189,17 @@ function shouldDebugDisableLabels() {
   }
 }
 const debugLabelsDisabled = shouldDebugDisableLabels();
+function shouldDebugUseCanonicalHitPaths() {
+  if (!shouldEnableDebugRenderStats()) return false;
+  try {
+    const value = new URLSearchParams(window.location.search).get('debugUseCanonicalHitPaths');
+    if (value === null) return false;
+    return !['0', 'false', 'off'].includes(value.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+const debugCanonicalHitPaths = shouldDebugUseCanonicalHitPaths();
 const gRegions = document.getElementById('regions');
 const gNormalRegionColors = document.getElementById('normalRegionColors');
 const gHitRegions = document.getElementById('hitRegions');
@@ -295,7 +306,24 @@ function createDebugRenderStats(staticValues = {}) {
     'claimHatchPathCount',
     'claimClipPathCount',
     'claimLabelCount',
+    'baseRegionPathCount',
+    'baseRegionUseCount',
     'hitPathCount',
+    'hitUseCount',
+    'hitGeometryDefPathCount',
+    'hitGeometryDefPathDBytes',
+    'totalHitGeometryDBytes',
+    'worldCopyBasePathCount',
+    'worldCopyBaseUseCount',
+    'worldCopyHitPathCount',
+    'worldCopyHitUseCount',
+    'baseRegionPathDBytes',
+    'hitPathDBytes',
+    'totalRegionPathDBytes',
+    'canonicalRegionPathCount',
+    'canonicalRegionPathDBytes',
+    'canonicalHitPathCount',
+    'canonicalHitPathDBytes',
     'labelCount',
     'labelCopyGroupCount',
     'wrappedLabelCopyCount',
@@ -307,6 +335,7 @@ function createDebugRenderStats(staticValues = {}) {
     'labelRenderMsMax',
     'labelVisibleState',
     'debugLabelsDisabled',
+    'debugCanonicalHitPaths',
     'selectionOutlinePathCount',
     'hoverOutlinePathCount',
     'hoverClaimPreviewOverlayPathCount',
@@ -357,6 +386,7 @@ const debugRenderStats = shouldEnableDebugRenderStats() ? createDebugRenderStats
   worldWrapDisabled: worldWrapEnabled ? 0 : 1,
   worldCopyContextCount: worldCopyContexts.length,
   debugLabelsDisabled: debugLabelsDisabled ? 1 : 0,
+  debugCanonicalHitPaths: debugCanonicalHitPaths ? 1 : 0,
 }) : null;
 if (debugRenderStats) window.__TI_DEBUG_RENDER_STATS__ = debugRenderStats;
 
@@ -903,6 +933,7 @@ let panHoverRefreshFrame = 0;
 let pendingPanHoverPoint = null;
 let mapPanState = null;
 let suppressMapClick = false;
+let cachedRegionGeometryStats = {};
 const nationChoiceByValue = new Map();
 let incomingClaimsByRegion = derivedIndices.incomingClaimsByRegion;
 const regionCenterCache = new Map();
@@ -2764,6 +2795,7 @@ function renderRegions(renderContext = {}) {
     colorFor: () => MUTED_NON_CLAIM_COLOR,
     labelPosition,
     localizedRegionName,
+    useCanonicalHitPaths: debugCanonicalHitPaths,
   });
   recordLabelRenderResult(labelStartedAt);
   renderNormalRegionColors(renderContext);
@@ -3121,9 +3153,39 @@ function measurePanViewportRect() {
   recordRenderStat('panSvgRectReads');
   return svg?.getBoundingClientRect();
 }
-function sampleDebugSvgLayerCounts() {
+function collectRegionGeometryStats() {
+  const count = selector => svg.querySelectorAll(selector).length;
+  const dBytes = selector => [...svg.querySelectorAll(selector)]
+    .reduce((sum, element) => sum + String(element.getAttribute('d') || '').length, 0);
+  const baseRegionPathDBytes = dBytes('#regions path.region');
+  const hitPathDBytes = dBytes('#hitRegions path.region-hit');
+  const hitGeometryDefPathDBytes = dBytes('#hitRegions path.region-hit-geometry');
+  const totalHitGeometryDBytes = hitPathDBytes + hitGeometryDefPathDBytes;
+  return {
+    baseRegionPathCount: count('#regions path.region'),
+    baseRegionUseCount: count('#regions use.region'),
+    hitPathCount: count('#hitRegions path.region-hit'),
+    hitUseCount: count('#hitRegions use.region-hit'),
+    hitGeometryDefPathCount: count('#hitRegions path.region-hit-geometry'),
+    hitGeometryDefPathDBytes,
+    totalHitGeometryDBytes,
+    worldCopyBasePathCount: count('#regions path.region[data-wrap-canonical="0"]'),
+    worldCopyBaseUseCount: count('#regions use.region[data-wrap-canonical="0"]'),
+    worldCopyHitPathCount: count('#hitRegions path.region-hit[data-wrap-canonical="0"]'),
+    worldCopyHitUseCount: count('#hitRegions use.region-hit[data-wrap-canonical="0"]'),
+    baseRegionPathDBytes,
+    hitPathDBytes,
+    totalRegionPathDBytes: baseRegionPathDBytes + totalHitGeometryDBytes,
+    canonicalRegionPathCount: count('#regions path.region[data-wrap-canonical="1"]'),
+    canonicalRegionPathDBytes: dBytes('#regions path.region[data-wrap-canonical="1"]'),
+    canonicalHitPathCount: count('#hitRegions path.region-hit[data-wrap-canonical="1"]'),
+    canonicalHitPathDBytes: dBytes('#hitRegions path.region-hit[data-wrap-canonical="1"]'),
+  };
+}
+function sampleDebugSvgLayerCounts({includeGeometry=true} = {}) {
   if (!debugRenderStats || !svg) return;
   const count = selector => svg.querySelectorAll(selector).length;
+  if (includeGeometry) cachedRegionGeometryStats = collectRegionGeometryStats();
   setRenderStat('visibleSvgNodeCount', svg.querySelectorAll('*').length);
   setRenderStat('claimOverlayPathCount', count('#claimOverlays path'));
   setRenderStat('claimOverlayUseCount', count('#claimOverlays use'));
@@ -3135,7 +3197,7 @@ function sampleDebugSvgLayerCounts() {
   setRenderStat('claimHatchPathCount', count('#claimOverlays .claim-hatch-line'));
   setRenderStat('claimClipPathCount', count('#claimOverlays clipPath'));
   setRenderStat('claimLabelCount', count('#claimLabels text.claim-label'));
-  setRenderStat('hitPathCount', count('#hitRegions path.region-hit'));
+  for (const [key, value] of Object.entries(cachedRegionGeometryStats)) setRenderStat(key, value);
   setRenderStat('labelCount', count('#labels text.label'));
   setRenderStat('labelCopyGroupCount', count('#labels .label-copy'));
   setRenderStat('wrappedLabelCopyCount', count('#labels text.label[data-wrap-canonical="0"]'));
@@ -3151,7 +3213,7 @@ function sampleDebugSvgLayerCounts() {
   setRenderStat('totalClipPathCount', count('clipPath'));
 }
 function samplePanSvgNodeCount() {
-  sampleDebugSvgLayerCounts();
+  sampleDebugSvgLayerCounts({includeGeometry: false});
 }
 function viewDeltaFromPointerDelta(deltaX, deltaY, rect = null) {
   const viewportRect = rect || measurePanViewportRect();

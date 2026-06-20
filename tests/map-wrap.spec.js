@@ -242,6 +242,133 @@ test('debug render stats reset preserves current world-wrap state', async ({ pag
   expect(stats.worldCopyContextCount).toBe(3);
 });
 
+test('debug render stats sample single-copy region geometry counters', async ({ page }) => {
+  await waitForSingleCopyMap(page, '/?worldWrap=0&debugRenderStats=1');
+
+  const counters = await page.evaluate(() => {
+    const count = selector => document.querySelectorAll(selector).length;
+    const dBytes = selector => [...document.querySelectorAll(selector)]
+      .reduce((sum, element) => sum + String(element.getAttribute('d') || '').length, 0);
+    const stats = {...window.__TI_DEBUG_RENDER_STATS__};
+    return {
+      stats,
+      actual: {
+        baseRegionPathCount: count('#regions path.region'),
+        baseRegionUseCount: count('#regions use.region'),
+        hitPathCount: count('#hitRegions path.region-hit'),
+        hitUseCount: count('#hitRegions use.region-hit'),
+        worldCopyBasePathCount: count('#regions path.region[data-wrap-canonical="0"]'),
+        worldCopyHitPathCount: count('#hitRegions path.region-hit[data-wrap-canonical="0"]'),
+        baseRegionPathDBytes: dBytes('#regions path.region'),
+        hitPathDBytes: dBytes('#hitRegions path.region-hit'),
+        canonicalRegionPathCount: count('#regions path.region[data-wrap-canonical="1"]'),
+        canonicalHitPathCount: count('#hitRegions path.region-hit[data-wrap-canonical="1"]'),
+      },
+    };
+  });
+
+  expect(counters.stats.baseRegionPathCount).toBe(counters.actual.baseRegionPathCount);
+  expect(counters.stats.baseRegionUseCount).toBe(0);
+  expect(counters.stats.hitPathCount).toBe(counters.actual.hitPathCount);
+  expect(counters.stats.hitUseCount).toBe(0);
+  expect(counters.stats.worldCopyBasePathCount).toBe(0);
+  expect(counters.stats.worldCopyHitPathCount).toBe(0);
+  expect(counters.stats.baseRegionPathCount).toBeGreaterThan(300);
+  expect(counters.stats.hitPathCount).toBe(counters.stats.baseRegionPathCount);
+  expect(counters.stats.baseRegionPathDBytes).toBe(counters.actual.baseRegionPathDBytes);
+  expect(counters.stats.hitPathDBytes).toBe(counters.actual.hitPathDBytes);
+  expect(counters.stats.totalRegionPathDBytes).toBe(counters.actual.baseRegionPathDBytes + counters.actual.hitPathDBytes);
+  expect(counters.stats.canonicalRegionPathCount).toBe(counters.actual.canonicalRegionPathCount);
+  expect(counters.stats.canonicalHitPathCount).toBe(counters.actual.canonicalHitPathCount);
+});
+
+test('debug render stats sample wrapped region geometry counters', async ({ page }) => {
+  await waitForWrappedMap(page, '/?debugRenderStats=1');
+
+  const counters = await page.evaluate(() => {
+    const count = selector => document.querySelectorAll(selector).length;
+    const dBytes = selector => [...document.querySelectorAll(selector)]
+      .reduce((sum, element) => sum + String(element.getAttribute('d') || '').length, 0);
+    const stats = {...window.__TI_DEBUG_RENDER_STATS__};
+    return {
+      stats,
+      actual: {
+        baseRegionPathCount: count('#regions path.region'),
+        baseRegionUseCount: count('#regions use.region'),
+        hitPathCount: count('#hitRegions path.region-hit'),
+        hitUseCount: count('#hitRegions use.region-hit'),
+        worldCopyBasePathCount: count('#regions path.region[data-wrap-canonical="0"]'),
+        worldCopyHitPathCount: count('#hitRegions path.region-hit[data-wrap-canonical="0"]'),
+        baseRegionPathDBytes: dBytes('#regions path.region'),
+        hitPathDBytes: dBytes('#hitRegions path.region-hit'),
+        canonicalRegionPathDBytes: dBytes('#regions path.region[data-wrap-canonical="1"]'),
+        canonicalHitPathDBytes: dBytes('#hitRegions path.region-hit[data-wrap-canonical="1"]'),
+      },
+    };
+  });
+
+  expect(counters.stats.worldCopyContextCount).toBe(3);
+  expect(counters.stats.baseRegionPathCount).toBe(counters.actual.baseRegionPathCount);
+  expect(counters.stats.baseRegionUseCount).toBe(0);
+  expect(counters.stats.hitPathCount).toBe(counters.actual.hitPathCount);
+  expect(counters.stats.hitUseCount).toBe(0);
+  expect(counters.stats.worldCopyBasePathCount).toBe(counters.actual.worldCopyBasePathCount);
+  expect(counters.stats.worldCopyHitPathCount).toBe(counters.actual.worldCopyHitPathCount);
+  expect(counters.stats.worldCopyBasePathCount).toBeGreaterThan(0);
+  expect(counters.stats.worldCopyHitPathCount).toBeGreaterThan(0);
+  expect(counters.stats.baseRegionPathDBytes).toBe(counters.actual.baseRegionPathDBytes);
+  expect(counters.stats.hitPathDBytes).toBe(counters.actual.hitPathDBytes);
+  expect(counters.stats.totalRegionPathDBytes).toBe(counters.actual.baseRegionPathDBytes + counters.actual.hitPathDBytes);
+  expect(counters.stats.baseRegionPathDBytes).toBeGreaterThan(counters.actual.canonicalRegionPathDBytes);
+  expect(counters.stats.hitPathDBytes).toBeGreaterThan(counters.actual.canonicalHitPathDBytes);
+});
+
+test('debug canonical hit paths preserve single-copy hover and click', async ({ page }) => {
+  await waitForSingleCopyMap(page, '/?worldWrap=0&debugRenderStats=1&debugUseCanonicalHitPaths=1');
+
+  await expect(page.locator('#hitRegions path.region-hit')).toHaveCount(0);
+  const hitUses = page.locator('#hitRegions use.region-hit');
+  await expect(hitUses.first()).toBeVisible();
+  await expect(page.locator('#hitRegions path.region-hit-geometry')).toHaveCount(await hitUses.count());
+
+  const amazon = page.locator('#hitRegions .region-hit[data-region="Amazonia"][data-wrap-canonical="1"]');
+  await amazon.hover();
+  await expect(page.locator('#hoverPill')).toHaveText('Hover: BRA · Manaus');
+
+  await amazon.dispatchEvent('click', { bubbles: true });
+  await expect(page.locator('#search')).toHaveValue(/Brazil/);
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.debugCanonicalHitPaths).toBe(1);
+  expect(stats.hitPathCount).toBe(0);
+  expect(stats.hitUseCount).toBeGreaterThan(300);
+  expect(stats.hitGeometryDefPathCount).toBe(stats.hitUseCount);
+  expect(stats.hitGeometryDefPathDBytes).toBeGreaterThan(0);
+  expect(stats.totalHitGeometryDBytes).toBe(stats.hitGeometryDefPathDBytes);
+});
+
+test('debug canonical hit paths preserve wrapped seam hover and click', async ({ page }) => {
+  await waitForWrappedMap(page, '/?debugRenderStats=1&debugUseCanonicalHitPaths=1');
+
+  await expectProjectedCopies(page.locator('#hitRegions .region-hit[data-region="Amazonia"]'));
+  await expect(page.locator('#hitRegions path.region-hit')).toHaveCount(0);
+  await expect(page.locator('#hitRegions use.region-hit[data-region="Amazonia"]')).toHaveCount(3);
+
+  const copiedAmazonia = page.locator('#hitRegions .region-hit[data-region="Amazonia"][data-wrap-copy="-1"]');
+  await hoverWrappedRegion(page, 'Amazonia', '-1');
+  await expect(page.locator('#hoverPill')).toHaveText('Hover: BRA · Manaus');
+
+  await dispatchPointerClick(copiedAmazonia);
+  await expect(page.locator('#search')).toHaveValue(/Brazil/);
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.debugCanonicalHitPaths).toBe(1);
+  expect(stats.worldCopyHitPathCount).toBe(0);
+  expect(stats.worldCopyHitUseCount).toBeGreaterThan(0);
+  expect(stats.hitGeometryDefPathCount).toBeGreaterThan(300);
+  expect(stats.totalHitGeometryDBytes).toBeLessThan(stats.baseRegionPathDBytes);
+});
+
 test('single-copy grouped base fills preserve region-specific hit paths and filtering', async ({ page }) => {
   await waitForSingleCopyMap(page);
 
