@@ -110,7 +110,7 @@ export function renderNationDropdown({
     const tagText = choice.type === 'region' ? t('search.regionTag') : choice.tag;
     const labelText = choice.type === 'region'
       ? choice.label
-      : choice.label.replace(choice.tag + ' \u00b7 ', '');
+      : choice.label.replace(choice.tag + ' · ', '');
     return `<button type="button" class="searchOption${active ? ' active' : ''}${selected ? ' selected' : ''}" role="option" aria-selected="${selected ? 'true' : 'false'}" data-index="${index}"><span class="searchOptionTag">${escapeHtml(tagText)}</span><span class="searchOptionLabel">${escapeHtml(labelText)}</span></button>`;
   }).join('');
   setSearchDropdownExpanded(search, dropdown, true);
@@ -128,7 +128,7 @@ export function renderSearchResults({
 } = {}) {
   if (!root) return;
   const nationHtml = nationMatches.map(choice => `<div class="item nationResult" data-nation="${escapeHtml(choice.tag)}"><b>${escapeHtml(choice.label)}</b><div class="small">${escapeHtml(t('results.nation', {tag: choice.tag}))}</div></div>`).join('');
-  const regionHtml = regionMatches.map(region => `<div class="item" data-id="${region.id}"><b>${escapeHtml(localizedRegionName(region))}</b><div class="small">${escapeHtml(region.name)} \u00b7 ${escapeHtml(region.nationTag)}</div></div>`).join('');
+  const regionHtml = regionMatches.map(region => `<div class="item" data-id="${region.id}"><b>${escapeHtml(localizedRegionName(region))}</b><div class="small">${escapeHtml(region.name)} · ${escapeHtml(region.nationTag)}</div></div>`).join('');
   const empty = !nationHtml && !regionHtml ? `<div class="item small">${escapeHtml(t('search.noResults'))}</div>` : '';
   root.innerHTML = nationHtml + regionHtml + empty;
   root.querySelectorAll('.item[data-nation]').forEach(el => {
@@ -182,7 +182,8 @@ export function bindNationSearchControl({
       event.preventDefault();
       if (!getDropdownOpen?.()) openDropdown?.();
       const currentIndex = getHighlightedIndex?.() ?? -1;
-      setHighlightedIndex?.(Math.max(0, currentIndex - 1));
+      const count = getChoiceCount?.() || 0;
+      setHighlightedIndex?.(count > 0 ? Math.max(0, currentIndex - 1) : -1);
       renderDropdown?.();
     } else if (event.key === 'Enter') {
       if (getDropdownOpen?.() && (getHighlightedIndex?.() ?? -1) >= 0) {
