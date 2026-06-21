@@ -57,22 +57,39 @@
 - Baseline:
   - `src/app.js` owns hit-layer pointer events, tooltip scheduling, hover preview scheduling, map pan state, map view controls, and visual refresh calls.
 - After:
-  - TODO
+  - In-progress slice: extracted map pan state, drag threshold handling, drag click suppression, pan delta math, pointer capture lifecycle, and post-pan hover refresh scheduling into `src/interaction/map-pan.js`.
+  - `src/app.js` now creates a map pan controller with callbacks for `panMapView`, map-view render scheduling, debug stats, and hover refresh.
+  - Updated `tools/build_pages.py` to copy `src/interaction/**` to `docs/assets/interaction/**`.
+  - Updated `npm run verify` and `tools/verify_generated_outputs.py` to syntax-check/require `docs/assets/interaction/map-pan.js`.
+  - Ran `npm run build`; generated `docs/assets/app.js` and `docs/assets/interaction/map-pan.js`.
 - Delta:
-  - TODO
+  - `src/app.js` reduced from 4,153 lines after phase 3 to 4,072 lines.
+  - Interaction logic extracted so far: 158 lines in `src/interaction/map-pan.js`.
 - Interpretation:
-  - TODO
-- Commit: TODO
-- Commit blocker: TODO
+  - Map pan state and pointer-drag suppression can now be inspected outside `src/app.js`.
+  - `src/app.js` still owns hover/tooltip semantics and map-view rendering orchestration through injected callbacks.
+  - Phase 04 is not complete yet: map controls and tooltip/hover scheduling still need extraction review.
+- Validation:
+  - `node --check src/app.js`: passed.
+  - `node --check src/interaction/map-pan.js`: passed.
+  - Focused pan/world-wrap/hover/click/zoom/map-controls e2e grep: passed, 49 tests.
+  - `npm run build`: passed; wrote generated assets.
+  - `npm run verify`: passed; generated outputs verified and 17 Python tests passed.
+  - `npm run test:e2e`: passed, 85 tests.
+- Generated artifacts:
+  - `docs/assets/app.js` and `docs/assets/interaction/map-pan.js` changed through `npm run build`.
+- Commit: partial phase-4 slice pending (`Extract map pan controller`).
+- Commit blocker: None known.
 
 ## Progress
 
-- Not started.
+- In progress.
 
 ## Decision log
 
-- No decisions recorded yet.
+- 2026-06-21: Extract map pan as the first phase-4 slice because it has cohesive internal state and broad map-wrap e2e coverage.
+- 2026-06-21: Keep hover/tooltip behavior in `src/app.js` for this slice and pass post-pan hover refresh as a callback to avoid mixing pan mechanics with hover semantics.
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- In progress. Map pan extraction is complete and validated; map controls and tooltip/hover scheduling remain.

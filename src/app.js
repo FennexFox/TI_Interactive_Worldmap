@@ -39,6 +39,7 @@ import {
   panMapView,
   zoomMapView,
 } from './state/map-view-state.js';
+import {createMapPanController} from './interaction/map-pan.js';
 import {createAppData, getActiveData, getScenarioIds} from './data/active-data.js';
 import {createClaimModel} from './data/claim-model.js';
 import {buildDerivedIndices} from './data/derived-indices.js';
@@ -557,10 +558,6 @@ let hoverOutlineVisualKey = '';
 let capitalMarkersKey = '';
 let mapViewFrame = 0;
 let pendingMapViewRenderContext = null;
-let panHoverRefreshFrame = 0;
-let pendingPanHoverPoint = null;
-let mapPanState = null;
-let suppressMapClick = false;
 let cachedRegionGeometryStats = {};
 const nationChoiceByValue = new Map();
 let incomingClaimsByRegion = derivedIndices.incomingClaimsByRegion;
@@ -597,7 +594,6 @@ const claimOverlayBufferStates = new WeakMap();
 const claimLabelBufferStates = new WeakMap();
 const CLAIM_HATCH_SPACING = 0.055;
 const CLAIM_HATCH_PADDING = 0.06;
-const MAP_PAN_DRAG_THRESHOLD_PX = 4;
 const MAP_ZOOM_BUTTON_FACTOR = 1.25;
 const MAP_WHEEL_ZOOM_FACTOR = 1.18;
 
@@ -2603,25 +2599,8 @@ function refreshPanHoverFromClientPoint(clientX, clientY) {
   if (!region) return;
   onRegionMove({clientX, clientY, target: hit}, region);
 }
-function schedulePanHoverRefresh(clientX, clientY) {
-  pendingPanHoverPoint = {clientX, clientY};
-  if (panHoverRefreshFrame) return;
-  panHoverRefreshFrame = window.requestAnimationFrame(() => {
-    panHoverRefreshFrame = 0;
-    const point = pendingPanHoverPoint;
-    pendingPanHoverPoint = null;
-    if (!point) return;
-    refreshPanHoverFromClientPoint(point.clientX, point.clientY);
-  });
-}
 function shouldSuppressHitLayerPointerEvent(e) {
-  if (!mapPanState || e.pointerId !== mapPanState.pointerId) return false;
-  if (mapPanState.dragging) return true;
-  return Math.hypot(e.clientX - mapPanState.startX, e.clientY - mapPanState.startY) >= MAP_PAN_DRAG_THRESHOLD_PX;
-}
-function measurePanViewportRect() {
-  recordRenderStat('panSvgRectReads');
-  return svg?.getBoundingClientRect();
+  return mapPanController.shouldSuppressHitLayerPointerEvent(e);
 }
 function collectRegionGeometryStats() {
   const count = selector => svg.querySelectorAll(selector).length;
@@ -2685,98 +2664,38 @@ function sampleDebugSvgLayerCounts({includeGeometry=true} = {}) {
 function samplePanSvgNodeCount() {
   sampleDebugSvgLayerCounts({includeGeometry: false});
 }
-function viewDeltaFromPointerDelta(deltaX, deltaY, rect = null) {
-  const viewportRect = rect || measurePanViewportRect();
-  if (!viewportRect?.width || !viewportRect?.height) return {dx: 0, dy: 0};
-  return {
-    dx: -(deltaX * mapView.width) / viewportRect.width,
-    dy: -(deltaY * mapView.height) / viewportRect.height,
-  };
-}
-function markSuppressNextMapClick() {
-  suppressMapClick = true;
-  window.setTimeout(() => {
-    suppressMapClick = false;
-  }, 80);
-}
+const mapPanController = createMapPanController({
+  svg,
+  window,
+  getMapView: () => mapView,
+  getWorldWrapEnabled: () => worldWrapEnabled,
+  panMapView,
+  scheduleMapViewRender,
+  recordRenderStat,
+  samplePanSvgNodeCount,
+  onPanHoverRefresh: refreshPanHoverFromClientPoint,
+  debugRenderStats,
+});
 function consumeSuppressedMapClick(e) {
-  if (!suppressMapClick) return false;
-  suppressMapClick = false;
-  e?.preventDefault?.();
-  e?.stopPropagation?.();
-  return true;
-}
-function finishMapPan({cancel=false} = {}) {
-  if (!mapPanState) return;
-  const wasDragging = mapPanState.dragging;
-  const pointerId = mapPanState.pointerId;
-  const finalClientX = mapPanState.lastX;
-  const finalClientY = mapPanState.lastY;
-  mapPanState = null;
-  svg?.classList.remove('is-panning-ready', 'is-panning');
-  try {
-    if (svg?.hasPointerCapture?.(pointerId)) svg.releasePointerCapture(pointerId);
-  } catch {}
-  if (!cancel && wasDragging) {
-    markSuppressNextMapClick();
-    schedulePanHoverRefresh(finalClientX, finalClientY);
-  }
+  return mapPanController.consumeSuppressedMapClick(e);
 }
 function onMapPointerDown(e) {
-  if (e.button !== 0 || mapPanState) return;
-  mapPanState = {
-    pointerId: e.pointerId,
-    startX: e.clientX,
-    startY: e.clientY,
-    lastX: e.clientX,
-    lastY: e.clientY,
-    dragging: false,
-    viewportRect: null,
-  };
-  svg?.classList.add('is-panning-ready');
+  mapPanController.onPointerDown(e);
 }
 function onMapPointerMove(e) {
-  if (!mapPanState || e.pointerId !== mapPanState.pointerId) return;
-  const totalX = e.clientX - mapPanState.startX;
-  const totalY = e.clientY - mapPanState.startY;
-  if (!mapPanState.dragging && Math.hypot(totalX, totalY) < MAP_PAN_DRAG_THRESHOLD_PX) return;
-  if (!mapPanState.dragging) {
-    mapPanState.dragging = true;
-    mapPanState.viewportRect = measurePanViewportRect();
-    samplePanSvgNodeCount();
-    svg?.classList.add('is-panning');
-    try {
-      svg?.setPointerCapture?.(e.pointerId);
-    } catch {}
-  }
-  e.preventDefault();
-  recordRenderStat('panPointerMoveCount');
-  const scheduledAt = debugRenderStats ? performance.now() : 0;
-  const {dx, dy} = viewDeltaFromPointerDelta(
-    e.clientX - mapPanState.lastX,
-    e.clientY - mapPanState.lastY,
-    mapPanState.viewportRect
-  );
-  panMapView(mapView, {dx, dy, normalizeX: worldWrapEnabled});
-  mapPanState.lastX = e.clientX;
-  mapPanState.lastY = e.clientY;
-  scheduleMapViewRender({isPan: true, scheduledAt});
+  mapPanController.onPointerMove(e);
 }
 function onMapPointerUp(e) {
-  if (!mapPanState || e.pointerId !== mapPanState.pointerId) return;
-  if (mapPanState.dragging) e.preventDefault();
-  finishMapPan();
+  mapPanController.onPointerUp(e);
 }
 function onMapPointerCancel(e) {
-  if (!mapPanState || e.pointerId !== mapPanState.pointerId) return;
-  finishMapPan({cancel: true});
+  mapPanController.onPointerCancel(e);
 }
 function onMapLostPointerCapture(e) {
-  if (!mapPanState || e.pointerId !== mapPanState.pointerId) return;
-  finishMapPan({cancel: true});
+  mapPanController.onLostPointerCapture(e);
 }
 function onMapMove(e) {
-  if (mapPanState?.dragging) return;
+  if (mapPanController.isDragging()) return;
   const target = e.target;
   if (target?.classList?.contains('region') || target?.classList?.contains('region-hit')) return;
   const isBlankMap = target === svg || target === gGrid || target === gHitRegions || target?.classList?.contains('graticule');

@@ -85,6 +85,7 @@ def build_pages() -> None:
     shutil.copyfile(ROOT / "src" / "app.js", docs / "assets" / "app.js")
     copy_js_modules(ROOT / "src" / "state", docs / "assets" / "state")
     copy_js_modules(ROOT / "src" / "data", docs / "assets" / "data")
+    copy_js_modules(ROOT / "src" / "interaction", docs / "assets" / "interaction")
     copy_js_modules(ROOT / "src" / "render", docs / "assets" / "render")
     copy_js_modules(ROOT / "src" / "ui", docs / "assets" / "ui")
 
