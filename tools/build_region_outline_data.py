@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
+# SPDX-License-Identifier: MIT
+
 """Compact and enrich Terra Invicta region outlines for browser rendering."""
 from __future__ import annotations
 
@@ -24,6 +27,7 @@ from catalog_utils import (
 
 SCENARIO_YEARS = ("2022", "2026", "2070")
 DEFAULT_SCENARIO_YEAR = "2026"
+DEFAULT_NATION_DISPLAY_OVERRIDES = Path("data/manual/nation_display_overrides.json")
 NATION_COLOR_PALETTE = [
     "#4f83cc",
     "#c56b5d",
@@ -62,6 +66,19 @@ def scenario_template_name(name: str, scenario_year: str) -> str:
     return f"{scenario_year}_{norm_id(name)}"
 
 
+def load_nation_display_overrides(path: Path = DEFAULT_NATION_DISPLAY_OVERRIDES) -> dict[str, dict[str, Any]]:
+    if not path.is_file():
+        return {}
+    raw = load_json(path)
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        norm_id(tag): value
+        for tag, value in raw.items()
+        if norm_id(tag) and isinstance(value, dict)
+    }
+
+
 def select_scenario_template(
     templates: dict[str, dict[str, Any]],
     data_name: str,
@@ -87,9 +104,33 @@ def load_region_localizations(templates_dir: Path, languages: list[str]) -> dict
     return localizations
 
 
-def load_nation_localizations(templates_dir: Path, languages: list[str]) -> dict[str, dict[str, str]]:
+def nation_localization_priority(data_name: str, tag: str, scenario_year: str) -> int:
+    if data_name == scenario_template_name(tag, scenario_year):
+        return 2
+    if data_name == tag:
+        return 1
+    return 0
+
+
+def load_nation_localizations(
+    templates_dir: Path,
+    languages: list[str],
+    scenario_year: str = DEFAULT_SCENARIO_YEAR,
+) -> dict[str, dict[str, str]]:
+    layers = load_nation_localization_layers(templates_dir, languages, scenario_year)
+    return {
+        tag: dict(sorted((values.get("scenario") or values.get("base") or {}).items()))
+        for tag, values in sorted(layers.items())
+    }
+
+
+def load_nation_localization_layers(
+    templates_dir: Path,
+    languages: list[str],
+    scenario_year: str = DEFAULT_SCENARIO_YEAR,
+) -> dict[str, dict[str, dict[str, str]]]:
     root = templates_dir.parent / "Localization"
-    localizations: dict[str, dict[str, str]] = {}
+    localizations: dict[str, dict[str, dict[str, str]]] = {}
     for language in languages:
         values = read_localization_file(root / language / f"TINationTemplate.{language}")
         for key, value in values.items():
@@ -98,9 +139,17 @@ def load_nation_localizations(templates_dir: Path, languages: list[str]) -> dict
                 continue
             _, _, data_name = parts
             tag = norm_id(data_name)
-            if tag:
-                localizations.setdefault(tag, {})[language] = value
-    return localizations
+            if not tag:
+                continue
+            priority = nation_localization_priority(data_name, tag, scenario_year)
+            if priority == 2:
+                localizations.setdefault(tag, {}).setdefault("scenario", {})[language] = value
+            elif priority == 1:
+                localizations.setdefault(tag, {}).setdefault("base", {})[language] = value
+    return {
+        tag: {kind: dict(sorted(names.items())) for kind, names in sorted(values.items())}
+        for tag, values in sorted(localizations.items())
+    }
 
 
 def load_scenario_nations(templates_dir: Path, scenario_year: str) -> dict[str, dict[str, Any]]:
@@ -119,10 +168,19 @@ def load_scenario_nations(templates_dir: Path, scenario_year: str) -> dict[str, 
     return dict(sorted(by_tag.items()))
 
 
-def load_nation_name_lookup(templates_dir: Path, languages: list[str], scenario_year: str) -> dict[str, str]:
-    localizations = load_nation_localizations(templates_dir, languages)
+def load_nation_name_lookup(
+    templates_dir: Path,
+    languages: list[str],
+    scenario_year: str,
+    nation_display_overrides: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, str]:
+    localizations = load_nation_localizations(templates_dir, languages, scenario_year)
+    display_overrides = nation_display_overrides or {}
     lookup: dict[str, str] = {}
     for tag, template in load_scenario_nations(templates_dir, scenario_year).items():
+        override = display_overrides.get(tag, {})
+        override_display_name = override.get("displayName") if isinstance(override.get("displayName"), dict) else {}
+        override_aliases = override.get("aliases") if isinstance(override.get("aliases"), list) else []
         names = unique_strings([
             tag,
             template.get("dataName"),
@@ -130,6 +188,8 @@ def load_nation_name_lookup(templates_dir: Path, languages: list[str], scenario_
             norm_id(template.get("friendlyName")),
             *(template.get("ISOCodes") if isinstance(template.get("ISOCodes"), list) else []),
             *localizations.get(tag, {}).values(),
+            *override_display_name.values(),
+            *override_aliases,
         ])
         for name in names:
             key = normalize_match_key(name)
@@ -138,17 +198,48 @@ def load_nation_name_lookup(templates_dir: Path, languages: list[str], scenario_
     return lookup
 
 
+def load_nation_display_names(
+    templates_dir: Path,
+    languages: list[str],
+    scenario_year: str,
+    nation_display_overrides: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, str]:
+    localization_layers = load_nation_localization_layers(templates_dir, languages, scenario_year)
+    display_overrides = nation_display_overrides or {}
+    display_names: dict[str, str] = {}
+    for tag, template in load_scenario_nations(templates_dir, scenario_year).items():
+        layers = localization_layers.get(tag, {})
+        scenario_localized = layers.get("scenario") or {}
+        base_localized = layers.get("base") or {}
+        override = display_overrides.get(tag, {})
+        override_display_name = override.get("displayName") if isinstance(override.get("displayName"), dict) else {}
+        display_name = (
+            override_display_name.get("en")
+            or next(iter(override_display_name.values()), "")
+            or scenario_localized.get("en")
+            or next(iter(scenario_localized.values()), "")
+            or norm_id(template.get("friendlyName"))
+            or base_localized.get("en")
+            or next(iter(base_localized.values()), "")
+            or tag
+        )
+        display_names[tag] = clean_data_string(str(display_name))
+    return dict(sorted(display_names.items()))
+
+
 def load_region_metadata(
     templates_dir: Path | None,
     languages: list[str],
     scenario_year: str,
+    nation_display_overrides: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, dict[str, Any]]:
     if templates_dir is None:
         return {}
     region_templates = load_named_templates(templates_dir, "TIRegionTemplate.json")
     map_region_templates = load_named_templates(templates_dir, "TIMapRegionTemplate.json")
     localizations = load_region_localizations(templates_dir, languages)
-    nation_lookup = load_nation_name_lookup(templates_dir, languages, scenario_year)
+    nation_lookup = load_nation_name_lookup(templates_dir, languages, scenario_year, nation_display_overrides)
+    nation_display_names = load_nation_display_names(templates_dir, languages, scenario_year, nation_display_overrides)
     metadata: dict[str, dict[str, Any]] = {}
     region_names = sorted({norm_id(name) for name in region_templates if norm_id(name)})
     for region_name in region_names:
@@ -165,13 +256,12 @@ def load_region_metadata(
             map_template.get("friendlyNationName") if isinstance(map_template, dict) else None,
         ]
         owner_tag = ""
-        owner_name = ""
         for candidate in owner_candidates:
             key = normalize_match_key(candidate)
             if key and key in nation_lookup:
                 owner_tag = nation_lookup[key]
-                owner_name = str(candidate)
                 break
+        owner_name = nation_display_names.get(owner_tag, "") if owner_tag else ""
         metadata[region_name] = {
             "regionName": region_name,
             "displayName": display_name,
@@ -344,7 +434,7 @@ def compact_region_outlines(
             "primaryCity": clean_data_string(str(metadata.get("primaryCity") or display_en)),
             "nationTag": nation_tag,
             "outlineNationTag": clean_data_string(str(region.get("outlineNationTag") or region.get("nationTag") or "")),
-            "ownerName": clean_data_string(str(metadata.get("ownerName") or metadata.get("sortNation") or "")),
+            "ownerName": clean_data_string(str(metadata.get("ownerName") or "")),
             "path": " ".join(paths),
             "polygons": int(region.get("polygons") or len(paths)),
             "points": total_points,
@@ -399,6 +489,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--templates-dir", help="Path to TerraInvicta_Data/StreamingAssets/Templates.")
     parser.add_argument("--scenario-year", default=DEFAULT_SCENARIO_YEAR, choices=SCENARIO_YEARS)
     parser.add_argument("--languages", default="kor,en", help="Comma-separated localization languages to include.")
+    parser.add_argument("--nation-display-overrides", default=str(DEFAULT_NATION_DISPLAY_OVERRIDES), help="Optional manual nation display-name override JSON.")
     return parser.parse_args()
 
 
@@ -406,8 +497,9 @@ def main() -> int:
     args = parse_args()
     try:
         templates_dir = resolve_templates_dir(args.templates_dir)
+        nation_display_overrides = load_nation_display_overrides(Path(args.nation_display_overrides))
         region_metadata = (
-            load_region_metadata(templates_dir, parse_languages(args.languages), args.scenario_year)
+            load_region_metadata(templates_dir, parse_languages(args.languages), args.scenario_year, nation_display_overrides)
             if templates_dir
             else {}
         )

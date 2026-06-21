@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
+// SPDX-License-Identifier: MIT
+
 import { expect, test } from '@playwright/test';
 
 const SEAM_CANDIDATES = [
@@ -11,14 +14,20 @@ const SEAM_CANDIDATES = [
   'SakhalinKurils',
 ];
 
-async function waitForSingleCopyMap(page, path = '/?worldWrap=0') {
+function pathWithQueryParam(path, name, value) {
+  const url = new URL(path, 'http://localhost');
+  url.searchParams.set(name, value);
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+async function waitForSingleCopyMap(page, path = '/') {
   await page.goto(path);
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
   await expect(page.locator('body')).not.toContainText('Failed to load generated Terra Invicta map data.');
 }
 
 async function waitForWrappedMap(page, path = '/') {
-  await page.goto(path);
+  await page.goto(pathWithQueryParam(path, 'worldWrap', '1'));
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
   await expect(page.locator('body')).not.toContainText('Failed to load generated Terra Invicta map data.');
 }
@@ -56,6 +65,16 @@ async function expectProjectedCopies(locator, copies = ['-1', '0', '1']) {
 
 async function expectProjectedRegion(page, layerSelector, regionName, copies = ['-1', '0', '1']) {
   await expectProjectedCopies(page.locator(`${layerSelector}[data-region="${regionName}"]`), copies);
+}
+
+async function expectProjectedGroupedRegion(page, layerSelector, regionName, copies = ['-1', '0', '1']) {
+  await expectProjectedCopies(page.locator(`${layerSelector}[data-regions~="${regionName}"]`), copies);
+}
+
+async function groupedVisualRegionCount(page, layerSelector) {
+  return page.locator(layerSelector).evaluateAll(nodes => nodes.reduce((sum, node) => (
+    sum + Number(node.dataset.visualGroupSize || 0)
+  ), 0));
 }
 
 async function mapViewBox(page) {
@@ -189,6 +208,177 @@ test('baseline hit layer resolves one canonical region for hover and click', asy
   await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
 });
 
+test('world-wrap defaults off and can be enabled from map controls', async ({ page }) => {
+  await waitForSingleCopyMap(page);
+
+  await expect(page.locator('#regions .region-copy')).toHaveCount(0);
+  await expect(page.locator('#hitRegions .hit-copy')).toHaveCount(0);
+  await expect(page.locator('#regions .region[data-region="Amazonia"]')).toHaveCount(1);
+  const wrapToggle = page.locator('[data-map-view-wrap-toggle]');
+  await expect(wrapToggle).toHaveAttribute('aria-pressed', 'false');
+  await expect(wrapToggle).toHaveAttribute('title', /reduce performance/);
+
+  await wrapToggle.click();
+
+  await expect(wrapToggle).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(async () => wrapToggle.evaluate(el => {
+    const color = getComputedStyle(el).backgroundColor;
+    const alphaMatch = color.match(/^rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)$/);
+    return alphaMatch ? Number(alphaMatch[1]) : 1;
+  })).toBeGreaterThan(0.8);
+  await expect(page.locator('#regions .region-copy')).toHaveCount(3);
+  await expect(page.locator('#hitRegions .hit-copy')).toHaveCount(3);
+  await expect(page.locator('#regions .region[data-region="Amazonia"]')).toHaveCount(3);
+  await expectProjectedCopies(page.locator('#hitRegions .region-hit[data-region="Amazonia"]'));
+});
+
+test('debug render stats reset preserves current world-wrap state', async ({ page }) => {
+  await waitForSingleCopyMap(page, '/?worldWrap=0&debugRenderStats=1');
+
+  const wrapToggle = page.locator('[data-map-view-wrap-toggle]');
+  await expect(wrapToggle).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#regions .region-copy')).toHaveCount(0);
+
+  await wrapToggle.click();
+  await expect(wrapToggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#regions .region-copy')).toHaveCount(3);
+
+  const stats = await page.evaluate(() => {
+    window.__TI_DEBUG_RENDER_STATS__.reset();
+    return {...window.__TI_DEBUG_RENDER_STATS__};
+  });
+
+  expect(stats.worldWrapDisabled).toBe(0);
+  expect(stats.worldCopyContextCount).toBe(3);
+});
+
+test('debug render stats sample single-copy region geometry counters', async ({ page }) => {
+  await waitForSingleCopyMap(page, '/?worldWrap=0&debugRenderStats=1');
+
+  const counters = await page.evaluate(() => {
+    const count = selector => document.querySelectorAll(selector).length;
+    const dBytes = selector => [...document.querySelectorAll(selector)]
+      .reduce((sum, element) => sum + String(element.getAttribute('d') || '').length, 0);
+    const stats = {...window.__TI_DEBUG_RENDER_STATS__};
+    return {
+      stats,
+      actual: {
+        baseRegionPathCount: count('#regions path.region'),
+        baseRegionUseCount: count('#regions use.region'),
+        hitPathCount: count('#hitRegions path.region-hit'),
+        hitUseCount: count('#hitRegions use.region-hit'),
+        worldCopyBasePathCount: count('#regions path.region[data-wrap-canonical="0"]'),
+        worldCopyHitPathCount: count('#hitRegions path.region-hit[data-wrap-canonical="0"]'),
+        baseRegionPathDBytes: dBytes('#regions path.region'),
+        hitPathDBytes: dBytes('#hitRegions path.region-hit'),
+        canonicalRegionPathCount: count('#regions path.region[data-wrap-canonical="1"]'),
+        canonicalHitPathCount: count('#hitRegions path.region-hit[data-wrap-canonical="1"]'),
+      },
+    };
+  });
+
+  expect(counters.stats.baseRegionPathCount).toBe(counters.actual.baseRegionPathCount);
+  expect(counters.stats.baseRegionUseCount).toBe(0);
+  expect(counters.stats.hitPathCount).toBe(counters.actual.hitPathCount);
+  expect(counters.stats.hitUseCount).toBe(0);
+  expect(counters.stats.worldCopyBasePathCount).toBe(0);
+  expect(counters.stats.worldCopyHitPathCount).toBe(0);
+  expect(counters.stats.baseRegionPathCount).toBeGreaterThan(300);
+  expect(counters.stats.hitPathCount).toBe(counters.stats.baseRegionPathCount);
+  expect(counters.stats.baseRegionPathDBytes).toBe(counters.actual.baseRegionPathDBytes);
+  expect(counters.stats.hitPathDBytes).toBe(counters.actual.hitPathDBytes);
+  expect(counters.stats.totalRegionPathDBytes).toBe(counters.actual.baseRegionPathDBytes + counters.actual.hitPathDBytes);
+  expect(counters.stats.canonicalRegionPathCount).toBe(counters.actual.canonicalRegionPathCount);
+  expect(counters.stats.canonicalHitPathCount).toBe(counters.actual.canonicalHitPathCount);
+});
+
+test('debug render stats sample wrapped region geometry counters', async ({ page }) => {
+  await waitForWrappedMap(page, '/?debugRenderStats=1');
+
+  const counters = await page.evaluate(() => {
+    const count = selector => document.querySelectorAll(selector).length;
+    const dBytes = selector => [...document.querySelectorAll(selector)]
+      .reduce((sum, element) => sum + String(element.getAttribute('d') || '').length, 0);
+    const stats = {...window.__TI_DEBUG_RENDER_STATS__};
+    return {
+      stats,
+      actual: {
+        baseRegionPathCount: count('#regions path.region'),
+        baseRegionUseCount: count('#regions use.region'),
+        hitPathCount: count('#hitRegions path.region-hit'),
+        hitUseCount: count('#hitRegions use.region-hit'),
+        worldCopyBasePathCount: count('#regions path.region[data-wrap-canonical="0"]'),
+        worldCopyHitPathCount: count('#hitRegions path.region-hit[data-wrap-canonical="0"]'),
+        baseRegionPathDBytes: dBytes('#regions path.region'),
+        hitPathDBytes: dBytes('#hitRegions path.region-hit'),
+        canonicalRegionPathDBytes: dBytes('#regions path.region[data-wrap-canonical="1"]'),
+        canonicalHitPathDBytes: dBytes('#hitRegions path.region-hit[data-wrap-canonical="1"]'),
+      },
+    };
+  });
+
+  expect(counters.stats.worldCopyContextCount).toBe(3);
+  expect(counters.stats.baseRegionPathCount).toBe(counters.actual.baseRegionPathCount);
+  expect(counters.stats.baseRegionUseCount).toBe(0);
+  expect(counters.stats.hitPathCount).toBe(counters.actual.hitPathCount);
+  expect(counters.stats.hitUseCount).toBe(0);
+  expect(counters.stats.worldCopyBasePathCount).toBe(counters.actual.worldCopyBasePathCount);
+  expect(counters.stats.worldCopyHitPathCount).toBe(counters.actual.worldCopyHitPathCount);
+  expect(counters.stats.worldCopyBasePathCount).toBeGreaterThan(0);
+  expect(counters.stats.worldCopyHitPathCount).toBeGreaterThan(0);
+  expect(counters.stats.baseRegionPathDBytes).toBe(counters.actual.baseRegionPathDBytes);
+  expect(counters.stats.hitPathDBytes).toBe(counters.actual.hitPathDBytes);
+  expect(counters.stats.totalRegionPathDBytes).toBe(counters.actual.baseRegionPathDBytes + counters.actual.hitPathDBytes);
+  expect(counters.stats.baseRegionPathDBytes).toBeGreaterThan(counters.actual.canonicalRegionPathDBytes);
+  expect(counters.stats.hitPathDBytes).toBeGreaterThan(counters.actual.canonicalHitPathDBytes);
+});
+
+test('debug canonical hit paths preserve single-copy hover and click', async ({ page }) => {
+  await waitForSingleCopyMap(page, '/?worldWrap=0&debugRenderStats=1&debugUseCanonicalHitPaths=1');
+
+  await expect(page.locator('#hitRegions path.region-hit')).toHaveCount(0);
+  const hitUses = page.locator('#hitRegions use.region-hit');
+  await expect(hitUses.first()).toBeVisible();
+  await expect(page.locator('#hitRegions path.region-hit-geometry')).toHaveCount(await hitUses.count());
+
+  const amazon = page.locator('#hitRegions .region-hit[data-region="Amazonia"][data-wrap-canonical="1"]');
+  await amazon.hover();
+  await expect(page.locator('#hoverPill')).toHaveText('Hover: BRA · Manaus');
+
+  await amazon.dispatchEvent('click', { bubbles: true });
+  await expect(page.locator('#search')).toHaveValue(/Brazil/);
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.debugCanonicalHitPaths).toBe(1);
+  expect(stats.hitPathCount).toBe(0);
+  expect(stats.hitUseCount).toBeGreaterThan(300);
+  expect(stats.hitGeometryDefPathCount).toBe(stats.hitUseCount);
+  expect(stats.hitGeometryDefPathDBytes).toBeGreaterThan(0);
+  expect(stats.totalHitGeometryDBytes).toBe(stats.hitGeometryDefPathDBytes);
+});
+
+test('debug canonical hit paths preserve wrapped seam hover and click', async ({ page }) => {
+  await waitForWrappedMap(page, '/?debugRenderStats=1&debugUseCanonicalHitPaths=1');
+
+  await expectProjectedCopies(page.locator('#hitRegions .region-hit[data-region="Amazonia"]'));
+  await expect(page.locator('#hitRegions path.region-hit')).toHaveCount(0);
+  await expect(page.locator('#hitRegions use.region-hit[data-region="Amazonia"]')).toHaveCount(3);
+
+  const copiedAmazonia = page.locator('#hitRegions .region-hit[data-region="Amazonia"][data-wrap-copy="-1"]');
+  await hoverWrappedRegion(page, 'Amazonia', '-1');
+  await expect(page.locator('#hoverPill')).toHaveText('Hover: BRA · Manaus');
+
+  await dispatchPointerClick(copiedAmazonia);
+  await expect(page.locator('#search')).toHaveValue(/Brazil/);
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.debugCanonicalHitPaths).toBe(1);
+  expect(stats.worldCopyHitPathCount).toBe(0);
+  expect(stats.worldCopyHitUseCount).toBeGreaterThan(0);
+  expect(stats.hitGeometryDefPathCount).toBeGreaterThan(300);
+  expect(stats.totalHitGeometryDBytes).toBeLessThan(stats.baseRegionPathDBytes);
+});
+
 test('single-copy grouped base fills preserve region-specific hit paths and filtering', async ({ page }) => {
   await waitForSingleCopyMap(page);
 
@@ -246,37 +436,110 @@ test('claim grouped fills preserve per-region semantic outline paths', async ({ 
 
   await chooseNation(page, 'Brazil', 'BRA');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group')).toBe(26);
 
   const claimFillStats = await page.evaluate(() => {
     const fills = [...document.querySelectorAll('#claimOverlays .claim-fill-group')];
+    const hatches = [...document.querySelectorAll('#claimOverlays .claim-hatch-group')];
     const outlines = [...document.querySelectorAll('#claimOverlays .claim-overlay')];
     return {
       fillGroupCount: fills.length,
+      hatchGroupCount: hatches.length,
       outlineCount: outlines.length,
       fillGroupsWithRegion: fills.filter(fill => !!fill.dataset.region).length,
       groupedRegions: fills.reduce((sum, fill) => sum + Number(fill.dataset.visualGroupSize || 0), 0),
+      hatchedRegions: hatches.reduce((sum, hatch) => sum + Number(hatch.dataset.visualGroupSize || 0), 0),
       ownedFillGroups: fills.filter(fill => fill.classList.contains('owned-territory')).length,
-      ownedOutlines: outlines.filter(outline => outline.classList.contains('owned-territory')).length,
-      peacefulOutlines: outlines.filter(outline => outline.classList.contains('peaceful')).length,
-      hostileOutlines: outlines.filter(outline => outline.classList.contains('hostile')).length,
-      allOutlinesFillNone: outlines.every(outline => outline.getAttribute('fill') === 'none'),
+      hostileFillRegions: fills
+        .filter(fill => fill.classList.contains('research-claim') || fill.classList.contains('basic-claim'))
+        .reduce((sum, fill) => sum + Number(fill.dataset.visualGroupSize || 0), 0),
+      hostileHatchesHaveLines: hatches
+        .filter(hatch => hatch.classList.contains('hostile'))
+        .every(hatch => /^url\(#hostile-claim-hatch-pattern-/.test(hatch.getAttribute('fill') || '')),
+      hatchPatternLineCount: document.querySelectorAll('#claimOverlays pattern .claim-hatch-line').length,
+      clipPathCount: document.querySelectorAll('#claimOverlays clipPath').length,
+      peacefulHatches: hatches.filter(hatch => hatch.classList.contains('peaceful')).length,
+      ownedHatches: hatches.filter(hatch => hatch.classList.contains('owned-territory')).length,
     };
   });
 
   expect(claimFillStats.fillGroupCount).toBeGreaterThan(0);
-  expect(claimFillStats.fillGroupCount).toBeLessThan(claimFillStats.outlineCount);
+  expect(claimFillStats.hatchGroupCount).toBeGreaterThan(0);
+  expect(claimFillStats.outlineCount).toBe(0);
   expect(claimFillStats.fillGroupsWithRegion).toBe(0);
-  expect(claimFillStats.groupedRegions).toBe(claimFillStats.outlineCount);
+  expect(claimFillStats.groupedRegions).toBe(26);
   expect(claimFillStats.ownedFillGroups).toBeGreaterThan(0);
-  expect(claimFillStats.ownedOutlines).toBeGreaterThan(0);
-  expect(claimFillStats.peacefulOutlines).toBeGreaterThan(0);
-  expect(claimFillStats.hostileOutlines).toBeGreaterThan(0);
-  expect(claimFillStats.allOutlinesFillNone).toBe(true);
+  expect(claimFillStats.hostileFillRegions).toBeGreaterThan(0);
+  expect(claimFillStats.hatchedRegions).toBeGreaterThan(0);
+  expect(claimFillStats.hatchGroupCount).toBeLessThan(claimFillStats.hatchedRegions);
+  expect(claimFillStats.hostileHatchesHaveLines).toBe(true);
+  expect(claimFillStats.hatchPatternLineCount).toBe(claimFillStats.hatchGroupCount);
+  expect(claimFillStats.clipPathCount).toBe(0);
+  expect(claimFillStats.peacefulHatches).toBe(0);
+  expect(claimFillStats.ownedHatches).toBe(0);
 
   await regionHit(page, 'Amazonia').hover();
   await expect(page.locator('#hoverPill')).toHaveText('Hover: BRA · Manaus');
   await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
+});
+
+test('project-specific hostile claims render hatch and follow claim kind filters', async ({ page }) => {
+  await waitForSingleCopyMap(page);
+
+  await chooseNation(page, 'China', 'CHN');
+  await page.selectOption('#projectSel', 'Project_GreaterPanAsia');
+  await expect(page.locator('#claimMode')).toHaveValue('project');
+  await expect(page.locator('#claimKind')).toHaveValue('all');
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group.research-claim')).toBe(30);
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(0);
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile')).toHaveCount(1);
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile[data-regions~="Hokkaido"]')).toHaveCount(1);
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile[data-regions~="NorthHonshu"]')).toHaveCount(1);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-hatch-group.hostile')).toBe(5);
+  await expect(page.locator('#claimOverlays clipPath')).toHaveCount(0);
+
+  await page.selectOption('#claimKind', 'peaceful');
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile')).toHaveCount(0);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group.research-claim')).toBe(25);
+
+  await page.selectOption('#claimKind', 'hostile');
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile')).toHaveCount(1);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-hatch-group.hostile')).toBe(5);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group.research-claim')).toBe(5);
+});
+
+test('all-mode propagated hostile claims render hatch and follow claim kind filters', async ({ page }) => {
+  await waitForSingleCopyMap(page, '/?worldWrap=0');
+
+  await chooseNation(page, 'Caliphate', 'CPH');
+  await expect(page.locator('#claimMode')).toHaveValue('all');
+  await expect(page.locator('#claimPill')).toHaveText('Caliphate: territory 0, claims 95, research tiers 3');
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile[data-regions~="Aceh"]')).toHaveCount(1);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-hatch-group.hostile')).toBe(59);
+
+  await page.selectOption('#claimKind', 'hostile');
+  await expect(page.locator('#claimPill')).toHaveText('Caliphate: territory 0, claims 59, research tiers 3');
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile[data-regions~="Aceh"]')).toHaveCount(1);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group')).toBe(59);
+
+  await page.selectOption('#claimKind', 'peaceful');
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile[data-regions~="Aceh"]')).toHaveCount(0);
+  await expect(page.locator('#claimOverlays .claim-fill-group[data-regions~="Aceh"]')).toHaveCount(0);
+});
+
+test('hostile hatch can be disabled for performance diagnostics', async ({ page }) => {
+  await waitForSingleCopyMap(page, '/?worldWrap=0&debugRenderStats=1&disableHostileHatch=1');
+
+  await chooseNation(page, 'China', 'CHN');
+  await page.selectOption('#projectSel', 'Project_GreaterPanAsia');
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile')).toHaveCount(0);
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(0);
+  await expect(page.locator('#claimOverlays .claim-fill-group.research-claim[data-regions~="Hokkaido"]')).toHaveCount(1);
+  await expect(page.locator('#claimOverlays .claim-fill-group.research-claim[data-regions~="NorthHonshu"]')).toHaveCount(1);
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.hostileHatchDisabled).toBe(1);
+  expect(stats.worldWrapDisabled).toBe(1);
 });
 
 test('baseline selected overlays stay canonical across hover and claim controls', async ({ page }) => {
@@ -284,7 +547,7 @@ test('baseline selected overlays stay canonical across hover and claim controls'
 
   await chooseNation(page, 'Brazil', 'BRA');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group')).toBe(26);
 
   await regionHit(page, 'Amazonia').hover();
   await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
@@ -292,12 +555,12 @@ test('baseline selected overlays stay canonical across hover and claim controls'
   await regionHit(page, 'FrenchGuiana').hover();
   await expect(page.locator('#hoverOutlines .hover-fill[data-region="FrenchGuiana"]')).toHaveCount(1);
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group')).toBe(26);
 
   await page.selectOption('#projectSel', 'Project_GranColombia');
   await expect(page.locator('#claimMode')).toHaveValue('project');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 5, research tiers 1');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(14);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group')).toBe(14);
 });
 
 test('world-wrap default renders base, grid, label, and hit copies', async ({ page }) => {
@@ -333,6 +596,34 @@ test('world-wrap default renders base, grid, label, and hit copies', async ({ pa
   await expect(page.locator('#labels .label[data-region="Amazonia"]')).toHaveCount(3);
 });
 
+test('debug label-disable flag suppresses rendered label nodes', async ({ page }) => {
+  await waitForSingleCopyMap(page, '/?worldWrap=0&debugRenderStats=1&debugDisableLabels=1');
+
+  await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+  await page.locator('#showLabels').click();
+
+  await expect(page.locator('#labels text.label')).toHaveCount(0);
+
+  const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+  expect(stats.debugLabelsDisabled).toBe(1);
+  expect(stats.labelVisibleState).toBe(1);
+  expect(stats.labelCount).toBe(0);
+  expect(stats.labelCopyGroupCount).toBe(0);
+  expect(stats.wrappedLabelCopyCount).toBe(0);
+  expect(stats.labelRenderCalls).toBeGreaterThan(0);
+  expect(stats.labelDomReplacements).toBeGreaterThan(0);
+  expect(stats.labelRenderSkippedByDebug).toBeGreaterThan(0);
+});
+
+test('debug label-disable flag is inert outside debug render stats mode', async ({ page }) => {
+  await waitForSingleCopyMap(page, '/?worldWrap=0&debugDisableLabels=1');
+
+  await page.locator('#showLabels').click();
+
+  await expect(page.locator('#labels text.label')).not.toHaveCount(0);
+  expect(await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__)).toBeUndefined();
+});
+
 test('world-wrap default projects grouped base and claim fill copies', async ({ page }) => {
   await waitForWrappedMap(page);
 
@@ -342,7 +633,7 @@ test('world-wrap default projects grouped base and claim fill copies', async ({ 
   await chooseNation(page, 'Brazil', 'BRA');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
   await expectProjectedCopies(page.locator('#claimOverlays .claim-fill-group.owned-territory[data-fill-key^="owned:"]'));
-  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group.owned-territory', 'Amazonia');
 });
 
 test('world-wrap default projects pinned node markers from row clicks', async ({ page }) => {
@@ -499,8 +790,8 @@ test('world-wrap default projects claim overlays and markers without pan churn',
 
   await chooseNation(page, 'Brazil', 'BRA');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(78);
-  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group')).toBe(78);
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group.owned-territory', 'Amazonia');
   await expectProjectedCopies(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]'));
 
   const mapBox = await page.locator('#map').boundingBox();
@@ -557,17 +848,19 @@ test('world-wrap default secondary capital hover projects foreign preview copies
   await waitForWrappedMap(page, '/?debugRenderStats=1');
 
   await chooseNation(page, 'France', 'EUA');
-  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay[data-region="Moskva"]'));
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group', 'Moskva');
 
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
   await hoverWrappedRegion(page, 'Moskva', '1');
   await waitForHoverPreviewFrame(page);
 
   await expect(page.locator('#claimPill')).toContainText('France');
-  await expectProjectedCopies(page.locator('#secondaryHoverOverlays .secondary-capital-preview[data-preview="secondary-capital"][data-nation="RUS"][data-region="Moskva"]'));
+  await expectProjectedCopies(page.locator('#secondaryHoverOverlays .secondary-capital-preview[data-preview="secondary-capital"][data-nation="RUS"][data-regions~="Moskva"]'));
   const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.overlayModelBuilds).toBe(0);
   expect(stats.secondaryHoverOverlayReplacements).toBeGreaterThan(0);
+  expect(stats.secondaryHoverOverlayPathCount).toBeGreaterThan(0);
+  expect(stats.secondaryHoverOverlayPathCount).toBeLessThan(stats.secondaryHoverOverlayRegionCount);
 });
 
 test('world-wrap default projects hover, selection, and foreign hover overlays', async ({ page }) => {
@@ -585,7 +878,7 @@ test('world-wrap default projects hover, selection, and foreign hover overlays',
   const copiedOntario = page.locator('#hitRegions .region-hit[data-region="Ontario"][data-wrap-copy="1"]');
   await copiedOntario.dispatchEvent('pointerover', { bubbles: true, clientX: 140, clientY: 140, pointerType: 'mouse' });
   await copiedOntario.dispatchEvent('pointermove', { bubbles: true, clientX: 146, clientY: 146, pointerType: 'mouse' });
-  await expectProjectedCopies(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="CAN"][data-region="Ontario"]'));
+  await expectProjectedCopies(page.locator('#foreignHoverOverlays .foreign-hover-overlay[data-nation="CAN"][data-regions~="Ontario"]'));
 });
 
 test('world-wrap seam candidate geometry stays split into local subpaths', async ({ page }) => {
@@ -670,13 +963,13 @@ test('world-wrap seam candidates keep hit, selection, and claim overlays project
   }
 
   await chooseNation(page, 'United States', 'USA');
-  await expectProjectedRegion(page, '#claimOverlays .claim-overlay.owned-territory', 'Alaska');
-  await expectProjectedRegion(page, '#claimOverlays .claim-overlay.owned-territory', 'AmericanPacific');
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group.owned-territory', 'Alaska');
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group.owned-territory', 'AmericanPacific');
 
   await chooseNation(page, 'Russia', 'RUS');
-  await expectProjectedRegion(page, '#claimOverlays .claim-overlay.owned-territory', 'Kamchatka');
-  await expectProjectedRegion(page, '#claimOverlays .claim-overlay.owned-territory', 'RussianFarEast');
-  await expectProjectedRegion(page, '#claimOverlays .claim-overlay.owned-territory', 'SakhalinKurils');
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group.owned-territory', 'Kamchatka');
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group.owned-territory', 'RussianFarEast');
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group.owned-territory', 'SakhalinKurils');
 });
 
 test('world-wrap panning is disabled through the fallback query flag', async ({ page }) => {
@@ -750,16 +1043,16 @@ test('issue #2 acceptance: selected claim overlays render on every visible world
 
   await chooseNation(page, 'Brazil', 'BRA');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(78);
-  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
-  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay[data-region="FrenchGuiana"]'));
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group')).toBe(78);
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group.owned-territory', 'Amazonia');
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group', 'FrenchGuiana');
 
   await page.selectOption('#claimKind', 'peaceful');
-  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group.owned-territory', 'Amazonia');
 
   await page.selectOption('#claimKind', 'all');
   await page.selectOption('#projectSel', 'Project_GranColombia');
   await expect(page.locator('#claimMode')).toHaveValue('project');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(42);
-  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group')).toBe(42);
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group.owned-territory', 'Amazonia');
 });

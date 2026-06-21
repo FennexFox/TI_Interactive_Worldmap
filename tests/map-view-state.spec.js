@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
+// SPDX-License-Identifier: MIT
+
 import { expect, test } from '@playwright/test';
 import {
   clampMapViewY,
@@ -148,6 +151,15 @@ test('zoomMapView clamps zoom-out to the base world extent', () => {
   expect(mapView.width).toBeCloseTo(360);
   expect(mapView.height).toBeCloseTo(180);
   expect(mapView.y).toBeCloseTo(0);
+});
+
+test('zoomMapView clamps zoom-in to about eight times the base extent', () => {
+  const mapView = initializeMapView(sampleActiveData([0, 0, 360, 180]));
+
+  zoomMapView(mapView, {scale: 0.001});
+
+  expect(mapView.width).toBeCloseTo(45);
+  expect(mapView.height).toBeCloseTo(22.5);
 });
 
 test('zoomMapView can zoom back out to the original base extent after zooming in', () => {

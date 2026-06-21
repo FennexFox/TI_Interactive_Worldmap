@@ -8,6 +8,20 @@ Default to `gpt-5.4-mini` for subagents unless a task is high-risk, architectura
 
 Keep the main agent focused on orchestration, final synthesis, and high-risk judgment. Delegate concrete, well-scoped work when doing so is unlikely to reduce quality.
 
+## Graphify And Serena Workflow
+
+Use Graphify as a structural navigation aid when it can reduce search and context cost. Read `graphify-out/GRAPH_REPORT.md` before broad refactors, unfamiliar feature work, cross-module changes, performance work, or tasks with unclear ownership. Trivial, obvious single-file edits may skip Graphify.
+
+Graphify is a map, not source of truth. Treat inferred or semantic edges as leads only; verify relationships in the actual source before editing or reviewing.
+
+When Serena is available, prefer symbol and reference queries over loading whole large files. In particular, avoid reading all of `src/app.js` or generated output when a focused symbol lookup, reference search, or small source slice is enough.
+
+Suggested Graphify entry points:
+
+- Map interaction and rendering: `App Interaction Flow`, `App Render Orchestration`, `SVG Map Layers`, `Map Visual State`, `Map View State`, `Map Pointer Rendering`, and `Claim Overlay Caching`.
+- Data and build work: `Catalog Build Pipeline`, `Claim Data Builder`, `Generated Output Verify`, and `Pages Build Tool`.
+- State and scenario work: `App State Management`, `Active Data Access`, and `Derived Data Indices`.
+
 ## Generated And Derived Artifacts
 
 This repository checks in generated data, static deployment output, and data parsed or cataloged from external Terra Invicta files. These files are **not source of truth**. They are build artifacts.
@@ -20,6 +34,7 @@ Generated and derived paths include:
 - `docs/index.html`
 - `docs/assets/**`
 - `docs/data/**`
+- `graphify-out/**`
 - `node_modules/**`
 - `__pycache__/**`
 - `.pytest_cache/**`
@@ -41,6 +56,8 @@ For these paths:
 - It is acceptable to inspect a small targeted slice of a generated file only when debugging a failing generator or verifier. Keep the slice minimal and state why it was needed.
 
 When reporting changes, summarize generated artifact changes at a high level, for example: “rebuilt docs and generated catalogs from updated source,” rather than reviewing the generated diff.
+
+For `graphify-out/**`, summarize it as refreshed Graphify output when it changes. Do not review `graphify-out/graph.json`, `graphify-out/graph.html`, or `graphify-out/GRAPH_REPORT.md` as source changes; use them only as navigation aids and verify any findings against the real source files.
 
 ## Preferred Source Paths
 

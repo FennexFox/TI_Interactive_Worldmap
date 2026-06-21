@@ -1,4 +1,6 @@
 <!doctype html>
+<!-- SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors -->
+<!-- SPDX-License-Identifier: MIT -->
 <html lang="en">
 <head>
 <meta charset="utf-8" />
@@ -29,6 +31,12 @@
           </div>
         </div>
         <div class="sideCardBody">
+          <div class="scenarioControl">
+            <label for="scenarioSel" data-i18n="scenario.label">Start scenario</label>
+            <select id="scenarioSel"></select>
+            <div class="scenarioSummary" id="scenarioSummary" role="status" aria-live="polite"></div>
+          </div>
+
           <label for="search" data-i18n="search.label">Search and select nation/region</label>
           <div class="searchCombo" id="nationSearchCombo">
             <input id="search" data-i18n-placeholder="search.placeholder" placeholder="Enter a nation tag, region, or project: CHN, Korea, Greater India..." autocomplete="off" role="combobox" aria-expanded="false" aria-controls="nationDropdown" aria-autocomplete="list" />

@@ -1,0 +1,11 @@
+SPDX-License-Identifier: LicenseRef-Terra-Invicta-Data
+
+Files marked with LicenseRef-Terra-Invicta-Data contain data, identifiers,
+localization, region geometry, catalog extracts, or generated bundles derived
+from a local Terra Invicta installation.
+
+They are not licensed under the MIT License in this repository. Terra Invicta
+game data and assets remain subject to the terms and ownership applicable to
+the Terra Invicta installation and its rightsholders. This repository does not
+grant rights to redistribute or reuse that material beyond what those terms
+allow.

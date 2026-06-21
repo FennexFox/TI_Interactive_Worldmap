@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
+# SPDX-License-Identifier: MIT
+
 """Build a normalized Terra Invicta research/project catalog for the worldmap app."""
 from __future__ import annotations
 
@@ -18,6 +21,7 @@ from catalog_utils import (
     source_fingerprint,
     write_json_output,
 )
+from scenario_rows import DEFAULT_SCENARIO, SUPPORTED_SCENARIOS, filter_bilateral_rows_for_scenario
 
 
 SCHEMA_VERSION = 1
@@ -156,9 +160,15 @@ def localized_fields(
 def claim_grants_by_project(
     bilateral_rows: list[dict[str, Any]] | None,
     aliases: dict[str, str] | None,
+    scenario_year: str | None = None,
 ) -> dict[str, dict[str, Any]]:
+    scenario_rows = filter_bilateral_rows_for_scenario(
+        bilateral_rows or [],
+        scenario_year,
+        relation_types=("Claim",),
+    )
     grants: dict[str, dict[str, Any]] = {}
-    for row in bilateral_rows or []:
+    for row in scenario_rows:
         if not isinstance(row, dict) or row.get("relationType") != "Claim":
             continue
         project = row.get("projectUnlockName")
@@ -252,9 +262,10 @@ def build_catalog(
     *,
     bilateral_rows: list[dict[str, Any]] | None = None,
     aliases: dict[str, str] | None = None,
+    scenario_year: str | None = None,
 ) -> dict[str, Any]:
     localizations = load_research_localizations(templates_dir, languages)
-    claim_grants = claim_grants_by_project(bilateral_rows, aliases)
+    claim_grants = claim_grants_by_project(bilateral_rows, aliases, scenario_year)
     nodes: list[dict[str, Any]] = []
     for kind, filename in RESEARCH_TEMPLATE_FILES.items():
         templates = load_named_templates(templates_dir, filename)
@@ -280,6 +291,7 @@ def build_catalog(
             "techTemplate": source_fingerprint(templates_dir / RESEARCH_TEMPLATE_FILES["tech"]),
             "projectTemplate": source_fingerprint(templates_dir / RESEARCH_TEMPLATE_FILES["project"]),
             "localizationLanguages": languages,
+            "scenarioYear": scenario_year or "",
         },
         "notes": [
             "Nodes are static template data; save-specific completion and availability should be evaluated separately.",
@@ -307,6 +319,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--languages", default="kor,en", help="Comma-separated localization languages to include.")
     parser.add_argument("--bilateral-template", help="Path to TIBilateralTemplate.json.")
     parser.add_argument("--aliases", default="data/manual/region_aliases.json")
+    parser.add_argument("--scenario-year", default=DEFAULT_SCENARIO, choices=SUPPORTED_SCENARIOS)
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
     return parser.parse_args()
 
@@ -320,7 +333,13 @@ def main() -> int:
     bilateral_path = Path(args.bilateral_template) if args.bilateral_template else templates_dir / "TIBilateralTemplate.json"
     bilateral_rows = load_json(bilateral_path) if bilateral_path.is_file() else None
     aliases = load_json(Path(args.aliases)) if args.aliases and Path(args.aliases).is_file() else {}
-    catalog = build_catalog(templates_dir, languages, bilateral_rows=bilateral_rows, aliases=aliases)
+    catalog = build_catalog(
+        templates_dir,
+        languages,
+        bilateral_rows=bilateral_rows,
+        aliases=aliases,
+        scenario_year=args.scenario_year,
+    )
     output = write_json_output(Path(args.output), catalog)
     print(f"Wrote {output}")
     print(f"Nodes: {catalog['counts']['total']}")

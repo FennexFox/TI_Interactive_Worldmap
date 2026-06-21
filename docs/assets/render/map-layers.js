@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
+// SPDX-License-Identifier: MIT
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const DEFAULT_COPY_CONTEXT = Object.freeze({copyIndex: 0, xOffset: 0, isCanonical: true});
 
@@ -79,6 +82,19 @@ export function createRegionPath(region, attrs = {}, dataset = {}) {
   });
 }
 
+function hitGeometryId(index) {
+  return `hit-region-geometry-${index}`;
+}
+
+function createRegionHitUse(region, geometryId, attrs = {}, dataset = {}) {
+  return createSvgElement('use', {href: `#${geometryId}`, ...attrs}, {
+    id: region.id,
+    region: region.regionName,
+    nation: region.nationTag,
+    ...dataset,
+  });
+}
+
 function normalizeDataset(dataset = {}) {
   return Object.fromEntries(
     Object.entries(dataset || {})
@@ -115,9 +131,13 @@ export function buildVisualFillGroups(descriptors = []) {
         fillOpacity,
         dataset,
         paths: [],
+        regions: [],
       });
     }
-    groups.get(groupKey).paths.push(path);
+    const group = groups.get(groupKey);
+    group.paths.push(path);
+    const regionName = descriptor.regionName || descriptor.region?.regionName || '';
+    if (regionName) group.regions.push(regionName);
   }
   return [...groups.values()];
 }
@@ -142,6 +162,7 @@ export function createGroupedVisualFillFragment({
         }, {
           ...group.dataset,
           visualGroupSize: group.paths.length,
+          regions: group.regions.length ? group.regions.join(' ') : '',
           ...worldCopyDataset(copyContext),
         }));
       }
@@ -202,17 +223,38 @@ export function renderHitLayer({
   hitPathInstancesByRegion,
   hitPathElements,
   copyContexts,
+  useCanonicalHitPaths = false,
 }) {
   const contexts = normalizeWorldCopyContexts(copyContexts);
   hitPathByRegion.clear();
   clearRegistry(hitPathInstancesByRegion);
   hitPathElements.length = 0;
   const frag = document.createDocumentFragment();
+  if (useCanonicalHitPaths) {
+    const defs = createSvgElement('defs', {'data-hit-geometry-defs': '1'});
+    indices.regions.forEach((region, index) => {
+      defs.appendChild(createSvgElement('path', {
+        id: hitGeometryId(index),
+        class: 'region-hit-geometry',
+        d: region.path,
+      }, {
+        id: region.id,
+        region: region.regionName,
+        nation: region.nationTag,
+      }));
+    });
+    frag.appendChild(defs);
+  }
   for (const copyContext of contexts) {
     appendWorldCopyFragment(frag, copyContext, contexts.length, 'hit-copy', () => {
       const copyFrag = document.createDocumentFragment();
-      for (const region of indices.regions) {
-        const hitPath = createRegionPath(region, {
+      for (const [index, region] of indices.regions.entries()) {
+        const hitPath = useCanonicalHitPaths ? createRegionHitUse(region, hitGeometryId(index), {
+          class: 'region-hit',
+          fill: 'transparent',
+          stroke: 'none',
+          'pointer-events': 'fill',
+        }, {regionId: region.regionName, ...worldCopyDataset(copyContext)}) : createRegionPath(region, {
           class: 'region-hit',
           fill: 'transparent',
           stroke: 'none',
@@ -286,6 +328,7 @@ export function renderRegions({
   colorFor,
   labelPosition,
   localizedRegionName,
+  useCanonicalHitPaths = false,
 }) {
   const contexts = normalizeWorldCopyContexts(copyContexts);
   pathByRegion.clear();
@@ -309,6 +352,6 @@ export function renderRegions({
     });
   }
   replaceLayerChildren(layer, frag);
-  renderHitLayer({parent: hitLayer, indices, hitPathByRegion, hitPathInstancesByRegion, hitPathElements, copyContexts: contexts});
+  renderHitLayer({parent: hitLayer, indices, hitPathByRegion, hitPathInstancesByRegion, hitPathElements, copyContexts: contexts, useCanonicalHitPaths});
   renderLabels({layer: labelLayer, labelTextElements, labelsVisible, regions: indices.regions, labelPosition, localizedRegionName, copyContexts: contexts});
 }

@@ -1,3 +1,6 @@
+/* SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors */
+/* SPDX-License-Identifier: MIT */
+
   :root {
     --bg:#0b1020; --panel:#121a2b; --panel2:#0e1525; --text:#e8eefc; --muted:#98a6bd;
     --line:rgba(255,255,255,.12); --soft:rgba(255,255,255,.055); --accent:#91b7ff;
@@ -114,6 +117,9 @@
   .searchOption.empty { display:block; color:var(--muted); cursor:default; }
   .searchOptionTag { min-width:3.4em; color:#dbeafe; font-weight:800; letter-spacing:.02em; }
   .searchOptionLabel { color:#cbd5e1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .scenarioControl { margin-bottom:10px; }
+  .scenarioControl label { margin-top:0; }
+  .scenarioSummary { min-height:18px; margin-top:6px; color:var(--muted); font-size:12px; line-height:1.45; }
   .row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .mapbar { display:flex; gap:8px; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid rgba(255,255,255,.08); background:rgba(10,15,25,.78); backdrop-filter:blur(8px); }
   .mapbar .left { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
@@ -150,14 +156,48 @@
     color:#e8eefc;
     font-weight:800;
     box-shadow:0 6px 18px rgba(0,0,0,.26);
+    transition:background-color .12s ease, border-color .12s ease, color .12s ease, box-shadow .12s ease;
   }
   .mapViewControl:hover {
     background:rgba(34,48,82,.92);
     border-color:rgba(145,183,255,.38);
   }
+  .mapViewControl:active {
+    background:rgba(48,66,108,.96);
+    border-color:rgba(191,219,254,.7);
+    box-shadow:0 3px 10px rgba(0,0,0,.3);
+  }
   .mapViewControlReset {
     font-size:12px;
     font-weight:700;
+  }
+  .mapViewWrapToggle {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:64px;
+    font-size:12px;
+    font-weight:700;
+    white-space:nowrap;
+  }
+  .mapViewWrapToggle[aria-pressed="false"] {
+    background:rgba(11,16,32,.82);
+    border-color:rgba(255,255,255,.18);
+    color:#e8eefc;
+  }
+  .mapViewWrapToggle[aria-pressed="true"] {
+    background:#2563eb;
+    border-color:#93c5fd;
+    color:#f8fbff;
+    box-shadow:0 6px 18px rgba(37,99,235,.34), inset 0 0 0 1px rgba(255,255,255,.12);
+  }
+  .mapViewWrapToggle[aria-pressed="true"]:hover {
+    background:#1d4ed8;
+    border-color:#bfdbfe;
+  }
+  .mapViewWrapToggle[aria-pressed="true"]:active {
+    background:#1e40af;
+    border-color:#dbeafe;
   }
   svg { width:100%; height:100%; display:block; background: radial-gradient(circle at 50% 45%,#172033 0%,#0b1020 70%); }
   svg.world-wrap-enabled { cursor:grab; touch-action:none; user-select:none; }
@@ -180,9 +220,11 @@
   .claim-overlay { pointer-events:none; stroke:rgba(255,255,255,.55); stroke-width:.012; vector-effect:non-scaling-stroke; mix-blend-mode:screen; }
   svg.claims-active .claim-overlay { mix-blend-mode:normal; filter: none; opacity: 1;}
   .claim-fill-group { pointer-events:none; stroke:none; mix-blend-mode:normal; filter:none; opacity:1; }
+  .claim-hatch-group { pointer-events:none; stroke:none; mix-blend-mode:normal; filter:none; opacity:1; }
   .claim-fill-group.gated { opacity:.72; }
+  .claim-hatch-group.gated { opacity:.72; }
   .claim-overlay.peaceful { stroke:#9ee7ff; stroke-width:.015; }
-  .claim-overlay.hostile { stroke:var(--hostile); stroke-width:.023; }
+  .claim-hatch-line { fill:none; stroke:rgba(255,244,230,.96); stroke-width:1.5px; vector-effect:non-scaling-stroke; }
   .claim-overlay.capital { stroke-dasharray:.035 .018; stroke-width:.027; }
 
   #capitalMarkers { pointer-events:none; opacity:1; mix-blend-mode:normal; }
@@ -191,6 +233,15 @@
   .capital-star { fill:rgba(255,184,61,.12); stroke:#ffd84d; stroke-width:1.75px; stroke-linejoin:round; vector-effect:non-scaling-stroke; paint-order:stroke fill; filter:drop-shadow(0 0 1.25px rgba(255,216,77,.42)); }
   .capital-marker.is-selected .capital-star-shadow { fill:rgba(59,33,0,.82); stroke:none; stroke-width:0; }
   .capital-marker.is-selected .capital-star { fill:rgba(255,184,61,.86); stroke:#fff1a8; stroke-width:2px; filter:drop-shadow(0 0 2px rgba(255,184,61,.55)); }
+  svg.is-panning #capitalMarkers *,
+  svg.is-panning #pinnedRegionMarkers *,
+  svg.is-panning #reachableCapitalCandidates *,
+  svg.is-panning #selectionOutlines * { filter:none; }
+  svg.is-panning #capitalMarkers .capital-star-shadow,
+  svg.is-panning #pinnedRegionMarkers .capital-star-shadow,
+  svg.is-panning #reachableCapitalCandidates .capital-star-shadow,
+  svg.is-panning #pinnedRegionMarkers .pinned-outline-glow,
+  svg.is-panning #selectionOutlines .selection-outline-glow { display:none; }
   .claim-overlay.gated { stroke:var(--gated); stroke-dasharray:.02 .018; stroke-width:.024; opacity:.72; }
   .hover-fill { pointer-events:none; fill:oklch(0.86 0.17 95 / .18); stroke:none; mix-blend-mode:screen; }
   .hover-outline-glow { pointer-events:none; fill:none; stroke:oklch(0.87 0.18 92 / .68); stroke-width:.058; vector-effect:non-scaling-stroke; }
@@ -229,6 +280,7 @@
   .manual-envelope-region-outline.manual-envelope-depth-1 { stroke:oklch(0.84 0.13 220 / .82); }
   .manual-envelope-region-outline.has-overlap { stroke-width:.019; }
   .manual-envelope-overlap { pointer-events:none; stroke-width:.033; vector-effect:non-scaling-stroke; stroke-dasharray:.018 .014; }
+  .manual-envelope-hostile-hatch { pointer-events:none; opacity:.92; }
   #pinnedRegionMarkers { pointer-events:none; opacity:1; mix-blend-mode:normal; }
   .pinned-fill { pointer-events:none; fill:oklch(0.78 0.13 185 / .20); stroke:none; mix-blend-mode:screen; }
   .pinned-outline-glow { pointer-events:none; fill:none; stroke:oklch(0.82 0.17 185 / .86); stroke-width:.072; vector-effect:non-scaling-stroke; }

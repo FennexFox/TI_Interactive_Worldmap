@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors -->
+<!-- SPDX-License-Identifier: MIT -->
+
 # Terra Invicta Interactive Worldmap
 
 Standalone builder and GitHub Pages site for a Terra Invicta segmented world map.
@@ -12,6 +15,7 @@ The generated Pages site lives in `docs/index.html`.
 - Build direct claim profiles from `TIBilateralTemplate.json`.
 - Include projectless/basic claims as well as project-unlocked claims.
 - Distinguish hostile claims from peaceful claims.
+- Switch the visible map between the supported `2022`, `2026`, and `2070` start scenarios.
 - Treat Taiwan-style cases as `breakaway_gated_existing` instead of pure formables.
 - Keep the first pass static and save-file independent.
 - Leave recursive megastate absorption closure for a later issue.
@@ -52,8 +56,8 @@ There are three build levels:
 1. **Checked-in/UI build**: rebuilds `docs/` from source files and committed generated
    data. It does not read the Terra Invicta install.
 2. **Local game data rebuild**: reads Terra Invicta `Templates` to refresh nation,
-   research, claim, and metadata catalogs while reusing the committed
-   `data/generated/region_map.generated.json` geometry.
+   research, claim, and metadata catalogs for all supported start scenarios while
+   reusing the committed `data/generated/region_map.generated.json` geometry.
 3. **Region outline refresh**: explicitly re-extracts the Unity `regionoutlines` asset
    before rebuilding catalogs and pages. This is only needed when the game's region
    geometry changes or when validating the outline extractor.
@@ -62,6 +66,12 @@ The default local-game workflow intentionally reuses the checked-in region geome
 because Unity asset extraction is slower and more fragile than template/catalog rebuilds.
 Use `--refresh-region-outlines` only when you intend to update
 `data/generated/region_map.generated.json` from the Unity asset.
+
+Generated scenario data is checked in as `data/generated/scenario_bundle.generated.json`
+with schema version 2. It contains duplicated per-scenario `regionMap`, `claimMap`, and
+catalog data for `2022`, `2026`, and `2070`; `2026` remains the default scenario and is
+also copied to the legacy top-level generated files for compatibility. The static app
+loads the bundle and exposes those three scenarios through the sidebar selector.
 
 ## Windows workflows
 
@@ -100,9 +110,9 @@ python .\tools\rebuild_pages.py `
   --no-commit
 ```
 
-Template-derived region ownership and display names default to the `2026` scenario. Pass
-`--scenario-year 2022` or `--scenario-year 2070` to rebuild against another supported
-start year.
+Template-derived region ownership, nation status, research claim grants, and claim rows
+are rebuilt for `2022`, `2026`, and `2070` in one pass. The `--scenario-year` option is
+deprecated; `2026` remains the default and legacy top-level output.
 
 For development fixtures, use:
 
@@ -155,7 +165,6 @@ Unity region geometry as well:
 Useful WSL options:
 
 ```bash
-./scripts/build-wsl.sh --from-game --scenario-year 2070
 ./scripts/build-wsl.sh --from-game --languages kor,en
 ./scripts/build-wsl.sh --from-game --skip-verify
 ./scripts/build-wsl.sh --e2e
@@ -177,10 +186,12 @@ The deploy helper only stages generated paths:
 - `data/generated/research.catalog.json`
 - `data/generated/region_map.generated.json`
 - `data/generated/claim_map.generated.json`
+- `data/generated/scenario_bundle.generated.json`
 - `docs/data/generated/nations.catalog.json`
 - `docs/data/generated/research.catalog.json`
 - `docs/data/region_map.generated.json`
 - `docs/data/claim_map.generated.json`
+- `docs/data/scenario_bundle.generated.json`
 - `docs/assets/data.generated.js`
 - `docs/assets/app.js`
 - `docs/assets/state/*.js`
@@ -190,3 +201,26 @@ The deploy helper only stages generated paths:
 - `docs/index.html`
 
 Other local changes are left untouched.
+
+## Documentation and planning notes
+
+The repository uses `docs/` as the generated GitHub Pages output. Do not use `docs/` for planning documentation and do not hand-edit generated `docs/**` artifacts as source.
+
+Durable project guidance lives in:
+
+- `README.md` for setup, build, deploy, and user-facing scope;
+- `AGENTS.md` for contributor and agent workflow rules;
+- `.github/**` for issue, PR, review, and automation guidance.
+
+Temporary implementation plans and profiling notes live in `dev-docs/plan/**`. Those folders may be deleted after the related PR is merged, closed, or abandoned. Before deleting a plan folder, promote only still-useful decisions or validated findings into durable documentation or the relevant GitHub issue.
+
+## License
+
+Project-owned source code, build/test tooling, and documentation are licensed
+under the MIT License. See `LICENSE` and the SPDX metadata in `REUSE.toml`.
+
+Generated catalogs, region geometry, scenario bundles, the generated JS data
+bundle, and manual data normalization tables that contain Terra Invicta-derived
+identifiers or data are not covered by MIT. They are marked with
+`LicenseRef-Terra-Invicta-Data` in `REUSE.toml` and remain subject to the
+terms and ownership applicable to Terra Invicta and its rightsholders.
