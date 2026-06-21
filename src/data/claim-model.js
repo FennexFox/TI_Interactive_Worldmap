@@ -519,12 +519,9 @@ export function createClaimModel({
     const hostileEntries = hostileAncestor
       ? (source.entries || []).map(entry => applyRecursiveHostilityToEntry(entry, hostileAncestor))
       : source.entries || [];
-    const entries = hostileEntries
-      .map(filterEntryByClaimKind)
-      .filter(entry => entry.regions.length);
     return {
       ...source,
-      entries,
+      entries: hostileEntries,
       recursiveHostileAncestor: hostileAncestor || null,
     };
   }
@@ -581,7 +578,6 @@ export function createClaimModel({
         ? claimWithEffectiveHostility({}, source.recursiveHostileAncestor)
         : {};
       for (const regionName of source.baseSet) {
-        if (!claimKindPass(baseClaim)) continue;
         addManualEnvelopeContribution(regionContributions, source, regionName, {
           kind: 'base',
           project: '',
@@ -607,6 +603,7 @@ export function createClaimModel({
     for (const [region, contributions] of regionContributions) {
       const sorted = [...contributions].sort(compareManualEnvelopeContributions);
       const primary = sorted[0];
+      if (!claimKindPass(primary.claim)) continue;
       const overlapSourceKeys = new Set();
       const overlapSources = [];
       for (const contribution of sorted) {

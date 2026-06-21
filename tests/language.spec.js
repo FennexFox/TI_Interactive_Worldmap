@@ -915,14 +915,14 @@ test('manual recursive envelope hatches claims inherited through a hostile paren
   const nzViaUkHatch = page.locator('#manualEnvelopeOverlays .manual-envelope-hostile-hatch[data-envelope-claimant="GBR"][data-envelope-parent="EUA"][data-envelope-via-capital="England"][data-regions~="NewZealand"]');
   await expect(australiaViaUkHatch).toHaveCount(1);
   await expect(nzViaUkHatch).toHaveCount(1);
-  expect(await groupedClaimRegionCount(page, '#manualEnvelopeOverlays .manual-envelope-hostile-hatch')).toBeGreaterThan(100);
+  expect(await groupedClaimRegionCount(page, '#manualEnvelopeOverlays .manual-envelope-hostile-hatch')).toBeGreaterThan(70);
 
   await page.selectOption('#claimKind', 'hostile');
   await expect(franceViaRussiaHatch).toHaveCount(1);
   await expect(ukViaEuropeHatch).toHaveCount(1);
   await expect(australiaViaUkHatch).toHaveCount(1);
   await expect(nzViaUkHatch).toHaveCount(1);
-  expect(await groupedClaimRegionCount(page, '#manualEnvelopeOverlays .manual-envelope-hostile-hatch')).toBeGreaterThan(100);
+  expect(await groupedClaimRegionCount(page, '#manualEnvelopeOverlays .manual-envelope-hostile-hatch')).toBeGreaterThan(70);
 });
 
 test('formable capital hover does not show the current owner capital marker', async ({ page }) => {

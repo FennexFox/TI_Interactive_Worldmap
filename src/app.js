@@ -2922,9 +2922,7 @@ function manualEnvelopeRenderKey(model, copyContexts = worldCopyContexts) {
   });
 }
 function manualEnvelopeHostileContribution(item) {
-  return (item.contributions || []).find(contribution => (
-    claimIsEffectivelyHostile(contribution.claim)
-  )) || null;
+  return claimIsEffectivelyHostile(item?.primary?.claim) ? item.primary : null;
 }
 function createManualEnvelopeFragment(model, {copyContexts=worldCopyContexts} = {}) {
   const fillDescriptors = model.regionItems.map(item => {
