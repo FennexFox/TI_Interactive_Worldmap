@@ -23,8 +23,17 @@ EXPECTED_MODULE_ASSETS = (
     "docs/assets/state/app-state.js",
     "docs/assets/state/map-visual-state.js",
     "docs/assets/data/active-data.js",
+    "docs/assets/data/claim-model.js",
     "docs/assets/data/derived-indices.js",
+    "docs/assets/interaction/map-pan.js",
+    "docs/assets/interaction/tooltip.js",
     "docs/assets/render/map-layers.js",
+    "docs/assets/runtime/refresh-flow.js",
+    "docs/assets/ui/aside-cards.js",
+    "docs/assets/ui/controls.js",
+    "docs/assets/ui/i18n.js",
+    "docs/assets/ui/map-controls.js",
+    "docs/assets/ui/panels.js",
 )
 
 

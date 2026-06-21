@@ -21,7 +21,9 @@ import {
   unpinPinnedRegion,
 } from '../src/state/app-state.js';
 import {createAppData, getActiveData, getScenarioIds} from '../src/data/active-data.js';
+import {createClaimModel} from '../src/data/claim-model.js';
 import {buildDerivedIndices, resolveSecondaryCapitalPreview} from '../src/data/derived-indices.js';
+import {createI18n, normalizeLanguage} from '../src/ui/i18n.js';
 import {
   applyMapVisualState,
   applyMapVisualStateForRegions,
@@ -111,6 +113,108 @@ function sampleActiveData() {
         },
       },
     },
+  };
+}
+
+function sampleClaimModelFixture() {
+  const claimsByNation = {
+    AAA: {
+      nation: 'AAA',
+      baseRegions: ['Alpha'],
+      capitalRegions: ['Alpha'],
+      projects: [
+        {
+          project: '',
+          label: 'Base claims',
+          regions: ['Beta'],
+          claims: {Beta: {hostileClaim: false}},
+        },
+        {
+          project: 'Project_Bridge',
+          label: 'Bridge',
+          regions: ['Gamma'],
+          claims: {Gamma: {hostileClaim: true, capitalClaim: true}},
+        },
+        {
+          project: 'Project_Final',
+          label: 'Final',
+          regions: ['Delta'],
+          claims: {Delta: {hostileClaim: false, gatedClaim: true}},
+        },
+      ],
+    },
+    BBB: {
+      nation: 'BBB',
+      baseRegions: ['Beta'],
+      capitalRegions: ['Beta'],
+      projects: [
+        {
+          project: '',
+          label: 'Base claims',
+          regions: ['Gamma'],
+          claims: {Gamma: {hostileClaim: false}},
+        },
+      ],
+    },
+    CCC: {
+      nation: 'CCC',
+      baseRegions: ['Gamma'],
+      capitalRegions: ['Gamma'],
+      projects: [],
+    },
+    DDD: {
+      nation: 'DDD',
+      baseRegions: ['Delta'],
+      capitalRegions: ['Delta'],
+      projects: [],
+    },
+  };
+  const projectMeta = {
+    Project_Bridge: {displayName: 'Bridge', researchCost: 100, prerequisiteNodes: []},
+    Project_Final: {displayName: 'Final', researchCost: 200, prerequisiteNodes: ['Project_Bridge']},
+  };
+  const regionByName = Object.fromEntries(['Alpha', 'Beta', 'Gamma', 'Delta'].map(regionName => [regionName, {regionName}]));
+  const nationRegions = new Map(Object.entries(claimsByNation).map(([nation, data]) => [nation, data.baseRegions]));
+  const capitalNationsByRegion = new Map([
+    ['Beta', ['BBB']],
+    ['Gamma', ['CCC']],
+    ['Delta', ['DDD']],
+  ]);
+  let claimMode = 'all';
+  let claimKind = 'all';
+  let projectFilter = '';
+  let activeIncomingClaimKey = '';
+  let selectedRegionIds = [];
+  let incomingClaimsByRegion = new Map();
+  const model = createClaimModel({
+    claimsByNation: () => claimsByNation,
+    nationRegions: () => nationRegions,
+    projectMeta: () => projectMeta,
+    claimMode: () => claimMode,
+    claimKind: () => claimKind,
+    projectFilter: () => projectFilter,
+    activeIncomingClaimKey: () => activeIncomingClaimKey,
+    selectedRegionIds: () => selectedRegionIds,
+    incomingClaimsByRegion: () => incomingClaimsByRegion,
+    capitalNationsByRegion: () => capitalNationsByRegion,
+    regionExists: regionName => !!regionByName[regionName],
+    isCapitalRegionForNation: (nation, regionName) => (claimsByNation[nation]?.capitalRegions || []).includes(regionName),
+    projectLabel: project => projectMeta[project]?.displayName || project || '',
+    sourceLabels: {
+      inheritedFrom: project => `Inherited from ${project}`,
+      basicClaim: () => 'Basic claim',
+      direct: () => 'Direct',
+    },
+  });
+  return {
+    claimsByNation,
+    model,
+    setClaimMode: value => { claimMode = value; },
+    setClaimKind: value => { claimKind = value; },
+    setProjectFilter: value => { projectFilter = value; },
+    setActiveIncomingClaimKey: value => { activeIncomingClaimKey = value; },
+    setSelectedRegionIds: value => { selectedRegionIds = value; },
+    setIncomingClaimsByRegion: value => { incomingClaimsByRegion = value; },
   };
 }
 
@@ -333,6 +437,82 @@ test('derived indices merge active data and resolve secondary capital previews d
     hoveredRegionId: 'Beta',
     selectedOverlayModel: {...selectedOverlayModel, hasClaimOverlay: false},
   })).toBe(null);
+});
+
+test('claim model builds cumulative claims, overlay models, and incoming entries without DOM state', () => {
+  const fixture = sampleClaimModelFixture();
+  const {model} = fixture;
+
+  const directEntries = model.getClaimKindFilteredProjectEntries('AAA');
+  expect(directEntries.map(entry => entry.project || '__base__')).toEqual(['__base__', 'Project_Bridge', 'Project_Final']);
+
+  const cumulative = model.cumulativeClaimEntries(directEntries);
+  const final = cumulative.find(entry => entry.project === 'Project_Final');
+  expect(final.regions).toEqual(['Beta', 'Gamma', 'Delta']);
+  expect(final.inheritedRegions).toEqual(['Beta', 'Gamma']);
+  expect(final.regionSourceLabels).toEqual({
+    Beta: 'Basic claim',
+    Gamma: 'Inherited from Bridge',
+    Delta: 'Direct',
+  });
+
+  fixture.setClaimKind('hostile');
+  expect(model.getClaimKindFilteredProjectEntries('AAA').map(entry => entry.project)).toEqual(['Project_Bridge']);
+  fixture.setClaimKind('all');
+
+  const incomingIndex = model.buildIncomingClaimIndex();
+  fixture.setIncomingClaimsByRegion(incomingIndex);
+  fixture.setSelectedRegionIds(['Gamma']);
+  const incoming = model.incomingClaimsForTarget('CCC', fixture.claimsByNation.CCC, new Set(['Gamma']));
+  expect(incoming.map(entry => entry.claimant)).toEqual(['AAA', 'BBB']);
+  expect(incoming.find(entry => entry.claimant === 'AAA').capital).toBe(1);
+
+  fixture.setActiveIncomingClaimKey('AAA|Project_Bridge');
+  const overlayModel = model.buildNationOverlayModel(
+    {claimMap: {claimsByNation: fixture.claimsByNation}},
+    {nationRegions: new Map(), regionByName: {}},
+    'CCC'
+  );
+  expect(overlayModel.activeIncoming?.claimant).toBe('AAA');
+  expect(overlayModel.displayBaseSet.has('Alpha')).toBe(true);
+  expect(overlayModel.resultSet.has('Gamma')).toBe(true);
+});
+
+test('claim model filters reachable capitals and assembles manual envelope data', () => {
+  const {model} = sampleClaimModelFixture();
+  const visibleResult = new Set(['Alpha', 'Beta', 'Gamma', 'Delta']);
+
+  expect(model.reachableCapitalCandidateNations('Beta', 'AAA', new Set(['Alpha']))).toEqual(['BBB']);
+  expect(model.reachableCapitalCandidateNations('Beta', 'AAA', visibleResult)).toEqual([]);
+  expect(model.reachableCapitalCandidateNations('Alpha', 'AAA', new Set(['Alpha']))).toEqual([]);
+
+  const specs = [
+    {claimant: 'AAA', depth: 0, parentClaimant: '', viaCapitalRegion: '', pinIndex: -1},
+    {claimant: 'BBB', depth: 1, parentClaimant: 'AAA', viaCapitalRegion: 'Beta', pinIndex: 0},
+  ].sort(model.compareManualEnvelopeSourceSpecs('AAA'));
+  const envelope = model.buildManualEnvelopeModelData('AAA', specs);
+  expect(envelope.anchorNation).toBe('AAA');
+  expect(envelope.sources.map(source => source.claimant)).toEqual(['AAA', 'BBB']);
+  expect(envelope.regionItems.map(item => item.region)).toEqual(['Alpha', 'Beta', 'Delta', 'Gamma']);
+  expect(envelope.regionItems.find(item => item.region === 'Gamma').overlapSources.map(source => source.claimant)).toEqual(['AAA', 'BBB']);
+  expect(envelope.sourceKey).toContain('1:BBB:AAA:Beta:0');
+});
+
+test('i18n runtime formats translated strings and switches language explicitly', () => {
+  expect(normalizeLanguage('en-US')).toBe('en');
+  expect(normalizeLanguage('ko-KR')).toBe('ko');
+
+  const i18n = createI18n({initialLanguage: 'en'});
+  expect(i18n.language).toBe('en');
+  expect(i18n.t('reachableCandidates.count', {count: '3'})).toBe('3 candidate capitals');
+  expect(i18n.regionCountText(2)).toBe('2 regions');
+  expect(i18n.dataLanguageKey()).toBe('en');
+
+  i18n.setLanguage('ko');
+  expect(i18n.language).toBe('ko');
+  expect(i18n.t('reachableCandidates.count', {count: '3'})).toBe('후보 수도 3개');
+  expect(i18n.regionCountText(2)).toBe('2개 지역');
+  expect(i18n.dataLanguageKey()).toBe('kor');
 });
 
 test('map visual state applies explicit classes and bounded updates to copied region instances', () => {
