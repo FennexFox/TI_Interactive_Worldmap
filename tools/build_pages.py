@@ -86,6 +86,7 @@ def build_pages() -> None:
     copy_js_modules(ROOT / "src" / "state", docs / "assets" / "state")
     copy_js_modules(ROOT / "src" / "data", docs / "assets" / "data")
     copy_js_modules(ROOT / "src" / "render", docs / "assets" / "render")
+    copy_js_modules(ROOT / "src" / "ui", docs / "assets" / "ui")
 
     region_map = load_json(ROOT / "data" / "generated" / "region_map.generated.json")
     claim_map = load_json(ROOT / "data" / "generated" / "claim_map.generated.json")

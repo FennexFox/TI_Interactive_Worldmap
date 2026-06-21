@@ -26,6 +26,8 @@ EXPECTED_MODULE_ASSETS = (
     "docs/assets/data/claim-model.js",
     "docs/assets/data/derived-indices.js",
     "docs/assets/render/map-layers.js",
+    "docs/assets/ui/aside-cards.js",
+    "docs/assets/ui/i18n.js",
 )
 
 

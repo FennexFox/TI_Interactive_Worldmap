@@ -23,6 +23,7 @@ import {
 import {createAppData, getActiveData, getScenarioIds} from '../src/data/active-data.js';
 import {createClaimModel} from '../src/data/claim-model.js';
 import {buildDerivedIndices, resolveSecondaryCapitalPreview} from '../src/data/derived-indices.js';
+import {createI18n, normalizeLanguage} from '../src/ui/i18n.js';
 import {
   applyMapVisualState,
   applyMapVisualStateForRegions,
@@ -495,6 +496,23 @@ test('claim model filters reachable capitals and assembles manual envelope data'
   expect(envelope.regionItems.map(item => item.region)).toEqual(['Alpha', 'Beta', 'Delta', 'Gamma']);
   expect(envelope.regionItems.find(item => item.region === 'Gamma').overlapSources.map(source => source.claimant)).toEqual(['AAA', 'BBB']);
   expect(envelope.sourceKey).toContain('1:BBB:AAA:Beta:0');
+});
+
+test('i18n runtime formats translated strings and switches language explicitly', () => {
+  expect(normalizeLanguage('en-US')).toBe('en');
+  expect(normalizeLanguage('ko-KR')).toBe('ko');
+
+  const i18n = createI18n({initialLanguage: 'en'});
+  expect(i18n.language).toBe('en');
+  expect(i18n.t('reachableCandidates.count', {count: '3'})).toBe('3 candidate capitals');
+  expect(i18n.regionCountText(2)).toBe('2 regions');
+  expect(i18n.dataLanguageKey()).toBe('en');
+
+  i18n.setLanguage('ko');
+  expect(i18n.language).toBe('ko');
+  expect(i18n.t('reachableCandidates.count', {count: '3'})).toBe('후보 수도 3개');
+  expect(i18n.regionCountText(2)).toBe('2개 지역');
+  expect(i18n.dataLanguageKey()).toBe('kor');
 });
 
 test('map visual state applies explicit classes and bounded updates to copied region instances', () => {
