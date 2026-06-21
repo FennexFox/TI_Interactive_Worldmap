@@ -1139,6 +1139,30 @@ test('map pan after multiple reachable capital pins avoids hover and marker chur
   expect(duringStats.foreignHoverOverlayReplacements).toBe(0);
   expect(duringStats.fullVisualStateApplications).toBe(0);
 
+  await expect(page.locator('#map')).toHaveClass(/(^|\s)is-panning(\s|$)/);
+  const panningMarkerPaint = await page.evaluate(() => {
+    const styleFor = selector => {
+      const node = document.querySelector(selector);
+      if (!node) return null;
+      const style = getComputedStyle(node);
+      return {display: style.display, filter: style.filter};
+    };
+    return {
+      capitalStar: styleFor('#capitalMarkers .capital-star'),
+      capitalShadow: styleFor('#capitalMarkers .capital-star-shadow'),
+      pinnedCapitalShadow: styleFor('#pinnedRegionMarkers .capital-star-shadow'),
+      pinnedGlow: styleFor('#pinnedRegionMarkers .pinned-outline-glow'),
+      selectionGlow: styleFor('#selectionOutlines .selection-outline-glow'),
+      reachableCapitalShadow: styleFor('#reachableCapitalCandidates .capital-star-shadow'),
+    };
+  });
+  expect(panningMarkerPaint.capitalStar?.filter).toBe('none');
+  expect(panningMarkerPaint.capitalShadow?.display).toBe('none');
+  expect(panningMarkerPaint.pinnedCapitalShadow?.display).toBe('none');
+  expect(panningMarkerPaint.pinnedGlow?.display).toBe('none');
+  expect(panningMarkerPaint.selectionGlow?.display).toBe('none');
+  expect(panningMarkerPaint.reachableCapitalShadow?.display).toBe('none');
+
   await page.mouse.up();
   await waitForAnimationFrames(page, 3);
   await hoverRegion(page, 'Moskva');
