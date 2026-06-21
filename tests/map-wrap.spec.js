@@ -67,6 +67,16 @@ async function expectProjectedRegion(page, layerSelector, regionName, copies = [
   await expectProjectedCopies(page.locator(`${layerSelector}[data-region="${regionName}"]`), copies);
 }
 
+async function expectProjectedGroupedRegion(page, layerSelector, regionName, copies = ['-1', '0', '1']) {
+  await expectProjectedCopies(page.locator(`${layerSelector}[data-regions~="${regionName}"]`), copies);
+}
+
+async function groupedVisualRegionCount(page, layerSelector) {
+  return page.locator(layerSelector).evaluateAll(nodes => nodes.reduce((sum, node) => (
+    sum + Number(node.dataset.visualGroupSize || 0)
+  ), 0));
+}
+
 async function mapViewBox(page) {
   const value = await page.locator('#map').getAttribute('viewBox');
   return String(value || '').split(/\s+/).map(Number);
@@ -426,7 +436,7 @@ test('claim grouped fills preserve per-region semantic outline paths', async ({ 
 
   await chooseNation(page, 'Brazil', 'BRA');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group')).toBe(26);
 
   const claimFillStats = await page.evaluate(() => {
     const fills = [...document.querySelectorAll('#claimOverlays .claim-fill-group')];
@@ -440,36 +450,33 @@ test('claim grouped fills preserve per-region semantic outline paths', async ({ 
       groupedRegions: fills.reduce((sum, fill) => sum + Number(fill.dataset.visualGroupSize || 0), 0),
       hatchedRegions: hatches.reduce((sum, hatch) => sum + Number(hatch.dataset.visualGroupSize || 0), 0),
       ownedFillGroups: fills.filter(fill => fill.classList.contains('owned-territory')).length,
-      ownedOutlines: outlines.filter(outline => outline.classList.contains('owned-territory')).length,
-      peacefulOutlines: outlines.filter(outline => outline.classList.contains('peaceful')).length,
-      hostileOutlines: outlines.filter(outline => outline.classList.contains('hostile')).length,
-      allOutlinesFillNone: outlines.every(outline => outline.getAttribute('fill') === 'none'),
+      hostileFillRegions: fills
+        .filter(fill => fill.classList.contains('research-claim') || fill.classList.contains('basic-claim'))
+        .reduce((sum, fill) => sum + Number(fill.dataset.visualGroupSize || 0), 0),
       hostileHatchesHaveLines: hatches
         .filter(hatch => hatch.classList.contains('hostile'))
-        .every(hatch => hatch.querySelectorAll('.claim-hatch-line').length === 1 && hatch.querySelectorAll('.claim-hatch-line-shadow').length === 0),
+        .every(hatch => /^url\(#hostile-claim-hatch-pattern-/.test(hatch.getAttribute('fill') || '')),
+      hatchPatternLineCount: document.querySelectorAll('#claimOverlays pattern .claim-hatch-line').length,
+      clipPathCount: document.querySelectorAll('#claimOverlays clipPath').length,
       peacefulHatches: hatches.filter(hatch => hatch.classList.contains('peaceful')).length,
       ownedHatches: hatches.filter(hatch => hatch.classList.contains('owned-territory')).length,
-      hostileOutlinesUseRetiredRedStroke: outlines
-        .filter(outline => outline.classList.contains('hostile'))
-        .some(outline => getComputedStyle(outline).stroke === 'rgb(255, 180, 168)'),
     };
   });
 
   expect(claimFillStats.fillGroupCount).toBeGreaterThan(0);
   expect(claimFillStats.hatchGroupCount).toBeGreaterThan(0);
-  expect(claimFillStats.fillGroupCount).toBeLessThan(claimFillStats.outlineCount);
+  expect(claimFillStats.outlineCount).toBe(0);
   expect(claimFillStats.fillGroupsWithRegion).toBe(0);
-  expect(claimFillStats.groupedRegions).toBe(claimFillStats.outlineCount);
+  expect(claimFillStats.groupedRegions).toBe(26);
   expect(claimFillStats.ownedFillGroups).toBeGreaterThan(0);
-  expect(claimFillStats.ownedOutlines).toBeGreaterThan(0);
-  expect(claimFillStats.peacefulOutlines).toBeGreaterThan(0);
-  expect(claimFillStats.hostileOutlines).toBeGreaterThan(0);
-  expect(claimFillStats.allOutlinesFillNone).toBe(true);
-  expect(claimFillStats.hatchedRegions).toBe(claimFillStats.hostileOutlines);
+  expect(claimFillStats.hostileFillRegions).toBeGreaterThan(0);
+  expect(claimFillStats.hatchedRegions).toBeGreaterThan(0);
+  expect(claimFillStats.hatchGroupCount).toBeLessThan(claimFillStats.hatchedRegions);
   expect(claimFillStats.hostileHatchesHaveLines).toBe(true);
+  expect(claimFillStats.hatchPatternLineCount).toBe(claimFillStats.hatchGroupCount);
+  expect(claimFillStats.clipPathCount).toBe(0);
   expect(claimFillStats.peacefulHatches).toBe(0);
   expect(claimFillStats.ownedHatches).toBe(0);
-  expect(claimFillStats.hostileOutlinesUseRetiredRedStroke).toBe(false);
 
   await regionHit(page, 'Amazonia').hover();
   await expect(page.locator('#hoverPill')).toHaveText('Hover: BRA · Manaus');
@@ -483,23 +490,22 @@ test('project-specific hostile claims render hatch and follow claim kind filters
   await page.selectOption('#projectSel', 'Project_GreaterPanAsia');
   await expect(page.locator('#claimMode')).toHaveValue('project');
   await expect(page.locator('#claimKind')).toHaveValue('all');
-  await expect(page.locator('#claimOverlays .claim-overlay.hostile')).toHaveCount(5);
-  await expect(page.locator('#claimOverlays .claim-overlay.peaceful')).toHaveCount(25);
-  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile')).toHaveCount(5);
-  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile[data-region="Hokkaido"] .claim-hatch-line')).toHaveCount(1);
-  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile[data-region="NorthHonshu"] .claim-hatch-line')).toHaveCount(1);
-  await expect(page.locator('#claimOverlays .claim-overlay.hostile[data-region="Hokkaido"]')).toHaveCount(1);
-  await expect(page.locator('#claimOverlays .claim-overlay.hostile[data-region="NorthHonshu"]')).toHaveCount(1);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group.research-claim')).toBe(30);
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(0);
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile')).toHaveCount(1);
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile[data-regions~="Hokkaido"]')).toHaveCount(1);
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile[data-regions~="NorthHonshu"]')).toHaveCount(1);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-hatch-group.hostile')).toBe(5);
+  await expect(page.locator('#claimOverlays clipPath')).toHaveCount(0);
 
   await page.selectOption('#claimKind', 'peaceful');
-  await expect(page.locator('#claimOverlays .claim-overlay.hostile')).toHaveCount(0);
   await expect(page.locator('#claimOverlays .claim-hatch-group.hostile')).toHaveCount(0);
-  await expect(page.locator('#claimOverlays .claim-overlay.peaceful')).toHaveCount(25);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group.research-claim')).toBe(25);
 
   await page.selectOption('#claimKind', 'hostile');
-  await expect(page.locator('#claimOverlays .claim-overlay.hostile')).toHaveCount(5);
-  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile')).toHaveCount(5);
-  await expect(page.locator('#claimOverlays .claim-overlay.peaceful')).toHaveCount(0);
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile')).toHaveCount(1);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-hatch-group.hostile')).toBe(5);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group.research-claim')).toBe(5);
 });
 
 test('hostile hatch can be disabled for performance diagnostics', async ({ page }) => {
@@ -507,10 +513,10 @@ test('hostile hatch can be disabled for performance diagnostics', async ({ page 
 
   await chooseNation(page, 'China', 'CHN');
   await page.selectOption('#projectSel', 'Project_GreaterPanAsia');
-  await expect(page.locator('#claimOverlays .claim-overlay.hostile')).toHaveCount(5);
   await expect(page.locator('#claimOverlays .claim-hatch-group.hostile')).toHaveCount(0);
-  await expect(page.locator('#claimOverlays .claim-overlay.hostile[data-region="Hokkaido"]')).toHaveCount(1);
-  await expect(page.locator('#claimOverlays .claim-overlay.hostile[data-region="NorthHonshu"]')).toHaveCount(1);
+  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(0);
+  await expect(page.locator('#claimOverlays .claim-fill-group.research-claim[data-regions~="Hokkaido"]')).toHaveCount(1);
+  await expect(page.locator('#claimOverlays .claim-fill-group.research-claim[data-regions~="NorthHonshu"]')).toHaveCount(1);
 
   const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.hostileHatchDisabled).toBe(1);
@@ -522,7 +528,7 @@ test('baseline selected overlays stay canonical across hover and claim controls'
 
   await chooseNation(page, 'Brazil', 'BRA');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group')).toBe(26);
 
   await regionHit(page, 'Amazonia').hover();
   await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
@@ -530,12 +536,12 @@ test('baseline selected overlays stay canonical across hover and claim controls'
   await regionHit(page, 'FrenchGuiana').hover();
   await expect(page.locator('#hoverOutlines .hover-fill[data-region="FrenchGuiana"]')).toHaveCount(1);
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group')).toBe(26);
 
   await page.selectOption('#projectSel', 'Project_GranColombia');
   await expect(page.locator('#claimMode')).toHaveValue('project');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 5, research tiers 1');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(14);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group')).toBe(14);
 });
 
 test('world-wrap default renders base, grid, label, and hit copies', async ({ page }) => {
@@ -608,7 +614,7 @@ test('world-wrap default projects grouped base and claim fill copies', async ({ 
   await chooseNation(page, 'Brazil', 'BRA');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
   await expectProjectedCopies(page.locator('#claimOverlays .claim-fill-group.owned-territory[data-fill-key^="owned:"]'));
-  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group.owned-territory', 'Amazonia');
 });
 
 test('world-wrap default projects pinned node markers from row clicks', async ({ page }) => {
@@ -765,8 +771,8 @@ test('world-wrap default projects claim overlays and markers without pan churn',
 
   await chooseNation(page, 'Brazil', 'BRA');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(78);
-  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group')).toBe(78);
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group.owned-territory', 'Amazonia');
   await expectProjectedCopies(page.locator('#capitalMarkers .capital-marker[data-region="Brasilia"]'));
 
   const mapBox = await page.locator('#map').boundingBox();
@@ -823,7 +829,7 @@ test('world-wrap default secondary capital hover projects foreign preview copies
   await waitForWrappedMap(page, '/?debugRenderStats=1');
 
   await chooseNation(page, 'France', 'EUA');
-  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay[data-region="Moskva"]'));
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group', 'Moskva');
 
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
   await hoverWrappedRegion(page, 'Moskva', '1');
@@ -938,13 +944,13 @@ test('world-wrap seam candidates keep hit, selection, and claim overlays project
   }
 
   await chooseNation(page, 'United States', 'USA');
-  await expectProjectedRegion(page, '#claimOverlays .claim-overlay.owned-territory', 'Alaska');
-  await expectProjectedRegion(page, '#claimOverlays .claim-overlay.owned-territory', 'AmericanPacific');
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group.owned-territory', 'Alaska');
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group.owned-territory', 'AmericanPacific');
 
   await chooseNation(page, 'Russia', 'RUS');
-  await expectProjectedRegion(page, '#claimOverlays .claim-overlay.owned-territory', 'Kamchatka');
-  await expectProjectedRegion(page, '#claimOverlays .claim-overlay.owned-territory', 'RussianFarEast');
-  await expectProjectedRegion(page, '#claimOverlays .claim-overlay.owned-territory', 'SakhalinKurils');
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group.owned-territory', 'Kamchatka');
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group.owned-territory', 'RussianFarEast');
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group.owned-territory', 'SakhalinKurils');
 });
 
 test('world-wrap panning is disabled through the fallback query flag', async ({ page }) => {
@@ -1018,16 +1024,16 @@ test('issue #2 acceptance: selected claim overlays render on every visible world
 
   await chooseNation(page, 'Brazil', 'BRA');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(78);
-  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
-  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay[data-region="FrenchGuiana"]'));
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group')).toBe(78);
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group.owned-territory', 'Amazonia');
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group', 'FrenchGuiana');
 
   await page.selectOption('#claimKind', 'peaceful');
-  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group.owned-territory', 'Amazonia');
 
   await page.selectOption('#claimKind', 'all');
   await page.selectOption('#projectSel', 'Project_GranColombia');
   await expect(page.locator('#claimMode')).toHaveValue('project');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(42);
-  await expectProjectedCopies(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Amazonia"]'));
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group')).toBe(42);
+  await expectProjectedGroupedRegion(page, '#claimOverlays .claim-fill-group.owned-territory', 'Amazonia');
 });

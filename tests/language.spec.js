@@ -104,6 +104,16 @@ async function clearMap(page) {
   await page.locator('#hitRegions').dispatchEvent('click', { bubbles: true });
 }
 
+async function groupedClaimRegionCount(page, selector = '#claimOverlays .claim-fill-group') {
+  return page.locator(selector).evaluateAll(nodes => nodes.reduce((sum, node) => (
+    sum + Number(node.dataset.visualGroupSize || 0)
+  ), 0));
+}
+
+async function expectGroupedClaimRegion(page, regionName, selector = '#claimOverlays .claim-fill-group') {
+  await expect(page.locator(`${selector}[data-regions~="${regionName}"]`)).not.toHaveCount(0);
+}
+
 test('language selector switches static and dynamic UI copy', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
@@ -293,7 +303,7 @@ test('simple selected-overlay claim hover movement uses bounded visual updates',
 
   await chooseNation(page, 'Brazil', 'BRA');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  expect(await groupedClaimRegionCount(page)).toBe(26);
 
   await hoverRegionWithMouse(page, 'Amazonia');
   await expect(page.locator('#hoverOutlines .hover-fill[data-region="Amazonia"]')).toHaveCount(1);
@@ -302,7 +312,7 @@ test('simple selected-overlay claim hover movement uses bounded visual updates',
   await hoverRegionWithMouse(page, 'FrenchGuiana');
   await expect(page.locator('#hoverOutlines .hover-fill[data-region="FrenchGuiana"]')).toHaveCount(1);
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  expect(await groupedClaimRegionCount(page)).toBe(26);
 
   const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.boundedVisualStateApplications).toBeGreaterThan(0);
@@ -415,7 +425,7 @@ test('unpinned hover preview leaves committed claim overlay empty until selectio
 
   await clickRegion(page, 'Bolivia');
   await expect(page.locator('#claimPill')).toContainText('Bolivia');
-  await expect(page.locator('#claimOverlays .claim-overlay.owned-territory[data-region="Bolivia"]')).toHaveCount(1);
+  await expectGroupedClaimRegion(page, 'Bolivia', '#claimOverlays .claim-fill-group.owned-territory');
   await expect(page.locator('#nationInfo')).toContainText('Bolivia');
 });
 
@@ -425,15 +435,15 @@ test('secondary capital hover previews a foreign nation inside selected expansio
 
   await chooseNation(page, 'France', 'EUA');
   await expect(page.locator('#claimPill')).toContainText('France');
-  await expect(page.locator('#claimOverlays .claim-overlay[data-region="Paris"]')).toHaveCount(1);
-  await expect(page.locator('#claimOverlays .claim-overlay[data-region="Moskva"]')).toHaveCount(1);
+  await expectGroupedClaimRegion(page, 'Paris');
+  await expectGroupedClaimRegion(page, 'Moskva');
 
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
   await hoverRegion(page, 'Moskva');
   await waitForHoverPreviewFrame(page);
   await expect(page.locator('#hoverPill')).toContainText('RUS');
   await expect(page.locator('#claimPill')).toContainText('France');
-  await expect(page.locator('#claimOverlays .claim-overlay[data-region="Paris"]')).toHaveCount(1);
+  await expectGroupedClaimRegion(page, 'Paris');
   await expect(page.locator('#secondaryHoverOverlays .secondary-capital-preview[data-preview="secondary-capital"][data-nation="RUS"]')).not.toHaveCount(0);
   await expect(page.locator('#secondaryHoverOverlays .secondary-capital-preview[data-regions~="Moskva"][data-nation="RUS"]')).toHaveCount(1);
   let stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
@@ -446,7 +456,7 @@ test('secondary capital hover previews a foreign nation inside selected expansio
   await expect(page.locator('#claimPill')).toContainText('France');
   await expect(page.locator('#secondaryHoverOverlays .secondary-capital-preview')).toHaveCount(0);
   await expect(page.locator('#hoverOutlines .hover-fill[data-region="Kharkiv"]')).toHaveCount(1);
-  await expect(page.locator('#claimOverlays .claim-overlay[data-region="Paris"]')).toHaveCount(1);
+  await expectGroupedClaimRegion(page, 'Paris');
 
   await hoverRegion(page, 'Paris');
   await waitForHoverPreviewFrame(page);
@@ -481,7 +491,7 @@ test('unlocked hover preview uses lightweight overlay and leaves committed detai
 
   await chooseNation(page, 'Brazil', 'BRA');
   await expect(page.locator('#claimPill')).toContainText('Brazil');
-  await expect(page.locator('#claimOverlays .claim-overlay[data-region="Amazonia"]')).toHaveCount(1);
+  await expectGroupedClaimRegion(page, 'Amazonia');
   await expect(page.locator('#nationInfo')).toContainText('Brazil');
 });
 
@@ -491,7 +501,7 @@ test('overlay model cache reuses unchanged inputs and misses changed filters', a
 
   await chooseNation(page, 'Brazil', 'BRA');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  expect(await groupedClaimRegionCount(page)).toBe(26);
 
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
   await chooseNation(page, 'Brazil', 'BRA');
@@ -504,7 +514,7 @@ test('overlay model cache reuses unchanged inputs and misses changed filters', a
   await page.selectOption('#projectSel', 'Project_GranColombia');
   await expect(page.locator('#claimMode')).toHaveValue('project');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 5, research tiers 1');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(14);
+  expect(await groupedClaimRegionCount(page)).toBe(14);
   stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.overlayModelBuilds).toBeGreaterThan(0);
   expect(stats.overlayModelCacheHits).toBe(0);
@@ -512,7 +522,7 @@ test('overlay model cache reuses unchanged inputs and misses changed filters', a
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
   await page.selectOption('#claimMode', 'all');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  expect(await groupedClaimRegionCount(page)).toBe(26);
   stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.overlayModelCacheHits).toBeGreaterThan(0);
   expect(stats.overlayModelBuilds).toBe(0);
@@ -520,7 +530,7 @@ test('overlay model cache reuses unchanged inputs and misses changed filters', a
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
   await page.selectOption('#claimKind', 'hostile');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 11, research tiers 1');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(20);
+  expect(await groupedClaimRegionCount(page)).toBe(20);
   stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.overlayModelBuilds).toBeGreaterThan(0);
   expect(stats.overlayModelCacheHits).toBe(0);
@@ -553,12 +563,12 @@ test('overlay render skip keys avoid unchanged DOM replacement', async ({ page }
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
   await chooseNation(page, 'Brazil', 'BRA');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  expect(await groupedClaimRegionCount(page)).toBe(26);
   await expect(page.locator('#claimLabels .claim-label')).not.toHaveCount(0);
 
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
   await chooseNation(page, 'Brazil', 'BRA');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  expect(await groupedClaimRegionCount(page)).toBe(26);
   let stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.claimOverlayDomReplacements).toBe(0);
   expect(stats.claimLabelDomReplacements).toBe(0);
@@ -585,7 +595,7 @@ test('overlay render skip keys avoid unchanged DOM replacement', async ({ page }
   await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
   await page.selectOption('#projectSel', 'Project_GranColombia');
   await expect(page.locator('#claimMode')).toHaveValue('project');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(14);
+  expect(await groupedClaimRegionCount(page)).toBe(14);
   stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
   expect(stats.claimOverlayDomReplacements).toBeGreaterThan(0);
   expect(stats.claimLabelDomReplacements).toBeGreaterThan(0);
@@ -724,20 +734,20 @@ test('selected nation claim controls update overlays without losing state', asyn
 
   await chooseNation(page, 'Brazil', 'BRA');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 17, research tiers 2');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  expect(await groupedClaimRegionCount(page)).toBe(26);
   await expect(page.locator('#projectSel option')).toHaveCount(3);
 
   await page.selectOption('#projectSel', 'Project_GranColombia');
   await expect(page.locator('#claimMode')).toHaveValue('project');
   await expect(page.locator('#projectSel')).toHaveValue('Project_GranColombia');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 5, research tiers 1');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(14);
+  expect(await groupedClaimRegionCount(page)).toBe(14);
   await expect(page.locator('.claimListItem.active[data-claim-kind="outgoing"]')).toHaveCount(1);
 
   await page.selectOption('#claimMode', 'all');
   await page.selectOption('#claimKind', 'hostile');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 11, research tiers 1');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(20);
+  expect(await groupedClaimRegionCount(page)).toBe(20);
   await expect(page.locator('.claimListItem[data-claim-kind="outgoing"]')).toHaveCount(1);
 
   await page.selectOption('#claimKind', 'all');
@@ -1222,7 +1232,7 @@ test('claim cards synchronize map overlays, panel state, and empty map clear', a
   await expect(page.locator('#claimMode')).toHaveValue('project');
   await expect(page.locator('#projectSel')).toHaveValue('Project_SouthAmericanUnion');
   await expect(page.locator('#claimPill')).toHaveText('Bolivia: territory 1, claims 25, research tiers 1');
-  await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(26);
+  expect(await groupedClaimRegionCount(page)).toBe(26);
   await expect(page.locator('.claimListItem.active[data-claim-kind="outgoing"]')).toHaveCount(1);
 
   await expect(page.locator('#pinnedRegionsPanel [data-pinned-region]')).toHaveCount(1);

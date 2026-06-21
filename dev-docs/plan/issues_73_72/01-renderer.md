@@ -67,21 +67,25 @@
 ## Evidence
 
 - Baseline: China / Greater Pan-Asia, single-copy: `claimOverlayPathCount=63`, `claimOutlinePathCount=56`, `claimOutlineUseCount=0`, `claimHatchGroupCount=5`, `claimHatchPathCount=5`, `claimClipPathCount=5`, `visibleSvgNodeCount=1305`; world-wrap: `claimOverlayPathCount=73`, `claimOutlinePathCount=56`, `claimOutlineUseCount=112`, `claimHatchGroupCount=15`, `claimHatchPathCount=15`, `claimClipPathCount=15`, `visibleSvgNodeCount=3905`.
-- After: TODO
-- Delta: TODO
-- Interpretation: TODO
-- Commit: TODO
-- Commit blocker: TODO
+- After: Same command after implementation, summary `debug-render-stats-2026-06-21T05-37-56-502Z.summary.json`. Single-copy: `claimOverlayPathCount=4`, `claimOutlinePathCount=0`, `claimOutlineUseCount=0`, `claimHatchGroupCount=1`, `claimHatchPathCount=1`, `claimClipPathCount=0`, `visibleSvgNodeCount=1228`; world-wrap: `claimOverlayPathCount=8`, `claimOutlinePathCount=0`, `claimOutlineUseCount=0`, `claimHatchGroupCount=3`, `claimHatchPathCount=3`, `claimClipPathCount=0`, `visibleSvgNodeCount=3674`.
+- Delta: single-copy overlay paths `63 -> 4`, outlines `56 -> 0`, hatches `5 -> 1`, clipPaths `5 -> 0`, visible nodes `1305 -> 1228`; world-wrap overlay paths `73 -> 8`, outline uses `112 -> 0`, hatches `15 -> 3`, clipPaths `15 -> 0`, visible nodes `3905 -> 3674`.
+- Interpretation: Hostile hatches now scale by hatch visual group and world copy instead of hostile region count; default committed overlays no longer emit visible per-region outline nodes.
+- Validation: `npm run build` passed; focused `tests/map-view-state.spec.js tests/map-wrap.spec.js -g "hostile|claim grouped|zoomMapView"` passed; `tests/scenarios.spec.js` passed; `tests/language.spec.js tests/map-wrap.spec.js` passed; `npm run verify` passed; `npm run test:e2e` passed with 86 tests.
+- Manual smoke tests: covered through browser tests for China / Greater Pan-Asia direct hostile hatch, disabled hostile hatch, world-wrap projection, hover previews, and pan churn; no separate manual browser session was run beyond automated Playwright and measurement runs.
+- Commit: this phase commit (`Group hostile claim hatch rendering`).
+- Commit blocker: none.
 
 ## Progress
 
 - Baseline captured.
-- Not implemented yet.
+- Implemented and validated.
 
 ## Decision log
 
 - #73 is required before #72 because #72 expands the set of hostile-rendered downstream claims.
+- Hover claim previews keep optional outline nodes so existing lightweight preview behavior remains unchanged; committed `#claimOverlays` omit outlines by default.
+- User-requested map zoom cap reduction was implemented as a separate adjacent change and will be committed separately from this phase.
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- Implemented grouped pattern-backed hostile hatches and removed default committed claim overlay outlines. Regression coverage now asserts grouped region coverage through `data-regions` and `data-visual-group-size`.

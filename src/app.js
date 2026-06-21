@@ -580,8 +580,7 @@ const claimLabelDescriptorCache = new Map();
 const foreignHoverDescriptorCache = new Map();
 const manualEnvelopeModelCache = new Map();
 const reachableCapitalCandidateDescriptorCache = new Map();
-const claimHatchPathCache = new Map();
-let claimHatchClipIdSequence = 0;
+let claimOverlayRenderIdSequence = 0;
 const CLAIM_OVERLAY_EMPTY_RENDER_KEY = 'claim-overlay-paths:empty';
 const CLAIM_LABEL_EMPTY_RENDER_KEY = 'claim-labels:empty';
 const FOREIGN_HOVER_EMPTY_RENDER_KEY = 'foreign-hover:empty';
@@ -599,7 +598,6 @@ const reachableCapitalCandidateLayerRenderKeys = new WeakMap();
 const claimOverlayBufferStates = new WeakMap();
 const claimLabelBufferStates = new WeakMap();
 const CLAIM_HATCH_SPACING = 0.055;
-const CLAIM_HATCH_PADDING = 0.06;
 const MAP_ZOOM_BUTTON_FACTOR = 1.25;
 const MAP_WHEEL_ZOOM_FACTOR = 1.18;
 
@@ -1573,7 +1571,7 @@ function updateHoverNationPreview(nation) {
   const overlayDescriptorSet = getClaimOverlayDescriptorSet(overlayModel);
   replaceHoverClaimPreviewOverlayForKey(
     hoverClaimPreviewRenderKey(overlayModel, overlayDescriptorSet, worldCopyContexts),
-    () => markHoverClaimPreviewFragment(createClaimOverlayPathFragment(overlayDescriptorSet.descriptors, {copyContexts: worldCopyContexts}))
+    () => markHoverClaimPreviewFragment(createClaimOverlayPathFragment(overlayDescriptorSet.descriptors, {copyContexts: worldCopyContexts, includeOutlines: true}))
   );
   syncClaimPresentationState();
   renderClaimSummaryPill(overlayModel);
@@ -3302,69 +3300,40 @@ function claimLabelRenderKey(model, descriptorSet, copyContexts = worldCopyConte
 function formatHatchNumber(value) {
   return Number(value).toFixed(6);
 }
-function pathBounds(path = '') {
-  // Region outline paths are generated as M/L coordinate pairs; use a real SVG
-  // path parser if the generated path grammar expands beyond x/y token pairs.
-  const numbers = String(path || '').match(/-?\d+(?:\.\d+)?/g)?.map(Number) || [];
-  if (numbers.length < 4) return null;
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minY = Infinity;
-  let maxY = -Infinity;
-  for (let index = 0; index < numbers.length - 1; index += 2) {
-    const x = numbers[index];
-    const y = numbers[index + 1];
-    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
-    minX = Math.min(minX, x);
-    maxX = Math.max(maxX, x);
-    minY = Math.min(minY, y);
-    maxY = Math.max(maxY, y);
-  }
-  if (![minX, maxX, minY, maxY].every(Number.isFinite)) return null;
-  return {minX, maxX, minY, maxY};
-}
-function hostileClaimHatchPath(region) {
-  const cacheKey = region?.regionName || region?.name || region?.path || '';
-  if (cacheKey && claimHatchPathCache.has(cacheKey)) return claimHatchPathCache.get(cacheKey);
-  const bounds = pathBounds(region?.path || '');
-  if (!bounds) return '';
-  const {minX, maxX, minY, maxY} = bounds;
-  const width = maxX - minX;
-  const height = maxY - minY;
-  const diagonal = width + height + CLAIM_HATCH_PADDING * 2;
-  const start = Math.floor((minX + minY - diagonal) / CLAIM_HATCH_SPACING) * CLAIM_HATCH_SPACING;
-  const end = Math.ceil((maxX + maxY + diagonal) / CLAIM_HATCH_SPACING) * CLAIM_HATCH_SPACING;
-  const parts = [];
-  for (let sum = start; sum <= end; sum += CLAIM_HATCH_SPACING) {
-    const x1 = sum - (maxY + CLAIM_HATCH_PADDING);
-    const y1 = maxY + CLAIM_HATCH_PADDING;
-    const x2 = sum - (minY - CLAIM_HATCH_PADDING);
-    const y2 = minY - CLAIM_HATCH_PADDING;
-    parts.push(`M ${formatHatchNumber(x1)} ${formatHatchNumber(y1)} L ${formatHatchNumber(x2)} ${formatHatchNumber(y2)}`);
-  }
-  const hatchPath = parts.join(' ');
-  if (cacheKey) claimHatchPathCache.set(cacheKey, hatchPath);
-  return hatchPath;
-}
-function hatchClipId(namespace, descriptor, copyContext, index) {
-  const region = String(descriptor.region || 'region').replace(/[^A-Za-z0-9_-]/g, '-');
+function hatchPatternId(namespace, group, copyContext, index) {
   const copy = String(copyContext.copyIndex).replace(/[^A-Za-z0-9_-]/g, '-');
-  return `hostile-claim-hatch-${namespace}-${copy}-${index}-${region}`;
+  const key = String(group.key || index).replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 80);
+  return `hostile-claim-hatch-pattern-${namespace}-${copy}-${index}-${key}`;
 }
 function claimOverlayReferenceId(namespace, kind, index, key = '') {
   const safeKey = String(key || index).replace(/[^A-Za-z0-9_-]/g, '-');
   return `claim-overlay-ref-${namespace}-${kind}-${index}-${safeKey}`;
 }
-function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyContexts} = {}) {
+function createClaimHatchPattern(patternId) {
+  const pattern = createSvgElement('pattern', {
+    id: patternId,
+    patternUnits: 'userSpaceOnUse',
+    width: formatHatchNumber(CLAIM_HATCH_SPACING),
+    height: formatHatchNumber(CLAIM_HATCH_SPACING),
+    patternTransform: 'rotate(45)',
+  });
+  pattern.appendChild(createSvgElement('path', {
+    d: `M 0 0 L 0 ${formatHatchNumber(CLAIM_HATCH_SPACING * 2)}`,
+    class: 'claim-hatch-line',
+  }));
+  return pattern;
+}
+function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyContexts, includeOutlines=false} = {}) {
   const fillDescriptors = [];
   const hatchDescriptors = [];
-  const renderNamespace = claimHatchClipIdSequence++;
-  const outlineReferenceIds = descriptors.map((descriptor, index) => claimOverlayReferenceId(renderNamespace, 'outline', index, descriptor.region));
-  for (const [descriptorIndex, descriptor] of descriptors.entries()) {
+  const outlineDescriptors = [];
+  const renderNamespace = claimOverlayRenderIdSequence++;
+  for (const descriptor of descriptors) {
     const r = regionByName[descriptor.region];
     if (!r) continue;
     fillDescriptors.push({
       path: r.path,
+      regionName: descriptor.region,
       className: descriptor.fillClassName || 'claim-fill-group',
       fill: descriptor.fill,
       fillOpacity: descriptor.fillOpacity,
@@ -3376,10 +3345,10 @@ function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyCont
     });
     if (descriptor.hatchClassName && !hostileClaimHatchingDisabled) {
       hatchDescriptors.push({
-        region: descriptor.region,
-        clipReferenceId: outlineReferenceIds[descriptorIndex],
-        hatchPath: hostileClaimHatchPath(r),
+        path: r.path,
+        regionName: descriptor.region,
         className: descriptor.hatchClassName,
+        groupKey: descriptor.hatchKey || descriptor.project || '',
         fillOpacity: descriptor.fillOpacity,
         dataset: {
           hatchKey: descriptor.hatchKey || descriptor.project || '',
@@ -3387,9 +3356,12 @@ function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyCont
         },
       });
     }
+    if (includeOutlines) outlineDescriptors.push({descriptor, region: r});
   }
   const fillGroups = buildVisualFillGroups(fillDescriptors);
+  const hatchGroups = buildVisualFillGroups(hatchDescriptors);
   const fillReferenceIds = fillGroups.map((group, index) => claimOverlayReferenceId(renderNamespace, 'fill', index, group.key));
+  const outlineReferenceIds = outlineDescriptors.map(({descriptor}, index) => claimOverlayReferenceId(renderNamespace, 'outline', index, descriptor.region));
   return createProjectedCopyFragment(copyContexts, 'claim-overlay-copy', copyContext => {
     const frag = document.createDocumentFragment();
     const copyData = worldCopyDataset(copyContext);
@@ -3401,6 +3373,7 @@ function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyCont
       };
       const dataset = {
         ...group.dataset,
+        regions: group.regions.join(' '),
         visualGroupSize: group.paths.length,
         ...copyData,
       };
@@ -3417,33 +3390,25 @@ function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyCont
         }, dataset));
       }
     }
-    hatchDescriptors.forEach((descriptor, index) => {
-      if (!descriptor.hatchPath) return;
-      const clipId = hatchClipId(renderNamespace, descriptor, copyContext, index);
+    hatchGroups.forEach((group, index) => {
+      if (!group.paths.length) return;
+      const patternId = hatchPatternId(renderNamespace, group, copyContext, index);
       const defs = createSvgElement('defs');
-      const clipPath = createSvgElement('clipPath', {id: clipId});
-      clipPath.appendChild(createSvgElement('use', {href: `#${descriptor.clipReferenceId}`}));
-      defs.appendChild(clipPath);
+      defs.appendChild(createClaimHatchPattern(patternId));
       frag.appendChild(defs);
-      const group = createSvgElement('g', {
-        class: descriptor.className,
-        'clip-path': `url(#${clipId})`,
-        opacity: descriptor.fillOpacity === '' ? null : descriptor.fillOpacity,
+      frag.appendChild(createSvgElement('path', {
+        d: group.paths.join(' '),
+        class: group.className,
+        fill: `url(#${patternId})`,
+        opacity: group.fillOpacity === '' ? null : group.fillOpacity,
       }, {
-        ...descriptor.dataset,
-        region: descriptor.region,
-        visualGroupSize: 1,
+        ...group.dataset,
+        regions: group.regions.join(' '),
+        visualGroupSize: group.paths.length,
         ...copyData,
-      });
-      group.appendChild(createSvgElement('path', {
-        d: descriptor.hatchPath,
-        class: 'claim-hatch-line',
       }));
-      frag.appendChild(group);
     });
-    for (const [index, descriptor] of descriptors.entries()) {
-      const r = regionByName[descriptor.region];
-      if (!r) continue;
+    for (const [index, {descriptor, region}] of outlineDescriptors.entries()) {
       const attrs = {
         class: descriptor.className,
         fill: 'none',
@@ -3456,7 +3421,7 @@ function createClaimOverlayPathFragment(descriptors, {copyContexts=worldCopyCont
       if (copyContext.isCanonical) {
         frag.appendChild(createSvgElement('path', {
           id: outlineReferenceIds[index],
-          d: r.path,
+          d: region.path,
           ...attrs,
         }, dataset));
       } else {
