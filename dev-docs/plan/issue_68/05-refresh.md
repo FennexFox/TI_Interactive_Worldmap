@@ -56,22 +56,39 @@
 - Baseline:
   - `src/app.js` owns all refresh sequencing.
 - After:
-  - TODO
+  - Added `src/runtime/refresh-flow.js` with explicit ordered step lists for active-scenario refresh and language refresh.
+  - Updated `renderActiveScenario()` and `refreshLanguage()` to run named refresh actions through `runRefreshSteps(...)`, preserving the existing operation order.
+  - Updated `tools/build_pages.py` to copy `src/runtime/**` to `docs/assets/runtime/**`.
+  - Updated `npm run verify` and `tools/verify_generated_outputs.py` to syntax-check/require `docs/assets/runtime/refresh-flow.js`.
+  - Ran `npm run build`; generated `docs/assets/app.js` and `docs/assets/runtime/refresh-flow.js`.
 - Delta:
-  - TODO
+  - `src/app.js` is 4,012 lines after the refresh-flow extraction.
+  - Runtime orchestration extracted in this phase: 46 lines in `src/runtime/refresh-flow.js`.
 - Interpretation:
-  - TODO
-- Commit: TODO
-- Commit blocker: TODO
+  - The scenario and language refresh paths are now inspectable as ordered named steps instead of implicit local call sequences.
+  - `src/app.js` still supplies concrete app-specific callbacks, so data/state/render/UI ownership remains explicit and behavior order is preserved.
+  - Phase 05 is complete.
+- Validation:
+  - `node --check src/app.js`: passed.
+  - `node --check src/runtime/refresh-flow.js`: passed.
+  - Focused scenario/language/filter/search/selection/claim-control/reachable/pinned e2e grep: passed, 44 tests.
+  - `npm run build`: passed; wrote generated assets.
+  - `npm run verify`: passed; generated outputs verified and 17 Python tests passed.
+  - `npm run test:e2e`: passed, 85 tests.
+- Generated artifacts:
+  - `docs/assets/app.js` and `docs/assets/runtime/refresh-flow.js` changed through `npm run build`.
+- Commit: phase-5 slice pending (`Extract runtime refresh flow steps`).
+- Commit blocker: None known.
 
 ## Progress
 
-- Not started.
+- Completed.
 
 ## Decision log
 
-- No decisions recorded yet.
+- 2026-06-21: Use explicit named step arrays rather than moving all refresh callbacks into a broad runtime object. This keeps ownership in `src/app.js` while making refresh order reviewable.
+- 2026-06-21: Preserve operation order exactly for scenario and language refresh to avoid subtle panel/map synchronization changes.
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- Completed. Scenario and language refresh paths are explicit ordered flows and remain covered by focused and full e2e validation.

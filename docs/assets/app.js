@@ -69,6 +69,11 @@ import {
   updateMapViewControlsLabels as updateMapViewControlsLabelsUi,
 } from './ui/map-controls.js';
 import {
+  ACTIVE_SCENARIO_REFRESH_STEPS,
+  LANGUAGE_REFRESH_STEPS,
+  runRefreshSteps,
+} from './runtime/refresh-flow.js';
+import {
   applyStaticTranslations as applyStaticTranslationsUi,
   bindAppControls,
   bindNationSearchControl,
@@ -682,28 +687,32 @@ function resetTransientScenarioInteractionState() {
 }
 
 function renderActiveScenario() {
-  populate();
-  clearOverlayVisualState();
-  renderGrid({mapView});
-  renderRegions({mapView});
-  renderLabels({mapView});
-  renderSelectionOutlines();
-  renderPinnedRegionsPanel();
-  renderPinnedRegionMarkers();
-  renderCapitalMarkers({force: true});
-  updateNationOverlay(getLockedNation() || getActiveNation(), {
-    renderDetails: true,
-    updateFilters: false,
-    updateSelected: false,
-    renderMap: true,
-    updateManualExpansion: true,
+  runRefreshSteps(ACTIVE_SCENARIO_REFRESH_STEPS, {
+    populate,
+    clearOverlayVisualState,
+    renderGrid: () => renderGrid({mapView}),
+    renderRegions: () => renderRegions({mapView}),
+    renderLabels: () => renderLabels({mapView}),
+    renderSelectionOutlines,
+    renderPinnedRegionsPanel,
+    renderPinnedRegionMarkers,
+    renderCapitalMarkers: () => renderCapitalMarkers({force: true}),
+    updateNationOverlay: () => updateNationOverlay(getLockedNation() || getActiveNation(), {
+      renderDetails: true,
+      updateFilters: false,
+      updateSelected: false,
+      renderMap: true,
+      updateManualExpansion: true,
+    }),
+    applyFilters: () => applyFilters(true),
+    updateSelectedRegions,
+    renderNationDropdown,
+    refreshReachableCapitalCandidateOutputs: () => refreshReachableCapitalCandidateOutputs(currentOverlayModel),
+    setHoverPill: () => setHoverPill(),
+    setClaimsPillEmptyIfIdle: () => {
+      if (!getLockedNation() && !getActiveNation()) setClaimsPillEmpty();
+    },
   });
-  applyFilters(true);
-  updateSelectedRegions();
-  renderNationDropdown();
-  refreshReachableCapitalCandidateOutputs(currentOverlayModel);
-  setHoverPill();
-  if (!getLockedNation() && !getActiveNation()) setClaimsPillEmpty();
 }
 
 function setActiveScenario(nextScenarioId, {force = false} = {}) {
@@ -3856,28 +3865,36 @@ function populate() {
   else if (warn) { warn.style.display='none'; warn.textContent = ''; }
 }
 function refreshLanguage() {
-  applyStaticTranslations();
-  populate();
-  const selectedNation = search.dataset.selectedNation || '';
-  if (selectedNation) search.value = humanizeNationLabel(selectedNation);
-  renderNationDropdown();
-  const committedNation = getLockedNation();
-  if (committedNation) {
-    updateNationOverlay(committedNation);
-  } else if (getHoverNation()) {
-    updateHoverNationPreview(getHoverNation());
-  } else {
-    updateNationOverlay('');
-  }
-  applyFilters(true);
-  updateSelectedRegions();
-  renderPinnedRegionsPanel();
-  renderPinnedRegionMarkers();
-  renderManualEnvelopeOverlay(currentOverlayModel);
-  refreshReachableCapitalCandidateOutputs(currentOverlayModel);
-  const hoveredRegionId = tooltipController.currentRegionId();
-  const hoveredRegion = hoveredRegionId != null ? REGIONS[hoveredRegionId] : null;
-  setHoverPill(hoveredRegion);
+  runRefreshSteps(LANGUAGE_REFRESH_STEPS, {
+    applyStaticTranslations,
+    populate,
+    syncSearchSelectedNationLabel: () => {
+      const selectedNation = search.dataset.selectedNation || '';
+      if (selectedNation) search.value = humanizeNationLabel(selectedNation);
+    },
+    renderNationDropdown,
+    refreshNationOverlayForLanguage: () => {
+      const committedNation = getLockedNation();
+      if (committedNation) {
+        updateNationOverlay(committedNation);
+      } else if (getHoverNation()) {
+        updateHoverNationPreview(getHoverNation());
+      } else {
+        updateNationOverlay('');
+      }
+    },
+    applyFilters: () => applyFilters(true),
+    updateSelectedRegions,
+    renderPinnedRegionsPanel,
+    renderPinnedRegionMarkers,
+    renderManualEnvelopeOverlay: () => renderManualEnvelopeOverlay(currentOverlayModel),
+    refreshReachableCapitalCandidateOutputs: () => refreshReachableCapitalCandidateOutputs(currentOverlayModel),
+    refreshHoverPill: () => {
+      const hoveredRegionId = tooltipController.currentRegionId();
+      const hoveredRegion = hoveredRegionId != null ? REGIONS[hoveredRegionId] : null;
+      setHoverPill(hoveredRegion);
+    },
+  });
 }
 
 injectClaimOverlayStyles();
