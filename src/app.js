@@ -1406,6 +1406,9 @@ function claimCardTitleParts(entry, kind) {
     research: claimCardResearchLabel(entry, nation, {compact: true}),
   };
 }
+function claimIsEffectivelyHostile(claim) {
+  return !!(claim?.effectiveHostile ?? claim?.hostileClaim);
+}
 function claimCardTitle(entry, kind) {
   return t('claimCard.title', claimCardTitleParts(entry, kind));
 }
@@ -2057,7 +2060,7 @@ function updateSelectedRegions({bounded = false, changedRegionIds: changed = []}
 function claimRegionSummary(claim) {
   if (!claim || !Object.keys(claim).length) return '';
   const parts = [];
-  parts.push(claim?.hostileClaim ? t('claim.hostile') : t('claim.peaceful'));
+  parts.push(claimIsEffectivelyHostile(claim) ? t('claim.hostile') : t('claim.peaceful'));
   if (claim?.capitalClaim) parts.push(t('claim.capital'));
   if (claim?.gatedClaim) parts.push(t('claim.gated'));
   return parts.join(' · ');
@@ -2172,7 +2175,7 @@ function renderClaimSection(title, items, emptyText, kind) {
     const targetRegions = kind === 'incoming' ? (item.targetRegions || regions) : regions;
     const detailRegions = kind === 'incoming' ? (item.resultRegions || regions) : regions;
     const detailClaims = item.claims || {};
-    const hostile = item.hostile ?? targetRegions.filter(rn => item.targetClaims?.[rn]?.hostileClaim || item.claims?.[rn]?.hostileClaim).length;
+    const hostile = item.hostile ?? targetRegions.filter(rn => claimIsEffectivelyHostile(item.targetClaims?.[rn]) || claimIsEffectivelyHostile(item.claims?.[rn])).length;
     const gated = item.gated ?? targetRegions.filter(rn => item.targetClaims?.[rn]?.gatedClaim || item.claims?.[rn]?.gatedClaim).length;
     const capital = item.capital ?? targetRegions.filter(rn => item.targetClaims?.[rn]?.capitalClaim || item.claims?.[rn]?.capitalClaim).length;
     const claimTitle = claimCardTitle(item, kind);
@@ -2729,7 +2732,8 @@ function claimOverlayPathDescriptors(model) {
     for (const rn of visibleClaimRegions) {
       if (!regionByName[rn]) continue;
       const claim = entry.claims?.[rn] || {};
-      const claimClassName = (entry.project ? 'research-claim ' : 'basic-claim ') + (claim.hostileClaim ? 'hostile' : 'peaceful') + (claim.capitalClaim ? ' capital' : '') + (claim.gatedClaim ? ' gated' : '');
+      const hostileClaim = claimIsEffectivelyHostile(claim);
+      const claimClassName = (entry.project ? 'research-claim ' : 'basic-claim ') + (hostileClaim ? 'hostile' : 'peaceful') + (claim.capitalClaim ? ' capital' : '') + (claim.gatedClaim ? ' gated' : '');
       const fillCategory = entry.project ? `research:${entry.project}` : 'basic';
       const claimFillClassName = (entry.project ? 'research-claim' : 'basic-claim') + (claim.gatedClaim ? ' gated' : '');
       descriptors.push({
@@ -2739,8 +2743,8 @@ function claimOverlayPathDescriptors(model) {
         fillKey: `${fillCategory}:${color}:${claim.gatedClaim ? 'gated' : 'normal'}`,
         fillOpacity: claim.gatedClaim ? 0.72 : '',
         fill: color,
-        hatchClassName: claim.hostileClaim ? 'claim-hatch-group hostile ' + claimFillClassName : '',
-        hatchKey: claim.hostileClaim ? `${fillCategory}:hostile-hatch:${claim.gatedClaim ? 'gated' : 'normal'}` : '',
+        hatchClassName: hostileClaim ? 'claim-hatch-group hostile ' + claimFillClassName : '',
+        hatchKey: hostileClaim ? `${fillCategory}:hostile-hatch:${claim.gatedClaim ? 'gated' : 'normal'}` : '',
         project: entry.project || 'base',
       });
     }

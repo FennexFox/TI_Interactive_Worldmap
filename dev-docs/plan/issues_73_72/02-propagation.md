@@ -64,15 +64,17 @@
 ## Evidence
 
 - Baseline: current cumulative fixture final claim inherits `Beta` and `Gamma` but direct `Delta` remains non-hostile; no propagated-hostile metadata exists.
-- After: TODO
-- Delta: TODO
-- Interpretation: TODO
-- Commit: TODO
-- Commit blocker: TODO
+- After: `Project_Final` cumulative claims preserve peaceful `Beta`, direct hostile `Gamma`, and mark direct gated `Delta` as `effectiveHostile: true` / `propagatedHostile: true` via `Project_Bridge`.
+- Delta: direct metadata remains `hostileClaim: false` and `gatedClaim: true`; propagation adds `hostileAncestor: "Gamma"`, `hostileVia: "Project_Bridge"`, and `hostileViaLabel: "Inherited from Bridge"`.
+- Interpretation: project-mode hostile filtering for `Project_Final` returns `Gamma` and propagated `Delta`; peaceful filtering returns only `Beta`.
+- Incoming: incoming claim index entries use the cumulative claim for direct target regions, so `Delta` previews/counts as hostile when another nation inspects that claim.
+- Commit: pending final phase gate and commit.
+- Commit blocker: none.
+- Validation: `node --check src/data/claim-model.js`, `node --check src/app.js`, `npx playwright test tests/state-data-boundaries.spec.js`, `npm run build`, `npm run verify`, and `npm run test:e2e` passed on 2026-06-21.
 
 ## Progress
 
-- Not started; blocked on phase 1 completion.
+- Implemented; awaiting phase gate and commit.
 
 ## Decision log
 
@@ -80,4 +82,4 @@
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- Cumulative claim construction now computes effective hostile state after inheritance, so filters and rendering can distinguish raw direct hostility from path-propagated hostility without losing original claim metadata.
