@@ -508,6 +508,25 @@ test('project-specific hostile claims render hatch and follow claim kind filters
   expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group.research-claim')).toBe(5);
 });
 
+test('all-mode propagated hostile claims render hatch and follow claim kind filters', async ({ page }) => {
+  await waitForSingleCopyMap(page, '/?worldWrap=0');
+
+  await chooseNation(page, 'Caliphate', 'CPH');
+  await expect(page.locator('#claimMode')).toHaveValue('all');
+  await expect(page.locator('#claimPill')).toHaveText('Caliphate: territory 0, claims 95, research tiers 3');
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile[data-regions~="Aceh"]')).toHaveCount(1);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-hatch-group.hostile')).toBe(59);
+
+  await page.selectOption('#claimKind', 'hostile');
+  await expect(page.locator('#claimPill')).toHaveText('Caliphate: territory 0, claims 59, research tiers 3');
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile[data-regions~="Aceh"]')).toHaveCount(1);
+  expect(await groupedVisualRegionCount(page, '#claimOverlays .claim-fill-group')).toBe(59);
+
+  await page.selectOption('#claimKind', 'peaceful');
+  await expect(page.locator('#claimOverlays .claim-hatch-group.hostile[data-regions~="Aceh"]')).toHaveCount(0);
+  await expect(page.locator('#claimOverlays .claim-fill-group[data-regions~="Aceh"]')).toHaveCount(0);
+});
+
 test('hostile hatch can be disabled for performance diagnostics', async ({ page }) => {
   await waitForSingleCopyMap(page, '/?worldWrap=0&debugRenderStats=1&disableHostileHatch=1');
 

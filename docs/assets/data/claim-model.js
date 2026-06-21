@@ -148,21 +148,24 @@ export function createClaimModel({
     return nextClaim;
   }
 
-  function claimKindPass(claim) {
-    const kind = claimKind();
+  function claimKindPassFor(claim, kind = claimKind()) {
     if (kind === 'all') return true;
     if (kind === 'hostile') return claimEffectiveHostile(claim);
     if (kind === 'peaceful') return !claimEffectiveHostile(claim);
     return true;
   }
 
+  function claimKindPass(claim) {
+    return claimKindPassFor(claim);
+  }
+
   function entryFilterValue(entry) {
     return entry?.project || '__base__';
   }
 
-  function filterEntryByClaimKind(entry) {
+  function filterEntryByClaimKindFor(entry, kind = claimKind()) {
     const claims = entry.claims || {};
-    const regions = (entry.regions || []).filter(regionName => claimKindPass(claims[regionName] || {}));
+    const regions = (entry.regions || []).filter(regionName => claimKindPassFor(claims[regionName] || {}, kind));
     const filteredClaims = {};
     for (const regionName of regions) filteredClaims[regionName] = claims[regionName];
     const regionSet = new Set(regions);
@@ -177,6 +180,10 @@ export function createClaimModel({
       inheritedClaimCount: inheritedRegions?.length ?? entry.inheritedClaimCount,
       directClaimCount: directRegions?.length ?? entry.directClaimCount,
     };
+  }
+
+  function filterEntryByClaimKind(entry) {
+    return filterEntryByClaimKindFor(entry);
   }
 
   function getClaimKindFilteredProjectEntries(nation) {
@@ -246,17 +253,42 @@ export function createClaimModel({
     });
   }
 
-  function getVisibleProjectEntries(nation) {
+  function entryWithCumulativeClaimMetadata(entry, cumulativeEntry) {
+    if (!entry || !cumulativeEntry?.claims) return entry;
+    const claims = {...(entry.claims || {})};
+    let changed = false;
+    for (const regionName of entry.regions || []) {
+      const cumulativeClaim = cumulativeEntry.claims[regionName];
+      if (!cumulativeClaim) continue;
+      claims[regionName] = cumulativeClaim;
+      changed = true;
+    }
+    return changed ? {...entry, claims} : entry;
+  }
+
+  function entriesWithCumulativeClaimMetadata(entries) {
+    const rawEntries = entries || [];
+    const cumulativeEntries = cumulativeClaimEntries(rawEntries);
+    return rawEntries.map((entry, index) => entryWithCumulativeClaimMetadata(entry, cumulativeEntries[index]));
+  }
+
+  function getVisibleProjectEntriesForKind(nation, kind = claimKind()) {
     if (claimMode() === 'off') return [];
     const data = dataForNation(nation);
     if (!data) return [];
     const rawEntries = sortedProjectEntries(data.projects || []);
     if (claimMode() === 'project' && projectFilter()) {
       return cumulativeClaimEntries(rawEntries)
-        .map(filterEntryByClaimKind)
+        .map(entry => filterEntryByClaimKindFor(entry, kind))
         .filter(entry => entry.regions.length && entryFilterValue(entry) === projectFilter());
     }
-    return rawEntries.map(filterEntryByClaimKind).filter(entry => entry.regions.length);
+    return entriesWithCumulativeClaimMetadata(rawEntries)
+      .map(entry => filterEntryByClaimKindFor(entry, kind))
+      .filter(entry => entry.regions.length);
+  }
+
+  function getVisibleProjectEntries(nation) {
+    return getVisibleProjectEntriesForKind(nation);
   }
 
   function buildIncomingClaimIndex() {
@@ -448,7 +480,7 @@ export function createClaimModel({
     };
     const baseSet = new Set(data.baseRegions || regionListForNation(spec.claimant));
     const tierByProject = countryProjectTierMap(spec.claimant, baseSet);
-    const entries = getVisibleProjectEntries(spec.claimant);
+    const entries = getVisibleProjectEntriesForKind(spec.claimant, 'all');
     return {
       ...spec,
       sourceOrder,
@@ -456,6 +488,44 @@ export function createClaimModel({
       baseSet,
       tierByProject,
       entries,
+    };
+  }
+
+  function sourceClaimHostileAncestor(source, regionName) {
+    if (!source || !regionName) return null;
+    for (const entry of source.entries || []) {
+      if (!(entry.regions || []).includes(regionName)) continue;
+      const claim = entry.claims?.[regionName] || {};
+      const sourceLabel = entry.regionSourceLabels?.[regionName] || entry.label || projectLabel(entry.project) || '';
+      const ancestor = hostileAncestorFromClaim(regionName, claim, 'recursive', sourceLabel, entry.project || '');
+      if (ancestor) return ancestor;
+    }
+    return null;
+  }
+
+  function applyRecursiveHostilityToEntry(entry, hostileAncestor) {
+    if (!hostileAncestor) return entry;
+    const claims = {};
+    for (const regionName of entry.regions || []) {
+      claims[regionName] = claimWithEffectiveHostility(entry.claims?.[regionName], hostileAncestor);
+    }
+    return {...entry, claims};
+  }
+
+  function applyRecursiveHostilityToSource(source, sourceByClaimant) {
+    const parentSource = sourceByClaimant.get(source.parentClaimant);
+    const hostileAncestor = parentSource?.recursiveHostileAncestor
+      || sourceClaimHostileAncestor(parentSource, source.viaCapitalRegion);
+    const hostileEntries = hostileAncestor
+      ? (source.entries || []).map(entry => applyRecursiveHostilityToEntry(entry, hostileAncestor))
+      : source.entries || [];
+    const entries = hostileEntries
+      .map(filterEntryByClaimKind)
+      .filter(entry => entry.regions.length);
+    return {
+      ...source,
+      entries,
+      recursiveHostileAncestor: hostileAncestor || null,
     };
   }
 
@@ -491,19 +561,32 @@ export function createClaimModel({
   function buildManualEnvelopeModelData(anchorNation, specs, {includeAnchorOnly = false} = {}) {
     if (!anchorNation) return null;
     if ((specs || []).length <= 1 && !includeAnchorOnly) return null;
-    const sources = (specs || [])
+    const rawSources = (specs || [])
       .map((spec, sourceOrder) => buildManualEnvelopeSource(spec, sourceOrder))
       .filter(source => source.baseSet.size || source.entries.length);
+    const sources = [];
+    const sourceByClaimant = new Map();
+    for (const source of rawSources) {
+      const nextSource = applyRecursiveHostilityToSource(source, sourceByClaimant);
+      if (nextSource.baseSet.size || nextSource.entries.length) {
+        sources.push(nextSource);
+        sourceByClaimant.set(nextSource.claimant, nextSource);
+      }
+    }
     if (sources.length <= 1 && !includeAnchorOnly) return null;
 
     const regionContributions = new Map();
     for (const source of sources) {
+      const baseClaim = source.recursiveHostileAncestor
+        ? claimWithEffectiveHostility({}, source.recursiveHostileAncestor)
+        : {};
       for (const regionName of source.baseSet) {
+        if (!claimKindPass(baseClaim)) continue;
         addManualEnvelopeContribution(regionContributions, source, regionName, {
           kind: 'base',
           project: '',
           tier: -1,
-          claim: {},
+          claim: baseClaim,
         });
       }
       for (const entry of source.entries) {
@@ -549,7 +632,7 @@ export function createClaimModel({
       sources,
       regionItems,
       sourceKey: sources.map(source => `${source.depth}:${source.claimant}:${source.parentClaimant || ''}:${source.viaCapitalRegion || ''}:${source.pinIndex}`).join('|'),
-      regionKey: regionItems.map(item => `${item.region}:${item.primary.depth}:${item.primary.claimant}:${item.primary.project || ''}:${item.overlapSources.length}`).join('|'),
+      regionKey: regionItems.map(item => `${item.region}:${item.primary.depth}:${item.primary.claimant}:${item.primary.project || ''}:${claimEffectiveHostile(item.primary.claim) ? 1 : 0}:${item.overlapSources.length}`).join('|'),
     };
   }
 
@@ -603,6 +686,7 @@ export function createClaimModel({
     inheritedClaimProjectsFor,
     cumulativeClaimEntry,
     cumulativeClaimEntries,
+    getVisibleProjectEntriesForKind,
     getVisibleProjectEntries,
     buildIncomingClaimIndex,
     incomingTargetRegions,

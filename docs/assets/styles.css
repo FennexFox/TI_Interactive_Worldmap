@@ -280,6 +280,7 @@
   .manual-envelope-region-outline.manual-envelope-depth-1 { stroke:oklch(0.84 0.13 220 / .82); }
   .manual-envelope-region-outline.has-overlap { stroke-width:.019; }
   .manual-envelope-overlap { pointer-events:none; stroke-width:.033; vector-effect:non-scaling-stroke; stroke-dasharray:.018 .014; }
+  .manual-envelope-hostile-hatch { pointer-events:none; opacity:.92; }
   #pinnedRegionMarkers { pointer-events:none; opacity:1; mix-blend-mode:normal; }
   .pinned-fill { pointer-events:none; fill:oklch(0.78 0.13 185 / .20); stroke:none; mix-blend-mode:screen; }
   .pinned-outline-glow { pointer-events:none; fill:none; stroke:oklch(0.82 0.17 185 / .86); stroke-width:.072; vector-effect:non-scaling-stroke; }

@@ -1135,6 +1135,7 @@ const {
   isExcludedSystemClaim,
   entryFilterValue,
   getClaimKindFilteredProjectEntries,
+  getVisibleProjectEntriesForKind,
   cumulativeClaimEntries,
   incomingTargetRegions,
   outgoingClaimKey,
@@ -2812,19 +2813,51 @@ function manualEnvelopeSourceSpecs(anchorNation) {
     pinIndex: -1,
   }];
   const seenClaimants = new Set([anchorNation]);
+  const resultSetByClaimant = new Map();
+  const sourceResultSet = claimant => {
+    if (resultSetByClaimant.has(claimant)) return resultSetByClaimant.get(claimant);
+    const resultSet = new Set(nationBaseRegionNames(claimant));
+    for (const entry of getVisibleProjectEntriesForKind(claimant, 'all')) {
+      for (const regionName of entry.regions || []) resultSet.add(regionName);
+    }
+    resultSetByClaimant.set(claimant, resultSet);
+    return resultSet;
+  };
+  const parentSpecForRegion = regionName => specs
+    .filter(spec => sourceResultSet(spec.claimant).has(regionName))
+    .sort((a, b) => b.depth - a.depth || b.pinIndex - a.pinIndex || a.claimant.localeCompare(b.claimant))[0] || null;
+  const pending = [];
   [...getPinnedRegionIds()].forEach((regionName, pinIndex) => {
     for (const claimant of pinnedExpansionClaimants(regionName)) {
-      if (!claimant || seenClaimants.has(claimant)) continue;
-      seenClaimants.add(claimant);
-      specs.push({
-        claimant,
-        depth: 1,
-        parentClaimant: anchorNation,
-        viaCapitalRegion: regionName,
-        pinIndex,
-      });
+      if (claimant) pending.push({claimant, regionName, pinIndex});
     }
   });
+  let changed = true;
+  while (changed && pending.length) {
+    changed = false;
+    for (let index = 0; index < pending.length;) {
+      const item = pending[index];
+      if (seenClaimants.has(item.claimant)) {
+        pending.splice(index, 1);
+        continue;
+      }
+      const parent = parentSpecForRegion(item.regionName);
+      if (!parent) {
+        index += 1;
+        continue;
+      }
+      seenClaimants.add(item.claimant);
+      specs.push({
+        claimant: item.claimant,
+        depth: parent.depth + 1,
+        parentClaimant: parent.claimant,
+        viaCapitalRegion: item.regionName,
+        pinIndex: item.pinIndex,
+      });
+      pending.splice(index, 1);
+      changed = true;
+    }
+  }
   return specs.sort(compareManualEnvelopeSourceSpecs(anchorNation));
 }
 function manualEnvelopeKindLabel(contribution) {
@@ -2885,7 +2918,13 @@ function manualEnvelopeRenderKey(model, copyContexts = worldCopyContexts) {
     claimMode: claimModeSel.value || '',
     claimKind: claimKindSel.value || '',
     project: getProjectFilter(),
+    hostileHatchDisabled: hostileClaimHatchingDisabled ? 1 : 0,
   });
+}
+function manualEnvelopeHostileContribution(item) {
+  return (item.contributions || []).find(contribution => (
+    claimIsEffectivelyHostile(contribution.claim)
+  )) || null;
 }
 function createManualEnvelopeFragment(model, {copyContexts=worldCopyContexts} = {}) {
   const fillDescriptors = model.regionItems.map(item => {
@@ -2904,6 +2943,30 @@ function createManualEnvelopeFragment(model, {copyContexts=worldCopyContexts} = 
     };
   });
   const fillGroups = buildVisualFillGroups(fillDescriptors);
+  const hatchDescriptors = hostileClaimHatchingDisabled ? [] : model.regionItems
+    .map(item => ({item, contribution: manualEnvelopeHostileContribution(item)}))
+    .filter(({contribution}) => contribution)
+    .map(({item, contribution}) => {
+      const region = regionByName[item.region];
+      return {
+        path: region.path,
+        regionName: item.region,
+        className: `claim-hatch-group hostile manual-envelope-hostile-hatch manual-envelope-depth-${contribution.depth}`,
+        groupKey: `manual-envelope-hostile:${contribution.depth}:${contribution.claimant}:${contribution.project || ''}`,
+        dataset: {
+          envelopeHostile: '1',
+          envelopeDepth: contribution.depth,
+          envelopeClaimant: contribution.claimant,
+          envelopeParent: contribution.parentClaimant,
+          envelopeViaCapital: contribution.viaCapitalRegion,
+          envelopeProject: contribution.project,
+          envelopeTier: contribution.tier,
+          envelopeKind: contribution.kind,
+        },
+      };
+    });
+  const hatchGroups = buildVisualFillGroups(hatchDescriptors);
+  const renderNamespace = claimOverlayRenderIdSequence++;
   return createProjectedCopyFragment(copyContexts, 'manual-envelope-copy', copyContext => {
     const frag = document.createDocumentFragment();
     const copyData = worldCopyDataset(copyContext);
@@ -2919,6 +2982,23 @@ function createManualEnvelopeFragment(model, {copyContexts=worldCopyContexts} = 
         ...copyData,
       }));
     }
+    hatchGroups.forEach((group, index) => {
+      if (!group.paths.length) return;
+      const patternId = hatchPatternId(renderNamespace, group, copyContext, index);
+      const defs = createSvgElement('defs');
+      defs.appendChild(createClaimHatchPattern(patternId));
+      frag.appendChild(defs);
+      frag.appendChild(createSvgElement('path', {
+        d: group.paths.join(' '),
+        class: group.className,
+        fill: `url(#${patternId})`,
+      }, {
+        ...group.dataset,
+        regions: group.regions.join(' '),
+        visualGroupSize: group.paths.length,
+        ...copyData,
+      }));
+    });
     for (const item of model.regionItems) {
       const region = regionByName[item.region];
       const primary = item.primary;
