@@ -77,7 +77,7 @@
   - `npm run test:e2e`: passed, 85 tests.
 - Generated artifacts:
   - `docs/assets/app.js` and `docs/assets/runtime/refresh-flow.js` changed through `npm run build`.
-- Commit: phase-5 slice pending (`Extract runtime refresh flow steps`).
+- Commit: phase-5 slice (`Extract runtime refresh flow steps`).
 - Commit blocker: None known.
 
 ## Progress

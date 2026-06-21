@@ -85,7 +85,7 @@
 - Generated artifacts:
   - `docs/assets/app.js`, `docs/assets/interaction/map-pan.js`, `docs/assets/interaction/tooltip.js`, and `docs/assets/ui/map-controls.js` changed through `npm run build`.
 - Commit: partial phase-4 slice (`Extract map pan controller`).
-- Commit: final phase-4 slice pending (`Extract map control and tooltip helpers`).
+- Commit: final phase-4 slice (`Extract map control and tooltip helpers`).
 - Commit blocker: None known.
 
 ## Progress
