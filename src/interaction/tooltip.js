@@ -65,11 +65,11 @@ export function createTooltipController({
   }
 
   function show(event, nextRegionId, text) {
-    if (regionId !== nextRegionId) {
+    if (tip.textContent !== text) {
       tip.textContent = text;
-      regionId = nextRegionId;
       tooltipSizeCache.valid = false;
     }
+    regionId = nextRegionId;
     schedulePosition(event);
   }
 
