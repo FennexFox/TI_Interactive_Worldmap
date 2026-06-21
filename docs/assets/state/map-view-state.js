@@ -6,6 +6,8 @@ function finiteNumber(value, fallback = 0) {
   return Number.isFinite(number) ? number : fallback;
 }
 
+const MAX_MAP_ZOOM = 8;
+
 function viewBoxNumbers(activeData) {
   const viewBox = activeData?.regionMap?.summary?.viewBox || [];
   const [x = 0, y = 0, width = 0, height = 0] = viewBox.map(value => finiteNumber(value));
@@ -97,8 +99,8 @@ export function zoomMapView(mapView, options = {}) {
   const currentHeight = Math.abs(finiteNumber(mapView.height, 1)) || 1;
   const baseWidth = Math.abs(finiteNumber(mapView.boundsWidth, finiteNumber(mapView.worldWidth, currentWidth))) || currentWidth;
   const baseHeight = Math.abs(finiteNumber(mapView.boundsHeight, currentHeight)) || currentHeight;
-  const minWidth = Math.max(baseWidth / 24, 0.000001);
-  const minHeight = Math.max(baseHeight / 24, 0.000001);
+  const minWidth = Math.max(baseWidth / MAX_MAP_ZOOM, 0.000001);
+  const minHeight = Math.max(baseHeight / MAX_MAP_ZOOM, 0.000001);
 
   const requestedScale = Number(options.scale);
   const scale = Number.isFinite(requestedScale) && requestedScale > 0 ? requestedScale : 1;
