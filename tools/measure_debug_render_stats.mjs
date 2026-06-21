@@ -136,6 +136,18 @@ const SUMMARY_COLUMNS = [
   'hoverLabelRenderCalls',
   'hoverLabelDomReplacements',
   'hoverLabelRenderSkippedByDebug',
+  'hoverProbeOk',
+  'hoverProbeFailures',
+  'hoverProbeHoverOutlinePathCount',
+  'hoverProbeHoverClaimPreviewOverlayPathCount',
+  'hoverProbeForeignHoverOverlayPathCount',
+  'hoverProbeForeignHoverOverlayRegionCount',
+  'hoverProbeSecondaryHoverOverlayPathCount',
+  'hoverProbeSecondaryHoverOverlayRegionCount',
+  'hoverProbeHoverOutlineReplacements',
+  'hoverProbeHoverClaimPreviewOverlayReplacements',
+  'hoverProbeForeignHoverOverlayReplacements',
+  'hoverProbeSecondaryHoverOverlayReplacements',
   'wrapToggleLabelRenderCalls',
   'wrapToggleLabelDomReplacements',
   'wrapToggleLabelRenderSkippedByDebug',
@@ -615,6 +627,11 @@ async function captureSetupStats(page) {
 function summarize(results) {
   const stat = (source, key) => source?.[key];
   const probeStat = (item, probe, key) => stat(item.interactionStats?.[probe]?.stats, key);
+  const probeSetupOk = (item, probe) => item.interactionStats?.[probe]?.setup?.ok !== false;
+  const probeSetupFailures = (item, probe) => {
+    const setup = item.interactionStats?.[probe]?.setup;
+    return setup?.ok === false ? `${setup.selector || probe}: ${setup.reason || 'failed'}` : '';
+  };
   return results.map(item => ({
     scenario: item.scenario,
     repeat: item.repeat,
@@ -738,6 +755,18 @@ function summarize(results) {
     hoverLabelRenderCalls: probeStat(item, 'hover', 'labelRenderCalls'),
     hoverLabelDomReplacements: probeStat(item, 'hover', 'labelDomReplacements'),
     hoverLabelRenderSkippedByDebug: probeStat(item, 'hover', 'labelRenderSkippedByDebug'),
+    hoverProbeOk: probeSetupOk(item, 'hover'),
+    hoverProbeFailures: probeSetupFailures(item, 'hover'),
+    hoverProbeHoverOutlinePathCount: probeStat(item, 'hover', 'hoverOutlinePathCount'),
+    hoverProbeHoverClaimPreviewOverlayPathCount: probeStat(item, 'hover', 'hoverClaimPreviewOverlayPathCount'),
+    hoverProbeForeignHoverOverlayPathCount: probeStat(item, 'hover', 'foreignHoverOverlayPathCount'),
+    hoverProbeForeignHoverOverlayRegionCount: probeStat(item, 'hover', 'foreignHoverOverlayRegionCount'),
+    hoverProbeSecondaryHoverOverlayPathCount: probeStat(item, 'hover', 'secondaryHoverOverlayPathCount'),
+    hoverProbeSecondaryHoverOverlayRegionCount: probeStat(item, 'hover', 'secondaryHoverOverlayRegionCount'),
+    hoverProbeHoverOutlineReplacements: probeStat(item, 'hover', 'hoverOutlineReplacements'),
+    hoverProbeHoverClaimPreviewOverlayReplacements: probeStat(item, 'hover', 'hoverClaimPreviewOverlayReplacements'),
+    hoverProbeForeignHoverOverlayReplacements: probeStat(item, 'hover', 'foreignHoverOverlayReplacements'),
+    hoverProbeSecondaryHoverOverlayReplacements: probeStat(item, 'hover', 'secondaryHoverOverlayReplacements'),
     wrapToggleLabelRenderCalls: probeStat(item, 'wrapToggle', 'labelRenderCalls'),
     wrapToggleLabelDomReplacements: probeStat(item, 'wrapToggle', 'labelDomReplacements'),
     wrapToggleLabelRenderSkippedByDebug: probeStat(item, 'wrapToggle', 'labelRenderSkippedByDebug'),
@@ -780,16 +809,22 @@ async function main() {
     });
     const page = await browser.newPage({ viewport: { width: 1400, height: 950 } });
     const baseScenarios = [
+      { name: 'wrap-off-initial-labels', query: 'debugRenderStats=1&worldWrap=0', labels: true, claimOverlay: false, canonicalHitPaths: false },
+      { name: 'wrap-off-initial-labels-disabled', query: 'debugRenderStats=1&worldWrap=0&debugDisableLabels=1', labels: true, claimOverlay: false, canonicalHitPaths: false },
       { name: 'wrap-off-labels', query: 'debugRenderStats=1&worldWrap=0', labels: true },
       { name: 'wrap-off-labels-disabled', query: 'debugRenderStats=1&worldWrap=0&debugDisableLabels=1', labels: true },
       { name: 'wrap-off-complex-overlays-labels', query: 'debugRenderStats=1&worldWrap=0', labels: true, complexOverlays: true },
       { name: 'wrap-off-complex-overlays-labels-disabled', query: 'debugRenderStats=1&worldWrap=0&debugDisableLabels=1', labels: true, complexOverlays: true },
+      { name: 'wrap-on-initial-labels', query: 'debugRenderStats=1&worldWrap=1', labels: true, claimOverlay: false, canonicalHitPaths: false },
+      { name: 'wrap-on-initial-labels-disabled', query: 'debugRenderStats=1&worldWrap=1&debugDisableLabels=1', labels: true, claimOverlay: false, canonicalHitPaths: false },
       { name: 'wrap-on-labels', query: 'debugRenderStats=1&worldWrap=1', labels: true },
       { name: 'wrap-on-labels-disabled', query: 'debugRenderStats=1&worldWrap=1&debugDisableLabels=1', labels: true },
       { name: 'wrap-on-complex-overlays-labels', query: 'debugRenderStats=1&worldWrap=1', labels: true, complexOverlays: true },
       { name: 'wrap-on-complex-overlays-labels-disabled', query: 'debugRenderStats=1&worldWrap=1&debugDisableLabels=1', labels: true, complexOverlays: true },
     ];
-    const canonicalHitPathScenarios = baseScenarios.map(canonicalHitPathScenario);
+    const canonicalHitPathScenarios = baseScenarios
+      .filter(scenario => scenario.canonicalHitPaths !== false)
+      .map(canonicalHitPathScenario);
     const scenarios = args.canonicalHitPathsOnly
       ? canonicalHitPathScenarios
       : args.includeCanonicalHitPaths
@@ -802,7 +837,14 @@ async function main() {
         for (const zoomSteps of args.zoomSteps) {
           await page.goto(scenarioUrl(baseUrl, scenario.query), { waitUntil: 'networkidle' });
           await page.waitForFunction(() => Boolean(window.__TI_DEBUG_RENDER_STATS__), null, { timeout: 10_000 });
-          const setup = await configureClaimOverlay(page, args);
+          const setup = scenario.claimOverlay === false
+            ? [{ ok: true, selector: '--claim-overlay', value: 'none', label: 'no selected claim overlay' }]
+            : await configureClaimOverlay(page, {
+              ...args,
+              nation: scenario.nation || args.nation,
+              project: scenario.project || args.project,
+              extraNations: scenario.extraNations || args.extraNations,
+            });
           setup.push(await configureLabelState(page, scenario.labels));
           if (scenario.complexOverlays) setup.push(...await configureComplexOverlayState(page));
           const setupStats = await captureSetupStats(page);
