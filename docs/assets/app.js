@@ -62,6 +62,16 @@ import {
   renderPinnedRegionsPanel as renderPinnedRegionsPanelUi,
   renderReachableCapitalCandidatesPanel as renderReachableCapitalCandidatesPanelUi,
 } from './ui/panels.js';
+import {
+  applyStaticTranslations as applyStaticTranslationsUi,
+  bindAppControls,
+  bindNationSearchControl,
+  renderNationDropdown as renderNationDropdownUi,
+  renderScenarioOptions as renderScenarioOptionsUi,
+  renderScenarioSummary,
+  renderSearchResults,
+  updateReachableCapitalsButton,
+} from './ui/controls.js';
 
 const appLoading = document.getElementById('appLoading');
 const appLoadingDetail = document.getElementById('appLoadingDetail');
@@ -466,22 +476,20 @@ function activeScenarioSummary() {
   };
 }
 function renderScenarioOptions() {
-  if (!scenarioSel) return;
-  const scenarioIds = getScenarioIds(appData);
-  const html = scenarioIds.map(id => `<option value="${escapeHtml(id)}">${escapeHtml(id)}</option>`).join('');
-  if (scenarioSel.innerHTML !== html) scenarioSel.innerHTML = html;
-  scenarioSel.value = activeScenarioId();
+  renderScenarioOptionsUi({
+    select: scenarioSel,
+    scenarioIds: getScenarioIds(appData),
+    activeScenarioId: activeScenarioId(),
+  });
 }
 function syncScenarioControls() {
   renderScenarioOptions();
-  if (!scenarioSummary) return;
-  const summary = activeScenarioSummary();
-  scenarioSummary.textContent = t('scenario.summary', {
-    scenario: activeScenarioId(),
-    regions: formatNumber(summary.regions),
-    nations: formatNumber(summary.nations),
-    claims: formatNumber(summary.claims),
-    projects: formatNumber(summary.projects),
+  renderScenarioSummary({
+    root: scenarioSummary,
+    t,
+    scenarioId: activeScenarioId(),
+    summary: activeScenarioSummary(),
+    formatNumber,
   });
 }
 function setHoverPill(region=null) {
@@ -496,25 +504,24 @@ function setClaimsPillEmpty() {
   if (el) el.textContent = t('pill.claimsEmpty');
 }
 function updateReachableCapitalsButtonState() {
-  const el = document.getElementById('reachableCapitalsBtn');
-  if (!el) return;
-  const visible = getShowReachableCapitalCandidates();
-  el.textContent = visible ? t('button.hideReachableCapitals') : t('button.showReachableCapitals');
-  el.setAttribute('aria-pressed', visible ? 'true' : 'false');
+  updateReachableCapitalsButton({
+    button: document.getElementById('reachableCapitalsBtn'),
+    visible: getShowReachableCapitalCandidates(),
+    t,
+  });
 }
 function applyStaticTranslations() {
-  document.documentElement.lang = currentLanguage;
-  document.title = t('document.title');
-  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
-  document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.setAttribute('placeholder', t(el.dataset.i18nPlaceholder)); });
-  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.setAttribute('title', t(el.dataset.i18nTitle)); });
-  document.querySelectorAll('[data-i18n-aria-label]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAriaLabel)); });
-  if (languageSel) languageSel.value = currentLanguage;
-  syncScenarioControls();
-  updateMapViewControlsLabels();
-  updateReachableCapitalsButtonState();
-  updateAsideCardControls();
+  applyStaticTranslationsUi({
+    document,
+    language: currentLanguage,
+    title: t('document.title'),
+    t,
+    languageSelect: languageSel,
+    onScenarioSync: syncScenarioControls,
+    onMapViewControlsUpdate: updateMapViewControlsLabels,
+    onReachableCapitalsUpdate: updateReachableCapitalsButtonState,
+    onAsideCardsUpdate: updateAsideCardControls,
+  });
 }
 
 let regionByName = derivedIndices.regionByName;
@@ -1483,32 +1490,17 @@ function visibleNationChoices() {
   const regionMatches = regionChoices.filter(c => c.searchText.includes(q)).slice(0, 16);
   return [...nationMatches, ...regionMatches].slice(0, 28);
 }
-function setDropdownExpanded(expanded) {
-  search.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-  if (nationDropdown) nationDropdown.hidden = !expanded;
-}
 function renderNationDropdown() {
-  if (!nationDropdown) return;
   currentDropdownChoices = visibleNationChoices();
-  if (!nationDropdownOpen) {
-    setDropdownExpanded(false);
-    return;
-  }
-  if (!currentDropdownChoices.length) {
-    nationDropdown.innerHTML = `<div class="searchOption empty">${escapeHtml(t('search.noResults'))}</div>`;
-    setDropdownExpanded(true);
-    return;
-  }
-  if (highlightedNationChoiceIndex >= currentDropdownChoices.length) highlightedNationChoiceIndex = currentDropdownChoices.length - 1;
-  if (highlightedNationChoiceIndex < -1) highlightedNationChoiceIndex = -1;
-  nationDropdown.innerHTML = currentDropdownChoices.map((c, i) => {
-    const selected = c.type === 'nation' ? search.dataset.selectedNation === c.tag : selectedRegionIds.has(c.regionName);
-    const active = i === highlightedNationChoiceIndex;
-    const tagText = c.type === 'region' ? t('search.regionTag') : c.tag;
-    const labelText = c.type === 'region' ? c.label : c.label.replace(c.tag + ' · ', '');
-    return `<button type="button" class="searchOption${active ? ' active' : ''}${selected ? ' selected' : ''}" role="option" aria-selected="${selected ? 'true' : 'false'}" data-index="${i}"><span class="searchOptionTag">${escapeHtml(tagText)}</span><span class="searchOptionLabel">${escapeHtml(labelText)}</span></button>`;
-  }).join('');
-  setDropdownExpanded(true);
+  highlightedNationChoiceIndex = renderNationDropdownUi({
+    dropdown: nationDropdown,
+    search,
+    open: nationDropdownOpen,
+    choices: currentDropdownChoices,
+    highlightedIndex: highlightedNationChoiceIndex,
+    selectedRegionIds,
+    t,
+  });
 }
 function openNationDropdown() {
   nationDropdownOpen = true;
@@ -4004,12 +3996,15 @@ function applyFilters(rerenderResults=true) {
   });
   if (rerenderResults && results) {
     const nationMatches = q ? matchingNationChoices(q, 25) : [];
-    const nationHtml = nationMatches.map(c => `<div class="item nationResult" data-nation="${escapeHtml(c.tag)}"><b>${escapeHtml(c.label)}</b><div class="small">${escapeHtml(t('results.nation', {tag: c.tag}))}</div></div>`).join('');
-    const regionHtml = matches.map(r => `<div class="item" data-id="${r.id}"><b>${escapeHtml(localizedRegionName(r))}</b><div class="small">${escapeHtml(r.name)} · ${escapeHtml(r.nationTag)}</div></div>`).join('');
-    const empty = !nationHtml && !regionHtml ? `<div class="item small">${escapeHtml(t('search.noResults'))}</div>` : '';
-    results.innerHTML = nationHtml + regionHtml + empty;
-    results.querySelectorAll('.item[data-nation]').forEach(el => el.addEventListener('click', () => focusNation(el.dataset.nation)));
-    results.querySelectorAll('.item[data-id]').forEach(el => el.addEventListener('click', () => selectRegion(REGIONS[Number(el.dataset.id)])));
+    renderSearchResults({
+      root: results,
+      nationMatches,
+      regionMatches: matches,
+      t,
+      localizedRegionName,
+      onNation: focusNation,
+      onRegion: index => selectRegion(REGIONS[index]),
+    });
   }
 }
 function populate() {
@@ -4047,88 +4042,71 @@ injectClaimOverlayStyles();
 applyStaticTranslations();
 initAsideCards();
 
-search.addEventListener('focus', () => openNationDropdown());
-search.addEventListener('click', () => openNationDropdown());
-search.addEventListener('input', () => {
-  if (search.dataset.selectedNation && parseNationSearchValue(search.value) !== search.dataset.selectedNation) {
+bindNationSearchControl({
+  search,
+  dropdown: nationDropdown,
+  combo: nationSearchCombo,
+  document,
+  getSelectedNation: () => search.dataset.selectedNation || '',
+  parseNationSearchValue,
+  onSelectedNationCleared: () => {
     search.dataset.selectedNation = '';
     setLockedNationState();
     setSelectedRegionIds();
     setFocusedRegionState();
     resetTransientClaimState();
     updateNationOverlay(getHoverNation() || '');
-  }
-  openNationDropdown();
-  highlightedNationChoiceIndex = currentDropdownChoices.length ? 0 : -1;
-  renderNationDropdown();
-  applyFilters(true);
+  },
+  openDropdown: openNationDropdown,
+  closeDropdown: closeNationDropdown,
+  renderDropdown: renderNationDropdown,
+  applyFilters,
+  getChoiceCount: () => currentDropdownChoices.length,
+  getDropdownOpen: () => nationDropdownOpen,
+  getHighlightedIndex: () => highlightedNationChoiceIndex,
+  setHighlightedIndex: index => { highlightedNationChoiceIndex = index; },
+  chooseDropdown: chooseNationFromDropdown,
+  focusNationFromSearch: focusNation,
 });
-search.addEventListener('keydown', e => {
-  if (e.key === 'ArrowDown') {
-    e.preventDefault();
-    if (!nationDropdownOpen) openNationDropdown();
-    highlightedNationChoiceIndex = Math.min(currentDropdownChoices.length - 1, highlightedNationChoiceIndex + 1);
-    renderNationDropdown();
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault();
-    if (!nationDropdownOpen) openNationDropdown();
-    highlightedNationChoiceIndex = Math.max(0, highlightedNationChoiceIndex - 1);
-    renderNationDropdown();
-  } else if (e.key === 'Enter') {
-    if (nationDropdownOpen && highlightedNationChoiceIndex >= 0) {
-      e.preventDefault();
-      chooseNationFromDropdown();
-    } else {
-      const selectedNation = parseNationSearchValue(search.value);
-      if (selectedNation) {
-        e.preventDefault();
-        focusNation(selectedNation);
-      }
-    }
-  } else if (e.key === 'Escape') {
-    closeNationDropdown();
-  }
-});
-if (nationDropdown) {
-  nationDropdown.addEventListener('mousedown', e => e.preventDefault());
-  nationDropdown.addEventListener('click', e => {
-    const option = e.target.closest('.searchOption[data-index]');
-    if (!option) return;
-    chooseNationFromDropdown(Number(option.dataset.index));
-  });
-}
-if (languageSel) {
-  languageSel.addEventListener('change', () => {
-    currentLanguage = i18n.setLanguage(languageSel.value);
+bindAppControls({
+  languageSelect: languageSel,
+  scenarioSelect: scenarioSel,
+  baseModeSelect: baseModeSel,
+  claimModeSelect: claimModeSel,
+  claimKindSelect: claimKindSel,
+  projectSelect: projectSel,
+  labelsToggle: document.getElementById('showLabels'),
+  reachableCapitalsButton: document.getElementById('reachableCapitalsBtn'),
+  onLanguageChange: language => {
+    currentLanguage = i18n.setLanguage(language);
     saveLanguage(currentLanguage);
     refreshLanguage();
-  });
-}
-if (scenarioSel) {
-  scenarioSel.addEventListener('change', () => {
-    if (!setActiveScenario(scenarioSel.value)) syncScenarioControls();
-  });
-}
-document.addEventListener('click', e => {
-  if (!nationSearchCombo?.contains(e.target)) closeNationDropdown();
-});
-baseModeSel.addEventListener('change', renderRegions);
-claimModeSel.addEventListener('change', () => {
-  setActiveIncomingClaimKeyState('');
-  if (claimModeSel.value !== 'project') setProjectFilterState('');
-  else if (!getProjectFilter()) setProjectFilterState(projectSel.value || '');
-  updateNationOverlay(getCurrentNation());
-});
-claimKindSel.addEventListener('change', () => updateNationOverlay(getCurrentNation()));
-projectSel.addEventListener('change', () => {
-  setActiveIncomingClaimKeyState('');
-  setProjectFilterState(projectSel.value || '');
-  claimModeSel.value = getProjectFilter() ? 'project' : 'all';
-  updateNationOverlay(getCurrentNation());
-});
-document.getElementById('showLabels').addEventListener('click', () => { labelsVisible=!labelsVisible; renderLabels(); applyFilters(); });
-document.getElementById('reachableCapitalsBtn')?.addEventListener('click', () => {
-  toggleReachableCapitalCandidatesState();
+  },
+  onScenarioChange: scenarioId => {
+    if (!setActiveScenario(scenarioId)) syncScenarioControls();
+  },
+  onBaseModeChange: renderRegions,
+  onClaimModeChange: mode => {
+    setActiveIncomingClaimKeyState('');
+    if (mode !== 'project') setProjectFilterState('');
+    else if (!getProjectFilter()) setProjectFilterState(projectSel.value || '');
+    updateNationOverlay(getCurrentNation());
+  },
+  onClaimKindChange: () => updateNationOverlay(getCurrentNation()),
+  onProjectChange: projectId => {
+    setActiveIncomingClaimKeyState('');
+    setProjectFilterState(projectId || '');
+    claimModeSel.value = getProjectFilter() ? 'project' : 'all';
+    updateNationOverlay(getCurrentNation());
+  },
+  onLabelsToggle: () => {
+    labelsVisible = !labelsVisible;
+    renderLabels();
+    applyFilters();
+  },
+  onReachableCapitalsToggle: () => {
+    toggleReachableCapitalCandidatesState();
+  },
 });
 if (gHitRegions) {
   gHitRegions.addEventListener('pointerover', onHitLayerPointerOver);
