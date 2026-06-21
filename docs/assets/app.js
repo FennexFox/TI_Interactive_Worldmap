@@ -40,6 +40,7 @@ import {
   zoomMapView,
 } from './state/map-view-state.js';
 import {createMapPanController} from './interaction/map-pan.js';
+import {createTooltipController} from './interaction/tooltip.js';
 import {createAppData, getActiveData, getScenarioIds} from './data/active-data.js';
 import {createClaimModel} from './data/claim-model.js';
 import {buildDerivedIndices} from './data/derived-indices.js';
@@ -63,6 +64,10 @@ import {
   renderPinnedRegionsPanel as renderPinnedRegionsPanelUi,
   renderReachableCapitalCandidatesPanel as renderReachableCapitalCandidatesPanelUi,
 } from './ui/panels.js';
+import {
+  initMapViewControls as initMapViewControlsUi,
+  updateMapViewControlsLabels as updateMapViewControlsLabelsUi,
+} from './ui/map-controls.js';
 import {
   applyStaticTranslations as applyStaticTranslationsUi,
   bindAppControls,
@@ -251,6 +256,7 @@ const nationInfo = document.getElementById('nationInfo');
 const selectedPill = document.getElementById('selectedPill');
 const languageSel = document.getElementById('languageSel');
 const svgWrap = document.querySelector('.svgwrap');
+const tooltipController = createTooltipController({window, svgWrap, tip});
 const regionPathElements = [];
 const hitPathElements = [];
 const labelTextElements = [];
@@ -546,11 +552,6 @@ let visibleNationRegionNames = new Set();
 let currentOverlayModel = null;
 let activeClaimPreviewRegionScopeKey = '';
 let activeClaimPreviewRegionScope = null;
-let tooltipRegionId = null;
-let svgWrapRectCache = null;
-let tooltipSizeCache = {width: 160, height: 26, valid: false};
-let tooltipFrame = 0;
-let pendingTooltipPoint = null;
 let foreignHoverVisualKey = '';
 let hoverClaimPreviewVisualKey = '';
 let secondaryHoverVisualKey = '';
@@ -2333,64 +2334,26 @@ function resetMapView() {
   initializeMapView(activeData, mapView);
   applyMapViewToSvg();
 }
-function mapViewControlLabel(action) {
-  const labels = {
-    zoomIn: currentLanguage === 'ko' ? '확대' : 'Zoom in',
-    zoomOut: currentLanguage === 'ko' ? '축소' : 'Zoom out',
-    reset: currentLanguage === 'ko' ? '보기 초기화' : 'Reset view',
-  };
-  return labels[action] || action;
-}
 function updateMapViewControlsLabels() {
-  const controls = document.getElementById('mapViewControls');
-  if (!controls) return;
-  controls.querySelectorAll('[data-map-view-action]').forEach(button => {
-    const action = button.dataset.mapViewAction;
-    const label = mapViewControlLabel(action);
-    button.title = label;
-    button.setAttribute('aria-label', label);
-    if (action === 'reset') button.textContent = currentLanguage === 'ko' ? '초기화' : 'Reset';
+  updateMapViewControlsLabelsUi({
+    document,
+    t,
+    currentLanguage,
+    worldWrapEnabled,
   });
-  const wrapToggle = controls.querySelector('[data-map-view-wrap-toggle]');
-  const wrapLabel = controls.querySelector('[data-map-view-wrap-label]');
-  const wrapTitle = t('mapWrap.warning');
-  if (wrapToggle) {
-    wrapToggle.title = wrapTitle;
-    wrapToggle.setAttribute('aria-pressed', worldWrapEnabled ? 'true' : 'false');
-    wrapToggle.setAttribute('aria-label', `${t('mapWrap.label')}. ${wrapTitle}`);
-  }
-  if (wrapLabel) wrapLabel.textContent = t('mapWrap.label');
 }
 function initMapViewControls() {
-  if (!svgWrap || document.getElementById('mapViewControls')) return;
-  const controls = document.createElement('div');
-  controls.id = 'mapViewControls';
-  controls.className = 'mapViewControls';
-  controls.innerHTML = `
-    <button type="button" class="mapViewControl" data-map-view-action="zoomIn">+</button>
-    <button type="button" class="mapViewControl" data-map-view-action="zoomOut">−</button>
-    <button type="button" class="mapViewControl mapViewControlReset" data-map-view-action="reset">Reset</button>
-    <button type="button" class="mapViewControl mapViewWrapToggle" data-map-view-wrap-toggle aria-pressed="false">
-      <span data-map-view-wrap-label></span>
-    </button>
-  `;
-  controls.addEventListener('click', event => {
-    const wrapToggle = event.target.closest('[data-map-view-wrap-toggle]');
-    if (wrapToggle) {
-      event.preventDefault();
-      setWorldWrapEnabled(!worldWrapEnabled);
-      return;
-    }
-    const button = event.target.closest('[data-map-view-action]');
-    if (!button) return;
-    event.preventDefault();
-    const action = button.dataset.mapViewAction;
-    if (action === 'zoomIn') zoomMapAt(1 / MAP_ZOOM_BUTTON_FACTOR);
-    else if (action === 'zoomOut') zoomMapAt(MAP_ZOOM_BUTTON_FACTOR);
-    else if (action === 'reset') resetMapView();
+  initMapViewControlsUi({
+    document,
+    svgWrap,
+    t,
+    currentLanguage,
+    worldWrapEnabled,
+    onZoomIn: () => zoomMapAt(1 / MAP_ZOOM_BUTTON_FACTOR),
+    onZoomOut: () => zoomMapAt(MAP_ZOOM_BUTTON_FACTOR),
+    onReset: resetMapView,
+    onToggleWrap: () => setWorldWrapEnabled(!worldWrapEnabled),
   });
-  svgWrap.appendChild(controls);
-  updateMapViewControlsLabels();
 }
 function onMapWheel(e) {
   if (!mapView) return;
@@ -2434,54 +2397,13 @@ function scheduleMapViewRender(renderContext = {}) {
   });
 }
 function invalidateTooltipLayout() {
-  svgWrapRectCache = null;
-  tooltipSizeCache.valid = false;
-}
-function svgWrapRect() {
-  if (!svgWrapRectCache) svgWrapRectCache = svgWrap.getBoundingClientRect();
-  return svgWrapRectCache;
-}
-function measureTooltipSize() {
-  if (tooltipSizeCache.valid) return tooltipSizeCache;
-  tip.classList.add('visible');
-  tooltipSizeCache = {
-    width: tip.offsetWidth || 160,
-    height: tip.offsetHeight || 26,
-    valid: true,
-  };
-  return tooltipSizeCache;
-}
-function applyTooltipPosition() {
-  tooltipFrame = 0;
-  if (!pendingTooltipPoint) return;
-  const {clientX, clientY} = pendingTooltipPoint;
-  const rect = svgWrapRect();
-  const {width, height} = measureTooltipSize();
-  const x = Math.max(8, Math.min(rect.width - width - 8, clientX - rect.left + 10));
-  const y = Math.max(8, Math.min(rect.height - height - 8, clientY - rect.top + 10));
-  tip.style.transform = `translate3d(${x}px, ${y}px, 0)`;
-  tip.classList.add('visible');
-}
-function scheduleTooltipPosition(e) {
-  pendingTooltipPoint = {clientX: e.clientX, clientY: e.clientY};
-  if (!tooltipFrame) tooltipFrame = window.requestAnimationFrame(applyTooltipPosition);
+  tooltipController.invalidateLayout();
 }
 function hideRegionTooltip() {
-  pendingTooltipPoint = null;
-  tooltipRegionId = null;
-  if (tooltipFrame) {
-    window.cancelAnimationFrame(tooltipFrame);
-    tooltipFrame = 0;
-  }
-  tip.classList.remove('visible');
+  tooltipController.hide();
 }
 function showRegionTooltip(e, r) {
-  if (tooltipRegionId !== r.id) {
-    tip.textContent = `${localizedRegionName(r)} (${nationDisplayName(r.nationTag)})`;
-    tooltipRegionId = r.id;
-    tooltipSizeCache.valid = false;
-  }
-  scheduleTooltipPosition(e);
+  tooltipController.show(e, r.id, `${localizedRegionName(r)} (${nationDisplayName(r.nationTag)})`);
 }
 function resolveHitRegion(event, indices = derivedIndices) {
   const target = event?.target;
@@ -2589,7 +2511,7 @@ function hitRegionElementFromClientPoint(clientX, clientY) {
 function refreshPanHoverFromClientPoint(clientX, clientY) {
   const hit = hitRegionElementFromClientPoint(clientX, clientY);
   if (!hit) {
-    if (getHoveredRegionName() || getHoverNation() || tooltipRegionId != null || pendingTooltipPoint) {
+    if (getHoveredRegionName() || getHoverNation() || tooltipController.hasActiveTooltip()) {
       clearHoverPreview();
     }
     return;
@@ -2700,7 +2622,7 @@ function onMapMove(e) {
   if (target?.classList?.contains('region') || target?.classList?.contains('region-hit')) return;
   const isBlankMap = target === svg || target === gGrid || target === gHitRegions || target?.classList?.contains('graticule');
   if (!isBlankMap) return;
-  if (getHoveredRegionName() || getHoverNation() || tooltipRegionId != null || pendingTooltipPoint) clearHoverPreview();
+  if (getHoveredRegionName() || getHoverNation() || tooltipController.hasActiveTooltip()) clearHoverPreview();
 }
 function onMapLeave() {
   clearHoverPreview();
@@ -3953,7 +3875,8 @@ function refreshLanguage() {
   renderPinnedRegionMarkers();
   renderManualEnvelopeOverlay(currentOverlayModel);
   refreshReachableCapitalCandidateOutputs(currentOverlayModel);
-  const hoveredRegion = tooltipRegionId != null ? REGIONS[tooltipRegionId] : null;
+  const hoveredRegionId = tooltipController.currentRegionId();
+  const hoveredRegion = hoveredRegionId != null ? REGIONS[hoveredRegionId] : null;
   setHoverPill(hoveredRegion);
 }
 
