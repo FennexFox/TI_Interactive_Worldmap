@@ -28,6 +28,7 @@ EXPECTED_MODULE_ASSETS = (
     "docs/assets/render/map-layers.js",
     "docs/assets/ui/aside-cards.js",
     "docs/assets/ui/i18n.js",
+    "docs/assets/ui/panels.js",
 )
 
 

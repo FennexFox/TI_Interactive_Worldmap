@@ -58,6 +58,10 @@ import {
 } from './render/map-layers.js';
 import {createAsideCardController} from './ui/aside-cards.js';
 import {createI18n, readSavedLanguage, saveLanguage} from './ui/i18n.js';
+import {
+  renderPinnedRegionsPanel as renderPinnedRegionsPanelUi,
+  renderReachableCapitalCandidatesPanel as renderReachableCapitalCandidatesPanelUi,
+} from './ui/panels.js';
 
 const appLoading = document.getElementById('appLoading');
 const appLoadingDetail = document.getElementById('appLoadingDetail');
@@ -1666,25 +1670,6 @@ function pinnedRegionCapitalSummary(regionName) {
 function pinnedRegionOwnerSummary(region) {
   return region?.nationTag ? t('expansionNodes.owner', {nation: nationDisplayName(region.nationTag)}) : '';
 }
-function pinnedRegionRow(regionName) {
-  const region = regionByName[regionName];
-  const label = localizedRegionName(region || regionName);
-  const owner = pinnedRegionOwnerSummary(region);
-  const capital = pinnedRegionCapitalSummary(regionName);
-  const meta = [owner, capital].filter(Boolean).join(' · ');
-  return `
-    <div class="pinnedRegionRow" data-pinned-region="${escapeHtml(regionName)}">
-      <button type="button" class="pinnedRegionFocus" data-pinned-focus="${escapeHtml(regionName)}" aria-label="${escapeHtml(t('expansionNodes.focusRegion', {region: label}))}">
-        <span class="pinnedRegionMain">
-          <b>${escapeHtml(label)}</b>
-          <span>${escapeHtml(meta)}</span>
-        </span>
-        <span class="pinnedRegionFocusText">${escapeHtml(t('expansionNodes.focus'))}</span>
-      </button>
-      <button type="button" class="pinnedRegionUnpin" data-pinned-unpin="${escapeHtml(regionName)}" title="${escapeHtml(t('expansionNodes.unpinRegion', {region: label}))}" aria-label="${escapeHtml(t('expansionNodes.unpinRegion', {region: label}))}">×</button>
-    </div>
-  `;
-}
 function focusPinnedRegion(regionName) {
   const region = regionByName[regionName];
   if (!region) return;
@@ -1694,38 +1679,20 @@ function focusPinnedRegion(regionName) {
   }
   selectRegion(region);
 }
-function bindPinnedRegionsPanelEvents() {
-  if (!pinnedRegionsPanel) return;
-  pinnedRegionsPanel.querySelectorAll('[data-pinned-focus]').forEach(button => {
-    button.addEventListener('click', () => focusPinnedRegion(button.dataset.pinnedFocus));
-  });
-  pinnedRegionsPanel.querySelectorAll('[data-pinned-unpin]').forEach(button => {
-    button.addEventListener('click', event => {
-      event.stopPropagation();
-      unpinPinnedRegionState(button.dataset.pinnedUnpin);
-    });
-  });
-  pinnedRegionsPanel.querySelector('[data-pinned-clear]')?.addEventListener('click', event => {
-    event.stopPropagation();
-    clearPinnedRegionState();
-  });
-}
 function renderPinnedRegionsPanel() {
-  if (!pinnedRegionsPanel) return;
-  const pinned = [...getPinnedRegionIds()].filter(regionName => regionByName[regionName]);
-  if (!pinned.length) {
-    pinnedRegionsPanel.innerHTML = `<div class="pinnedRegionEmpty small">${escapeHtml(t('expansionNodes.empty'))}</div>`;
-    return;
-  }
-  const rows = pinned.map(pinnedRegionRow).join('');
-  pinnedRegionsPanel.innerHTML = `
-    <div class="pinnedRegionToolbar">
-      <span class="pinnedRegionCount">${escapeHtml(t('expansionNodes.count', {count: formatNumber(pinned.length)}))}</span>
-      <button type="button" class="pinnedRegionClear" data-pinned-clear>${escapeHtml(t('expansionNodes.clear'))}</button>
-    </div>
-    <div class="pinnedRegionList">${rows}</div>
-  `;
-  bindPinnedRegionsPanelEvents();
+  renderPinnedRegionsPanelUi({
+    root: pinnedRegionsPanel,
+    pinnedRegionIds: getPinnedRegionIds(),
+    regionByName,
+    localizedRegionName,
+    ownerSummary: pinnedRegionOwnerSummary,
+    capitalSummary: pinnedRegionCapitalSummary,
+    t,
+    formatNumber,
+    onFocus: focusPinnedRegion,
+    onUnpin: unpinPinnedRegionState,
+    onClear: clearPinnedRegionState,
+  });
 }
 function refreshPinnedRegionOutputs(changedRegionIds = []) {
   const changed = [...new Set((changedRegionIds || []).filter(Boolean))];
@@ -3316,22 +3283,6 @@ function reachableCandidateMarkerLabel(candidate) {
     nations: reachableCandidateNationsText(candidate),
   });
 }
-function reachableCandidateRow(candidate) {
-  const label = localizedRegionName(regionByName[candidate.region] || candidate.region);
-  const depth = t('reachableCandidates.depth', {depth: formatNumber(candidate.depth)});
-  const nations = reachableCandidateNationsText(candidate);
-  return `
-    <div class="reachableCandidateRow" data-candidate-row="${escapeHtml(candidate.region)}">
-      <button type="button" class="reachableCandidateFocus" data-candidate-focus="${escapeHtml(candidate.region)}" data-candidate-nation="${escapeHtml(candidate.primaryNation)}" aria-label="${escapeHtml(t('reachableCandidates.focusRegion', {region: label}))}">
-        <span class="reachableCandidateMain">
-          <b>${escapeHtml(label)}</b>
-          <span>${escapeHtml(`${depth} · ${nations}`)}</span>
-        </span>
-        <span class="reachableCandidateFocusText">${escapeHtml(t('reachableCandidates.focus'))}</span>
-      </button>
-    </div>
-  `;
-}
 function commitReachableCapitalSelection(region, capitalClaimantId = '') {
   const claimant = resolveReachableCapitalSelectionClaimant(region, capitalClaimantId);
   if (!region?.regionName || !claimant) return false;
@@ -3383,34 +3334,19 @@ function selectActiveNationCapitalRegion(region, anchorModel = currentOverlayMod
   updateSelectedRegions({bounded: true, changedRegionIds: changedSelectionRegionIds});
   return true;
 }
-function bindReachableCapitalCandidatePanelEvents() {
-  if (!reachableCandidatesPanel) return;
-  reachableCandidatesPanel.querySelectorAll('[data-candidate-focus]').forEach(button => {
-    button.addEventListener('click', event => {
-      event.stopPropagation();
-      const region = regionByName[button.dataset.candidateFocus];
-      commitReachableCapitalSelection(region, button.dataset.candidateNation || '');
-    });
-  });
-}
 function renderReachableCapitalCandidatesPanel(anchorModel = currentOverlayModel, {candidates} = {}) {
-  if (!reachableCandidatesPanel) return;
-  const checked = getShowReachableCapitalCandidates();
-  if (!checked) {
-    reachableCandidatesPanel.innerHTML = '';
-    return;
-  }
   const resolvedCandidates = candidates ?? reachableCapitalCandidateDescriptors(anchorModel);
-  const body = resolvedCandidates.length
-    ? `<div class="reachableCandidateList">${resolvedCandidates.map(reachableCandidateRow).join('')}</div>`
-    : `<div class="reachableCandidateEmpty small">${escapeHtml(t('reachableCandidates.empty'))}</div>`;
-  reachableCandidatesPanel.innerHTML = `
-    <div class="reachableCandidateToolbar">
-      <span class="reachableCandidateCount">${escapeHtml(t('reachableCandidates.count', {count: formatNumber(resolvedCandidates.length)}))}</span>
-    </div>
-    ${body}
-  `;
-  bindReachableCapitalCandidatePanelEvents();
+  renderReachableCapitalCandidatesPanelUi({
+    root: reachableCandidatesPanel,
+    visible: getShowReachableCapitalCandidates(),
+    candidates: resolvedCandidates,
+    regionByName,
+    localizedRegionName,
+    candidateNationsText: reachableCandidateNationsText,
+    t,
+    formatNumber,
+    onSelect: (regionName, nationId) => commitReachableCapitalSelection(regionByName[regionName], nationId),
+  });
 }
 function reachableCapitalCandidateRenderKey(candidates, copyContexts = worldCopyContexts) {
   if (!getShowReachableCapitalCandidates() || !candidates.length) return REACHABLE_CAPITAL_CANDIDATES_EMPTY_RENDER_KEY;
