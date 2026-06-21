@@ -23,6 +23,7 @@ EXPECTED_MODULE_ASSETS = (
     "docs/assets/state/app-state.js",
     "docs/assets/state/map-visual-state.js",
     "docs/assets/data/active-data.js",
+    "docs/assets/data/claim-model.js",
     "docs/assets/data/derived-indices.js",
     "docs/assets/render/map-layers.js",
 )

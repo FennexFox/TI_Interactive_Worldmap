@@ -40,6 +40,7 @@ import {
   zoomMapView,
 } from './state/map-view-state.js';
 import {createAppData, getActiveData, getScenarioIds} from './data/active-data.js';
+import {createClaimModel} from './data/claim-model.js';
 import {buildDerivedIndices} from './data/derived-indices.js';
 import {
   appendWorldCopyFragment,
@@ -1456,60 +1457,6 @@ function colorFor(r) {
   }
   return `hsl(${hashHue(r.nationTag || r.regionName)} 50% 43%)`;
 }
-function projectCost(project) {
-  const cost = PROJECT_META[project]?.researchCost;
-  return typeof cost === 'number' && cost >= 0 ? cost : Number.POSITIVE_INFINITY;
-}
-function projectSortLabel(project) {
-  return projectDisplay(project) || project || '';
-}
-function dependsOn(project, prerequisite, seen=new Set()) {
-  if (!project || !prerequisite || project === prerequisite || seen.has(project)) return false;
-  seen.add(project);
-  const prereqs = PROJECT_META[project]?.prerequisiteNodes || [];
-  for (const node of prereqs) {
-    if (node === prerequisite) return true;
-    if (PROJECT_META[node] && dependsOn(node, prerequisite, seen)) return true;
-  }
-  return false;
-}
-function sortedProjectEntries(entries) {
-  return [...entries].sort((a, b) => {
-    if (!!a.project !== !!b.project) return a.project ? 1 : -1;
-    if (!a.project && !b.project) return String(a.label || '').localeCompare(String(b.label || ''));
-    if (dependsOn(a.project, b.project)) return 1;
-    if (dependsOn(b.project, a.project)) return -1;
-    const costA = projectCost(a.project);
-    const costB = projectCost(b.project);
-    if (costA !== costB) return costA < costB ? -1 : 1;
-    const byLabel = projectSortLabel(a.project).localeCompare(projectSortLabel(b.project));
-    if (byLabel) return byLabel;
-    return String(a.project || '').localeCompare(String(b.project || ''));
-  });
-}
-function countryProjectTierMap(nation, baseSet) {
-  const d = CLAIMS_BY_NATION[nation];
-  const tiers = new Map();
-  if (!d) return tiers;
-  let tier = 0;
-  for (const entry of sortedProjectEntries(d.projects || [])) {
-    if (!entry.project) continue;
-    const hasExpansionRegions = (entry.regions || []).some(rn => !baseSet.has(rn));
-    if (!hasExpansionRegions) continue;
-    tiers.set(entry.project, tier);
-    tier += 1;
-  }
-  return tiers;
-}
-function nationClaimTierCount(nation) {
-  const d = CLAIMS_BY_NATION[nation] || {};
-  const baseSet = new Set(d.baseRegions || nationRegions.get(nation) || []);
-  return countryProjectTierMap(nation, baseSet).size;
-}
-function countryProjectTier(entry, tierByProject) {
-  if (!entry.project) return -1;
-  return tierByProject.get(entry.project) ?? 0;
-}
 function projectColor(project, i=0) {
   const tier = project ? i + 1 : 0;
   return CLAIM_TIER_COLORS[Math.min(Math.max(tier, 0), CLAIM_TIER_COLORS.length - 1)];
@@ -1526,16 +1473,52 @@ function statusLabel(status) {
 function statusBadge(status) {
   return `<span class="status ${escapeHtml(status || 'existing')}">${escapeHtml(statusLabel(status))}</span>`;
 }
-function isExcludedSystemClaim(claimant, project, label='') {
-  const p = String(project || '');
-  const l = String(label || projectDisplay(project) || '');
-  return claimant === 'ALN'
-    || p === 'Project_AlienMasterProject'
-    || p === 'Project_ProtectorateAuthority'
-    || /alien master project/i.test(l)
-    || /protectorate authority/i.test(l)
-    || /보호국 총독부/.test(l);
-}
+const claimModel = createClaimModel({
+  claimsByNation: () => CLAIMS_BY_NATION,
+  nationRegions: () => nationRegions,
+  projectMeta: () => PROJECT_META,
+  claimMode: () => claimModeSel.value,
+  claimKind: () => claimKindSel.value,
+  projectFilter: () => getProjectFilter(),
+  activeIncomingClaimKey: () => getActiveIncomingClaimKey(),
+  selectedRegionIds: () => selectedRegionIds,
+  incomingClaimsByRegion: () => incomingClaimsByRegion,
+  capitalNationsByRegion: () => derivedIndices.capitalNationsByRegion,
+  regionExists: regionName => !!regionByName[regionName],
+  isCapitalRegionForNation: (nation, regionName) => isCapitalRegionForNation(nation, regionName),
+  projectLabel: project => projectDisplay(project),
+  sourceLabels: {
+    inheritedFrom: project => t('source.inheritedFrom', {project}),
+    basicClaim: () => t('source.basicClaim'),
+    direct: () => t('source.direct'),
+  },
+});
+const {
+  projectCost,
+  projectSortLabel,
+  dependsOn,
+  sortedProjectEntries,
+  countryProjectTierMap,
+  nationClaimTierCount,
+  countryProjectTier,
+  isExcludedSystemClaim,
+  entryFilterValue,
+  getClaimKindFilteredProjectEntries,
+  cumulativeClaimEntries,
+  incomingTargetRegions,
+  outgoingClaimKey,
+  incomingClaimKey,
+  selectedIncomingEntry,
+  incomingClaimsForTarget,
+  visibleClaimRegionsForEntry,
+  compareManualEnvelopeSourceSpecs,
+  buildManualEnvelopeModelData,
+  nationBaseRegionNames,
+  nationResultRegionNames,
+  nationFullyIncludedInResult,
+  isReachableCapitalCandidateNation,
+  reachableCapitalCandidateNations,
+} = claimModel;
 function labelPosition(r) {
   if (r.labels && r.labels[0]) return r.labels[0];
   return regionPathCenter(r);
@@ -2031,97 +2014,9 @@ function clearHoverPreview() {
   updateHoverNationPreview('');
 }
 function buildIncomingClaimIndex() {
+  const nextIndex = claimModel.buildIncomingClaimIndex();
   incomingClaimsByRegion.clear();
-  for (const [claimant, data] of Object.entries(CLAIMS_BY_NATION)) {
-    const claimantBaseRegions = [...new Set(data.baseRegions || nationRegions.get(claimant) || [])];
-    const directEntries = sortedProjectEntries(data.projects || []);
-    const cumulativeByKey = new Map(cumulativeClaimEntries(directEntries).map(e => [entryFilterValue(e), e]));
-    for (const entry of directEntries) {
-      const label = entry.label || projectDisplay(entry.project);
-      if (isExcludedSystemClaim(claimant, entry.project, label)) continue;
-      const entryRegions = [...new Set(entry.regions || [])];
-      const directEntryClaims = entry.claims || {};
-      const cumulative = cumulativeByKey.get(entryFilterValue(entry)) || entry;
-      const cumulativeRegions = [...new Set(cumulative.regions || entryRegions)];
-      const cumulativeClaims = cumulative.claims || directEntryClaims;
-      const resultRegions = [...new Set([...claimantBaseRegions, ...cumulativeRegions])].filter(Boolean).sort();
-      const resultClaimRegions = cumulativeRegions.filter(rn => !claimantBaseRegions.includes(rn));
-      const resultRegionSourceLabels = cumulative.regionSourceLabels || {};
-      for (const rn of entryRegions) {
-        const claim = directEntryClaims?.[rn] || {};
-        if (!incomingClaimsByRegion.has(rn)) incomingClaimsByRegion.set(rn, []);
-        incomingClaimsByRegion.get(rn).push({
-          claimant,
-          project: entry.project || '',
-          label,
-          region: rn,
-          claim,
-          claimantBaseRegions,
-          entryRegions,
-          entryClaims: cumulativeClaims,
-          resultRegions,
-          resultClaimRegions,
-          resultRegionSourceLabels,
-        });
-      }
-    }
-  }
-}
-function incomingTargetRegions(data, baseSet) {
-  const selected = [...selectedRegionIds].filter(Boolean);
-  if (selected.length) return new Set(selected);
-  const targetRegions = new Set(baseSet);
-  if (!targetRegions.size) {
-    for (const rn of data.capitalRegions || []) targetRegions.add(rn);
-    for (const rn of data.gatedRegions || []) targetRegions.add(rn);
-  }
-  return targetRegions;
-}
-function outgoingClaimKey(item) {
-  return item?.project || '__base__';
-}
-function incomingClaimKey(item) {
-  return `${item?.claimant || ''}|${item?.project || '__base__'}`;
-}
-function selectedIncomingEntry(entries) {
-  const activeIncomingClaimKey = getActiveIncomingClaimKey();
-  if (!activeIncomingClaimKey) return null;
-  return entries.find(e => incomingClaimKey(e) === activeIncomingClaimKey) || null;
-}
-function incomingClaimsForTarget(targetNation, data, baseSet) {
-  const targetRegions = incomingTargetRegions(data, baseSet);
-  const grouped = new Map();
-  for (const rn of targetRegions) {
-    for (const item of incomingClaimsByRegion.get(rn) || []) {
-      if (item.claimant === targetNation) continue;
-      const key = incomingClaimKey(item);
-      if (!grouped.has(key)) {
-        grouped.set(key, {
-          ...item,
-          key,
-          targetRegions: [],
-          regions: [],
-          claims: {},
-          targetClaims: {},
-          hostile: 0,
-          gated: 0,
-          capital: 0,
-        });
-      }
-      const g = grouped.get(key);
-      if (!g.targetRegions.includes(rn)) g.targetRegions.push(rn);
-      g.targetClaims[rn] = item.claim || {};
-      if (item.claim?.hostileClaim) g.hostile += 1;
-      if (item.claim?.gatedClaim) g.gated += 1;
-      if (item.claim?.capitalClaim) g.capital += 1;
-      g.regions = [...new Set(item.resultClaimRegions || item.entryRegions || [])].filter(Boolean).sort();
-      g.claims = item.entryClaims || {};
-      g.resultRegions = [...new Set(item.resultRegions || item.entryRegions || [])].filter(Boolean).sort();
-      g.claimantBaseRegions = [...new Set(item.claimantBaseRegions || [])].filter(Boolean).sort();
-      g.regionSourceLabels = item.resultRegionSourceLabels || {};
-    }
-  }
-  return [...grouped.values()].sort((a,b) => a.claimant.localeCompare(b.claimant) || projectSortLabel(a.project).localeCompare(projectSortLabel(b.project)));
+  for (const [regionName, entries] of nextIndex) incomingClaimsByRegion.set(regionName, entries);
 }
 function selectedRegionSummary() {
   const names = [...selectedRegionIds].filter(Boolean);
@@ -3317,81 +3212,6 @@ function onMapLeave() {
   clearHoverPreview();
 }
 function getCurrentNation() { return getLockedNation() || getHoverNation() || ''; }
-function claimKindPass(claim) {
-  const k = claimKindSel.value;
-  if (k === 'all') return true;
-  if (k === 'hostile') return !!claim.hostileClaim;
-  if (k === 'peaceful') return !claim.hostileClaim;
-  return true;
-}
-function entryFilterValue(entry) {
-  return entry?.project || '__base__';
-}
-function filterEntryByClaimKind(entry) {
-  const claims = entry.claims || {};
-  const regions = (entry.regions || []).filter(rn => claimKindPass(claims[rn] || {}));
-  const filteredClaims = {};
-  for (const rn of regions) filteredClaims[rn] = claims[rn];
-  return {...entry, regions, claims: filteredClaims};
-}
-function getClaimKindFilteredProjectEntries(nation) {
-  const d = CLAIMS_BY_NATION[nation];
-  if (!d) return [];
-  return sortedProjectEntries((d.projects || []).map(filterEntryByClaimKind).filter(e => e.regions.length));
-}
-function inheritedClaimProjectsFor(entry, entries) {
-  if (!entry?.project) return [];
-  return entries.filter(candidate => {
-    if (candidate === entry) return false;
-    if (!candidate.project) return true;
-    return dependsOn(entry.project, candidate.project);
-  });
-}
-function cumulativeClaimEntry(entry, entries) {
-  const inheritedEntries = inheritedClaimProjectsFor(entry, entries);
-  const regions = [];
-  const claims = {};
-  const regionSources = {};
-  const regionSourceLabels = {};
-  const addRegion = (rn, claim, source, sourceLabel, {overwrite=false} = {}) => {
-    if (!rn || (!overwrite && claims[rn])) return;
-    if (!claims[rn]) regions.push(rn);
-    claims[rn] = claim || {};
-    regionSources[rn] = source;
-    regionSourceLabels[rn] = sourceLabel;
-  };
-  for (const inherited of inheritedEntries) {
-    const source = inherited.project ? 'inherited' : 'basic';
-    const sourceLabel = inherited.project ? t('source.inheritedFrom', {project: projectDisplay(inherited.project)}) : t('source.basicClaim');
-    for (const rn of inherited.regions || []) addRegion(rn, inherited.claims?.[rn], source, sourceLabel);
-  }
-  for (const rn of entry.regions || []) addRegion(rn, entry.claims?.[rn], 'direct', t('source.direct'), {overwrite:true});
-  const directSet = new Set(entry.regions || []);
-  const inheritedSet = new Set(regions.filter(rn => !directSet.has(rn)));
-  return {
-    ...entry,
-    regions,
-    claims,
-    directRegions: [...directSet],
-    inheritedRegions: [...inheritedSet],
-    inheritedClaimCount: inheritedSet.size,
-    directClaimCount: directSet.size,
-    regionSources,
-    regionSourceLabels,
-    cumulative: inheritedSet.size > 0,
-  };
-}
-function cumulativeClaimEntries(entries) {
-  return entries.map(entry => cumulativeClaimEntry(entry, entries));
-}
-function getVisibleProjectEntries(nation) {
-  if (claimModeSel.value === 'off') return [];
-  const directEntries = getClaimKindFilteredProjectEntries(nation);
-  if (claimModeSel.value === 'project' && getProjectFilter()) {
-    return cumulativeClaimEntries(directEntries).filter(e => entryFilterValue(e) === getProjectFilter());
-  }
-  return directEntries;
-}
 function overlayModelDataVersionKey(activeData, indices) {
   const summary = activeData?.regionMap?.summary || {};
   const claimStats = activeData?.claimMap?.claimStats || {};
@@ -3460,56 +3280,7 @@ function claimLabelDescriptorCacheKey(model) {
 }
 function buildNationOverlayModel(activeData, indices, nationId, options = {}) {
   recordRenderStat('overlayModelBuilds');
-  const nation = nationId || '';
-  const data = CLAIMS_BY_NATION[nation] || {nation, baseRegions:nationRegions.get(nation)||[], projects:[], totalClaimRegions:0, projectCount:0};
-  const baseSet = new Set(data.baseRegions || nationRegions.get(nation) || []);
-  const tierByProject = countryProjectTierMap(nation, baseSet);
-  const directEntries = getClaimKindFilteredProjectEntries(nation);
-  const cumulativeEntries = cumulativeClaimEntries(directEntries);
-  const allEntries = getVisibleProjectEntries(nation);
-  const outgoingEntries = cumulativeEntries.map(e => ({...e, regions:(e.regions || []).filter(rn => !baseSet.has(rn))})).filter(e => e.regions.length);
-  const incomingEntries = incomingClaimsForTarget(nation, data, baseSet);
-  let activeIncoming = selectedIncomingEntry(incomingEntries);
-  const activeIncomingClaimKey = getActiveIncomingClaimKey();
-  const nextActiveIncomingClaimKey = activeIncomingClaimKey && !activeIncoming ? '' : activeIncomingClaimKey;
-  if (!nextActiveIncomingClaimKey) activeIncoming = null;
-  const displayBaseSet = activeIncoming ? new Set(activeIncoming.claimantBaseRegions || []) : baseSet;
-  const entries = activeIncoming ? [activeIncoming] : allEntries;
-  const claimSet = new Set();
-  entries.forEach(e => e.regions.forEach(r => { if (!displayBaseSet.has(r)) claimSet.add(r); }));
-  const resultSet = activeIncoming ? new Set([...(activeIncoming.resultRegions || []), ...(activeIncoming.claimantBaseRegions || [])]) : new Set([...displayBaseSet, ...claimSet]);
-  const ownedCount = displayBaseSet.size;
-  const claimCount = claimSet.size;
-  const projectCount = entries.filter(e => e.project && (e.regions || []).some(rn => !displayBaseSet.has(rn))).length;
-  const hasClaimOverlay = claimModeSel.value !== 'off' && (displayBaseSet.size > 0 || claimSet.size > 0);
-  return {
-    activeData,
-    indices,
-    options,
-    nation,
-    data,
-    baseSet,
-    tierByProject,
-    directEntries,
-    cumulativeEntries,
-    allEntries,
-    outgoingEntries,
-    incomingEntries,
-    activeIncoming,
-    activeIncomingClaimKey: nextActiveIncomingClaimKey,
-    displayBaseSet,
-    entries,
-    claimSet,
-    resultSet,
-    ownedCount,
-    claimCount,
-    projectCount,
-    hasClaimOverlay,
-    gatedCount: (data.gatedRegions || []).length,
-  };
-}
-function visibleClaimRegionsForEntry(entry, model) {
-  return (entry.regions || []).filter(rn => !model.displayBaseSet.has(rn));
+  return claimModel.buildNationOverlayModel(activeData, indices, nationId, options);
 }
 function claimOverlayPathDescriptors(model) {
   if (!model) return [];
@@ -3604,16 +3375,6 @@ function manualEnvelopeModelCacheKey(anchorModel = currentOverlayModel, {include
     project: getProjectFilter(),
   });
 }
-function compareManualEnvelopeSourceSpecs(anchorNation) {
-  return (a, b) => {
-    if (a.depth !== b.depth) return a.depth - b.depth;
-    const aFocused = a.claimant === anchorNation ? 0 : 1;
-    const bFocused = b.claimant === anchorNation ? 0 : 1;
-    if (aFocused !== bFocused) return aFocused - bFocused;
-    if (a.pinIndex !== b.pinIndex) return a.pinIndex - b.pinIndex;
-    return a.claimant.localeCompare(b.claimant);
-  };
-}
 function manualEnvelopeSourceSpecs(anchorNation) {
   if (!anchorNation || claimModeSel.value === 'off') return [];
   const specs = [{
@@ -3638,32 +3399,6 @@ function manualEnvelopeSourceSpecs(anchorNation) {
     }
   });
   return specs.sort(compareManualEnvelopeSourceSpecs(anchorNation));
-}
-function buildManualEnvelopeSource(spec, sourceOrder) {
-  const data = CLAIMS_BY_NATION[spec.claimant] || {nation: spec.claimant, baseRegions: nationRegions.get(spec.claimant) || [], projects: []};
-  const baseSet = new Set(data.baseRegions || nationRegions.get(spec.claimant) || []);
-  const tierByProject = countryProjectTierMap(spec.claimant, baseSet);
-  const entries = getVisibleProjectEntries(spec.claimant);
-  return {
-    ...spec,
-    sourceOrder,
-    data,
-    baseSet,
-    tierByProject,
-    entries,
-  };
-}
-function compareManualEnvelopeContributions(a, b) {
-  if (a.depth !== b.depth) return a.depth - b.depth;
-  if (a.sourceOrder !== b.sourceOrder) return a.sourceOrder - b.sourceOrder;
-  if (a.kind !== b.kind) return a.kind === 'base' ? -1 : 1;
-  if (a.tier !== b.tier) return a.tier - b.tier;
-  const byProject = projectSortLabel(a.project).localeCompare(projectSortLabel(b.project));
-  if (byProject) return byProject;
-  return a.claimant.localeCompare(b.claimant);
-}
-function manualEnvelopeSourceKey(contribution) {
-  return `${contribution.depth}:${contribution.claimant}:${contribution.parentClaimant || ''}:${contribution.viaCapitalRegion || ''}`;
 }
 function manualEnvelopeKindLabel(contribution) {
   if (contribution.kind === 'base') return t('manualEnvelope.kindBase');
@@ -3691,85 +3426,11 @@ function manualEnvelopeOverlapLabel(item) {
     count: formatNumber(item.overlapSources.length),
   });
 }
-function addManualEnvelopeContribution(regionContributions, source, regionName, contribution) {
-  if (!regionName || !regionByName[regionName]) return;
-  if (!regionContributions.has(regionName)) regionContributions.set(regionName, []);
-  regionContributions.get(regionName).push({
-    ...contribution,
-    region: regionName,
-    claimant: source.claimant,
-    depth: source.depth,
-    parentClaimant: source.parentClaimant,
-    viaCapitalRegion: source.viaCapitalRegion,
-    pinIndex: source.pinIndex,
-    sourceOrder: source.sourceOrder,
-  });
-}
 function buildManualEnvelopeModelUncached(anchorModel = currentOverlayModel, {includeAnchorOnly = false} = {}) {
   recordRenderStat('manualEnvelopeModelBuilds');
   const anchorNation = manualEnvelopeAnchorNation(anchorModel);
   const specs = manualEnvelopeSourceSpecs(anchorNation);
-  if (specs.length <= 1 && !includeAnchorOnly) return null;
-  const sources = specs
-    .map((spec, sourceOrder) => buildManualEnvelopeSource(spec, sourceOrder))
-    .filter(source => source.baseSet.size || source.entries.length);
-  if (sources.length <= 1 && !includeAnchorOnly) return null;
-
-  const regionContributions = new Map();
-  for (const source of sources) {
-    for (const regionName of source.baseSet) {
-      addManualEnvelopeContribution(regionContributions, source, regionName, {
-        kind: 'base',
-        project: '',
-        tier: -1,
-        claim: {},
-      });
-    }
-    for (const entry of source.entries) {
-      const tier = countryProjectTier(entry, source.tierByProject);
-      for (const regionName of entry.regions || []) {
-        if (source.baseSet.has(regionName)) continue;
-        addManualEnvelopeContribution(regionContributions, source, regionName, {
-          kind: 'claim',
-          project: entry.project || '',
-          tier,
-          claim: entry.claims?.[regionName] || {},
-        });
-      }
-    }
-  }
-
-  const regionItems = [];
-  for (const [region, contributions] of regionContributions) {
-    const sorted = [...contributions].sort(compareManualEnvelopeContributions);
-    const primary = sorted[0];
-    const overlapSourceKeys = new Set();
-    const overlapSources = [];
-    for (const contribution of sorted) {
-      const key = manualEnvelopeSourceKey(contribution);
-      if (overlapSourceKeys.has(key)) continue;
-      overlapSourceKeys.add(key);
-      overlapSources.push(contribution);
-    }
-    regionItems.push({
-      region,
-      primary,
-      contributions: sorted,
-      overlapSources,
-    });
-  }
-  regionItems.sort((a, b) => (
-    a.primary.depth - b.primary.depth
-    || a.primary.sourceOrder - b.primary.sourceOrder
-    || a.region.localeCompare(b.region)
-  ));
-  return {
-    anchorNation,
-    sources,
-    regionItems,
-    sourceKey: sources.map(source => `${source.depth}:${source.claimant}:${source.parentClaimant || ''}:${source.viaCapitalRegion || ''}:${source.pinIndex}`).join('|'),
-    regionKey: regionItems.map(item => `${item.region}:${item.primary.depth}:${item.primary.claimant}:${item.primary.project || ''}:${item.overlapSources.length}`).join('|'),
-  };
+  return buildManualEnvelopeModelData(anchorNation, specs, {includeAnchorOnly});
 }
 function buildManualEnvelopeModel(anchorModel = currentOverlayModel, options = {}) {
   const cacheKey = manualEnvelopeModelCacheKey(anchorModel, options);
@@ -3891,34 +3552,6 @@ function clearManualEnvelopeOverlay() {
     () => document.createDocumentFragment(),
     'manualEnvelopeRebuilds'
   );
-}
-function nationBaseRegionNames(nation) {
-  return [...new Set(CLAIMS_BY_NATION[nation]?.baseRegions || nationRegions.get(nation) || [])]
-    .filter(regionName => regionByName[regionName]);
-}
-function nationResultRegionNames(nation) {
-  const resultRegions = new Set(nationBaseRegionNames(nation));
-  for (const entry of getVisibleProjectEntries(nation)) {
-    for (const regionName of entry.regions || []) {
-      if (regionByName[regionName]) resultRegions.add(regionName);
-    }
-  }
-  return [...resultRegions];
-}
-function nationFullyIncludedInResult(nation, resultSet) {
-  const resultRegions = nationResultRegionNames(nation);
-  return !!resultRegions.length && resultRegions.every(regionName => resultSet?.has?.(regionName));
-}
-function isReachableCapitalCandidateNation(regionName, nation, anchorNation, resultSet = new Set()) {
-  return !!regionName
-    && !!nation
-    && nation !== anchorNation
-    && isCapitalRegionForNation(nation, regionName)
-    && !nationFullyIncludedInResult(nation, resultSet);
-}
-function reachableCapitalCandidateNations(regionName, anchorNation, resultSet = new Set()) {
-  return [...new Set(derivedIndices.capitalNationsByRegion?.get?.(regionName) || [])]
-    .filter(nation => isReachableCapitalCandidateNation(regionName, nation, anchorNation, resultSet));
 }
 function reachableCapitalCandidateDescriptorCacheKey(model) {
   return JSON.stringify({
