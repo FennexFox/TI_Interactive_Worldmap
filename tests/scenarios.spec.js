@@ -11,6 +11,12 @@ async function chooseNation(page, query, tag) {
     .click();
 }
 
+async function groupedClaimRegionCount(page) {
+  return page.locator('#claimOverlays .claim-fill-group').evaluateAll(nodes => nodes.reduce((sum, node) => (
+    sum + Number(node.dataset.visualGroupSize || 0)
+  ), 0));
+}
+
 test('scenario selector switches supported start scenarios and keeps map workflows usable', async ({ page }) => {
   await page.goto('/?worldWrap=0');
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
@@ -28,7 +34,7 @@ test('scenario selector switches supported start scenarios and keeps map workflo
   await expect(page.locator('#claimPill')).toContainText('Canada: territory');
   await expect(page.locator('#nationInfo')).toContainText('Canada');
   await expect(page.locator('#map')).toHaveClass(/claims-active/);
-  await expect.poll(async () => page.locator('#claimOverlays .claim-overlay').count()).toBeGreaterThan(0);
+  await expect.poll(async () => groupedClaimRegionCount(page)).toBeGreaterThan(0);
 
   await page.locator('#scenarioSel').selectOption('2070');
   await expect(page.locator('#scenarioSel')).toHaveValue('2070');
@@ -39,7 +45,7 @@ test('scenario selector switches supported start scenarios and keeps map workflo
   await expect(page.locator('#search')).toHaveValue(/Saudi Arabia/);
   await expect(page.locator('#claimPill')).toContainText('Saudi Arabia: territory');
   await expect(page.locator('#nationInfo')).toContainText('Saudi Arabia');
-  await expect.poll(async () => page.locator('#claimOverlays .claim-overlay').count()).toBeGreaterThan(0);
+  await expect.poll(async () => groupedClaimRegionCount(page)).toBeGreaterThan(0);
 
   await page.locator('#scenarioSel').selectOption('2026');
   await expect(page.locator('#scenarioSel')).toHaveValue('2026');

@@ -455,13 +455,96 @@ test('claim model builds cumulative claims, overlay models, and incoming entries
     Gamma: 'Inherited from Bridge',
     Delta: 'Direct',
   });
+  expect(final.claims.Beta).toMatchObject({
+    hostileClaim: false,
+    effectiveHostile: false,
+    propagatedHostile: false,
+  });
+  expect(final.claims.Gamma).toMatchObject({
+    hostileClaim: true,
+    effectiveHostile: true,
+    propagatedHostile: false,
+  });
+  expect(final.claims.Delta).toMatchObject({
+    hostileClaim: false,
+    gatedClaim: true,
+    effectiveHostile: true,
+    propagatedHostile: true,
+    hostileAncestor: 'Gamma',
+    hostileVia: 'Project_Bridge',
+    hostileViaLabel: 'Inherited from Bridge',
+  });
 
   fixture.setClaimKind('hostile');
   expect(model.getClaimKindFilteredProjectEntries('AAA').map(entry => entry.project)).toEqual(['Project_Bridge']);
   fixture.setClaimKind('all');
 
+  const allVisibleEntries = model.getVisibleProjectEntries('AAA');
+  const allVisibleFinal = allVisibleEntries.find(entry => entry.project === 'Project_Final');
+  expect(allVisibleFinal.regions).toEqual(['Delta']);
+  expect(allVisibleFinal.claims.Delta).toMatchObject({
+    hostileClaim: false,
+    effectiveHostile: true,
+    propagatedHostile: true,
+    hostileAncestor: 'Gamma',
+    hostileVia: 'Project_Bridge',
+  });
+
+  fixture.setClaimKind('hostile');
+  const hostileVisibleEntries = model.getVisibleProjectEntries('AAA');
+  expect(hostileVisibleEntries.map(entry => entry.project)).toEqual(['Project_Bridge', 'Project_Final']);
+  expect(hostileVisibleEntries.find(entry => entry.project === 'Project_Final').regions).toEqual(['Delta']);
+  fixture.setClaimKind('all');
+
+  fixture.setClaimMode('project');
+  fixture.setProjectFilter('Project_Final');
+  fixture.setClaimKind('hostile');
+  const hostileFinalOverlay = model.buildNationOverlayModel(
+    {claimMap: {claimsByNation: fixture.claimsByNation}},
+    {nationRegions: new Map(), regionByName: {}},
+    'AAA'
+  );
+  expect(hostileFinalOverlay.entries).toHaveLength(1);
+  expect(hostileFinalOverlay.entries[0].project).toBe('Project_Final');
+  expect(hostileFinalOverlay.entries[0].regions).toEqual(['Gamma', 'Delta']);
+  expect(hostileFinalOverlay.entries[0].claims.Delta).toMatchObject({
+    effectiveHostile: true,
+    propagatedHostile: true,
+    hostileAncestor: 'Gamma',
+  });
+
+  fixture.setClaimKind('peaceful');
+  const peacefulFinalOverlay = model.buildNationOverlayModel(
+    {claimMap: {claimsByNation: fixture.claimsByNation}},
+    {nationRegions: new Map(), regionByName: {}},
+    'AAA'
+  );
+  expect(peacefulFinalOverlay.entries).toHaveLength(1);
+  expect(peacefulFinalOverlay.entries[0].project).toBe('Project_Final');
+  expect(peacefulFinalOverlay.entries[0].regions).toEqual(['Beta']);
+
+  fixture.setClaimMode('all');
+  fixture.setProjectFilter('');
+  fixture.setClaimKind('all');
+
   const incomingIndex = model.buildIncomingClaimIndex();
+  const finalIncomingIndexItem = incomingIndex.get('Delta')?.find(entry => entry.claimant === 'AAA' && entry.project === 'Project_Final');
+  expect(finalIncomingIndexItem.claim).toMatchObject({
+    hostileClaim: false,
+    effectiveHostile: true,
+    propagatedHostile: true,
+    hostileAncestor: 'Gamma',
+  });
   fixture.setIncomingClaimsByRegion(incomingIndex);
+  fixture.setSelectedRegionIds(['Delta']);
+  const deltaIncoming = model.incomingClaimsForTarget('DDD', fixture.claimsByNation.DDD, new Set(['Delta']));
+  const finalDeltaIncoming = deltaIncoming.find(entry => entry.claimant === 'AAA' && entry.project === 'Project_Final');
+  expect(finalDeltaIncoming.hostile).toBe(1);
+  expect(finalDeltaIncoming.targetClaims.Delta).toMatchObject({
+    effectiveHostile: true,
+    propagatedHostile: true,
+  });
+
   fixture.setSelectedRegionIds(['Gamma']);
   const incoming = model.incomingClaimsForTarget('CCC', fixture.claimsByNation.CCC, new Set(['Gamma']));
   expect(incoming.map(entry => entry.claimant)).toEqual(['AAA', 'BBB']);
@@ -479,7 +562,8 @@ test('claim model builds cumulative claims, overlay models, and incoming entries
 });
 
 test('claim model filters reachable capitals and assembles manual envelope data', () => {
-  const {model} = sampleClaimModelFixture();
+  const fixture = sampleClaimModelFixture();
+  const {model} = fixture;
   const visibleResult = new Set(['Alpha', 'Beta', 'Gamma', 'Delta']);
 
   expect(model.reachableCapitalCandidateNations('Beta', 'AAA', new Set(['Alpha']))).toEqual(['BBB']);
@@ -496,6 +580,24 @@ test('claim model filters reachable capitals and assembles manual envelope data'
   expect(envelope.regionItems.map(item => item.region)).toEqual(['Alpha', 'Beta', 'Delta', 'Gamma']);
   expect(envelope.regionItems.find(item => item.region === 'Gamma').overlapSources.map(source => source.claimant)).toEqual(['AAA', 'BBB']);
   expect(envelope.sourceKey).toContain('1:BBB:AAA:Beta:0');
+
+  const hostileSpecs = [
+    {claimant: 'AAA', depth: 0, parentClaimant: '', viaCapitalRegion: '', pinIndex: -1},
+    {claimant: 'BBB', depth: 1, parentClaimant: 'AAA', viaCapitalRegion: 'Gamma', pinIndex: 0},
+  ].sort(model.compareManualEnvelopeSourceSpecs('AAA'));
+  fixture.setClaimKind('hostile');
+  const hostileEnvelope = model.buildManualEnvelopeModelData('AAA', hostileSpecs);
+  const bbbGamma = hostileEnvelope.regionItems
+    .find(item => item.region === 'Gamma')
+    .contributions.find(contribution => contribution.claimant === 'BBB' && contribution.kind === 'claim');
+  expect(bbbGamma.claim).toMatchObject({
+    hostileClaim: false,
+    effectiveHostile: true,
+    propagatedHostile: true,
+    hostileAncestor: 'Gamma',
+    hostileVia: 'Project_Bridge',
+  });
+  fixture.setClaimKind('all');
 });
 
 test('i18n runtime formats translated strings and switches language explicitly', () => {
