@@ -229,13 +229,18 @@ async function waitForServer(baseUrl, timeoutMs = 10_000) {
 }
 
 function startServer(port) {
-  const child = spawn('python', ['-m', 'http.server', String(port), '--directory', 'docs'], {
-    stdio: ['ignore', 'pipe', 'pipe'],
-    shell: process.platform === 'win32',
+  return new Promise((resolveServer, rejectServer) => {
+    const child = spawn('python', ['-m', 'http.server', String(port), '--directory', 'docs'], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      shell: process.platform === 'win32',
+    });
+    child.once('error', error => {
+      rejectServer(new Error(`Failed to start local docs server with python: ${error.message}`));
+    });
+    child.once('spawn', () => resolveServer(child));
+    child.stdout.on('data', chunk => process.stdout.write(`[server] ${chunk}`));
+    child.stderr.on('data', chunk => process.stderr.write(`[server] ${chunk}`));
   });
-  child.stdout.on('data', chunk => process.stdout.write(`[server] ${chunk}`));
-  child.stderr.on('data', chunk => process.stderr.write(`[server] ${chunk}`));
-  return child;
 }
 
 function scenarioUrl(baseUrl, query) {
@@ -354,7 +359,9 @@ async function clickSelectedRegionOnMap(page, label) {
         return { ...item, score, area, group };
       })
       .filter(item => item.score > 0 || item.group === 'selectionOutlines' || item.group === 'hoverOutlines');
-    const selected = scored.sort((a, b) => b.score - a.score || b.area - a.area)[0];
+    const selected = scored
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score || b.area - a.area)[0];
     if (!selected) {
       return {
         ok: false,
@@ -796,13 +803,14 @@ async function main() {
 
   const baseUrl = args.baseUrl || `http://127.0.0.1:${args.port}`;
   let server = null;
-  if (!args.baseUrl && !args.noServer) {
-    server = startServer(args.port);
-  }
+  let browser = null;
 
   try {
+    if (!args.baseUrl && !args.noServer) {
+      server = await startServer(args.port);
+    }
     await waitForServer(baseUrl);
-    const browser = await chromium.launch({
+    browser = await chromium.launch({
       ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
         ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH }
         : {}),
@@ -874,6 +882,7 @@ async function main() {
     }
 
     await browser.close();
+    browser = null;
     const outDir = resolve(args.outDir);
     await mkdir(outDir, { recursive: true });
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -894,6 +903,7 @@ async function main() {
       console.log(`Wrote ${jsonPath}`);
     }
   } finally {
+    if (browser) await browser.close().catch(() => {});
     if (server) server.kill();
   }
 }

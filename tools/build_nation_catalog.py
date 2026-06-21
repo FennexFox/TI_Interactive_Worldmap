@@ -76,7 +76,14 @@ def load_nation_localizations(
 ) -> dict[str, dict[str, str]]:
     layers = load_nation_localization_layers(templates_dir, languages, scenario_year)
     return {
-        tag: dict(sorted(((values.get("scenario") or {}).get("displayName") or (values.get("base") or {}).get("displayName") or {}).items()))
+        tag: dict(
+            sorted(
+                {
+                    **((values.get("base") or {}).get("displayName") or {}),
+                    **((values.get("scenario") or {}).get("displayName") or {}),
+                }.items()
+            )
+        )
         for tag, values in sorted(layers.items())
     }
 
@@ -127,7 +134,14 @@ def preferred_localized_family(
     layers: dict[str, dict[str, dict[str, str]]],
     family: str,
 ) -> dict[str, str]:
-    return dict(sorted((localized_family(layers, "scenario", family) or localized_family(layers, "base", family)).items()))
+    return dict(
+        sorted(
+            {
+                **localized_family(layers, "base", family),
+                **localized_family(layers, "scenario", family),
+            }.items()
+        )
+    )
 
 
 def load_nation_template_layers(templates_dir: Path, scenario_year: str) -> dict[str, dict[str, dict[str, Any]]]:

@@ -187,7 +187,6 @@ The deploy helper only stages generated paths:
 - `data/generated/region_map.generated.json`
 - `data/generated/claim_map.generated.json`
 - `data/generated/scenario_bundle.generated.json`
-- `data/generated/scenarios/**`
 - `docs/data/generated/nations.catalog.json`
 - `docs/data/generated/research.catalog.json`
 - `docs/data/region_map.generated.json`

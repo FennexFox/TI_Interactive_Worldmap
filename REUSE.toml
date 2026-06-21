@@ -8,7 +8,7 @@ SPDX-FileCopyrightText = "2026 TI Interactive Worldmap contributors"
 SPDX-License-Identifier = "MIT"
 
 [[annotations]]
-path = ["data/generated/**", "data/manual/**.json", "docs/assets/data.generated.js", "docs/data/**"]
+path = ["data/generated/**", "data/manual/**/*.json", "docs/assets/data.generated.js", "docs/data/**"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "Terra Invicta data and assets are copyright their respective rightsholders"
 SPDX-License-Identifier = "LicenseRef-Terra-Invicta-Data"

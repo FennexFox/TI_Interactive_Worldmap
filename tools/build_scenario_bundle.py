@@ -167,6 +167,11 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     scenarios = tuple(args.scenario) if args.scenario else SUPPORTED_SCENARIOS
+    if args.default_scenario not in scenarios:
+        selected = ", ".join(scenarios)
+        raise SystemExit(
+            f"--default-scenario {args.default_scenario!r} must be included in --scenario selections ({selected})."
+        )
     bundle = build_scenario_bundle(
         load_scenario_outputs(Path(args.base_dir), scenarios),
         default_scenario=args.default_scenario,
