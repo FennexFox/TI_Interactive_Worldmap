@@ -585,8 +585,27 @@ test('claim model filters reachable capitals and assembles manual envelope data'
     {claimant: 'AAA', depth: 0, parentClaimant: '', viaCapitalRegion: '', pinIndex: -1},
     {claimant: 'BBB', depth: 1, parentClaimant: 'AAA', viaCapitalRegion: 'Gamma', pinIndex: 0},
   ].sort(model.compareManualEnvelopeSourceSpecs('AAA'));
+  const overlapEnvelope = model.buildManualEnvelopeModelData('AAA', hostileSpecs);
+  const betaOverlap = overlapEnvelope.regionItems.find(item => item.region === 'Beta');
+  expect(betaOverlap.primary).toMatchObject({
+    claimant: 'AAA',
+    kind: 'claim',
+    claim: {
+      hostileClaim: false,
+      effectiveHostile: false,
+      propagatedHostile: false,
+    },
+  });
+  expect(betaOverlap.contributions.find(contribution => contribution.claimant === 'BBB' && contribution.kind === 'base').claim).toMatchObject({
+    effectiveHostile: true,
+    propagatedHostile: true,
+    hostileAncestor: 'Gamma',
+    hostileVia: 'Project_Bridge',
+  });
+
   fixture.setClaimKind('hostile');
   const hostileEnvelope = model.buildManualEnvelopeModelData('AAA', hostileSpecs);
+  expect(hostileEnvelope.regionItems.map(item => item.region)).not.toContain('Beta');
   const bbbGamma = hostileEnvelope.regionItems
     .find(item => item.region === 'Gamma')
     .contributions.find(contribution => contribution.claimant === 'BBB' && contribution.kind === 'claim');
