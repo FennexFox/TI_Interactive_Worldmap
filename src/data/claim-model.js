@@ -207,26 +207,37 @@ export function createClaimModel({
     const claims = {};
     const regionSources = {};
     const regionSourceLabels = {};
-    const addRegion = (regionName, claim, source, sourceLabel, {overwrite = false, hostileAncestor = null} = {}) => {
+    const regionSourceProjects = {};
+    const addRegion = (regionName, claim, source, sourceLabel, {overwrite = false, hostileAncestor = null, sourceProject = ''} = {}) => {
       if (!regionName || (!overwrite && claims[regionName])) return;
       if (!claims[regionName]) regions.push(regionName);
       claims[regionName] = claimWithEffectiveHostility(claim, hostileAncestor);
       regionSources[regionName] = source;
       regionSourceLabels[regionName] = sourceLabel;
+      regionSourceProjects[regionName] = sourceProject;
     };
-    let hostileAncestor = null;
     for (const inherited of inheritedEntries) {
       const inheritedEntry = cumulativeByEntry.get(inherited) || inherited;
       const source = inheritedEntry.project ? 'inherited' : 'basic';
       const sourceLabel = inheritedEntry.project ? sourceLabelFns.inheritedFrom(projectLabel(inheritedEntry.project)) : sourceLabelFns.basicClaim();
       for (const regionName of inheritedEntry.regions || []) {
         const inheritedClaim = inheritedEntry.claims?.[regionName];
-        addRegion(regionName, inheritedClaim, source, sourceLabel);
-        hostileAncestor ||= hostileAncestorFromClaim(regionName, inheritedClaim, source, sourceLabel, inheritedEntry.project || '');
+        addRegion(regionName, inheritedClaim, source, sourceLabel, {sourceProject: inheritedEntry.project || ''});
       }
     }
     for (const regionName of entry.regions || []) {
-      addRegion(regionName, entry.claims?.[regionName], 'direct', sourceLabelFns.direct(), {overwrite: true, hostileAncestor});
+      const inheritedClaim = claims[regionName];
+      const inheritedHostileAncestor = hostileAncestorFromClaim(
+        regionName,
+        inheritedClaim,
+        regionSources[regionName],
+        regionSourceLabels[regionName],
+        regionSourceProjects[regionName] || ''
+      );
+      addRegion(regionName, entry.claims?.[regionName], 'direct', sourceLabelFns.direct(), {
+        overwrite: true,
+        hostileAncestor: inheritedHostileAncestor,
+      });
     }
     const directSet = new Set(entry.regions || []);
     const inheritedSet = new Set(regions.filter(regionName => !directSet.has(regionName)));
