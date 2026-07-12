@@ -1398,12 +1398,18 @@ function claimCardTitle(entry, kind) {
 }
 function renderClaimCardTitle(entry, kind) {
   const parts = claimCardTitleParts(entry, kind);
+  const flavorText = projectSummary(entry?.project);
   const fields = [
     ['nation', t('claimCard.fieldNation'), parts.nation],
     ['research', t('claimCard.fieldResearch'), parts.research],
     ['project', t('claimCard.fieldProject'), parts.project],
   ];
-  return `<div class="claimCardTitle">${fields.map(([key, label, value]) => `<span class="claimCardTitleField claimCardTitleField--${key}"><span class="claimCardTitleLabel">${escapeHtml(label)}</span><b class="claimCardTitleValue">${escapeHtml(value)}</b></span>`).join('')}</div>`;
+  return `<div class="claimCardTitle">${fields.map(([key, label, value]) => {
+    const quoteHtml = key === 'project' && flavorText
+      ? `<q class="claimCardQuote">${escapeHtml(flavorText)}</q>`
+      : '';
+    return `<span class="claimCardTitleField claimCardTitleField--${key}"><span class="claimCardTitleLabel">${escapeHtml(label)}</span><b class="claimCardTitleValue">${escapeHtml(value)}</b>${quoteHtml}</span>`;
+  }).join('')}</div>`;
 }
 function buildNationChoices() {
   const tags = [...new Set([...REGIONS.map(r => r.nationTag), ...Object.keys(CLAIMS_BY_NATION), ...Object.keys(NATION_META)])].filter(Boolean).sort();
@@ -2154,7 +2160,6 @@ function renderClaimSection(title, items, emptyText, kind) {
   if (!items.length) return `<details class="infoSubsection claimSection" data-info-section="${sectionKey}"${infoSectionOpenAttribute(sectionKey)}><summary><span>${escapeHtml(title)}</span></summary><div class="infoSubsectionBody small">${escapeHtml(emptyText)}</div></details>`;
   const activeOutgoing = claimModeSel.value === 'project' ? getProjectFilter() : '';
   const rows = items.map((item, i) => {
-    const project = item.project || '';
     const regions = item.regions || [];
     const targetRegions = kind === 'incoming' ? (item.targetRegions || regions) : regions;
     const detailRegions = kind === 'incoming' ? (item.resultRegions || regions) : regions;
@@ -2164,7 +2169,6 @@ function renderClaimSection(title, items, emptyText, kind) {
     const capital = item.capital ?? targetRegions.filter(rn => item.targetClaims?.[rn]?.capitalClaim || item.claims?.[rn]?.capitalClaim).length;
     const claimTitle = claimCardTitle(item, kind);
     const claimTitleHtml = renderClaimCardTitle(item, kind);
-    const flavorText = projectSummary(project);
     const key = kind === 'incoming' ? incomingClaimKey(item) : outgoingClaimKey(item);
     const active = kind === 'incoming' ? getActiveIncomingClaimKey() === key : activeOutgoing === key;
     const targetNames = targetRegions.map(prettyRegion);
@@ -2177,8 +2181,7 @@ function renderClaimSection(title, items, emptyText, kind) {
     const cumulativeText = kind === 'outgoing' && inherited ? t('claimDirection.cumulative', {direct, inherited}) : '';
     const statsText = `${hostile ? t('claimStat.hostile', {count: hostile}) : ''}${capital ? t('claimStat.capital', {count: capital}) : ''}${gated ? t('claimStat.gated', {count: gated}) : ''}`;
     const regionDetails = active ? renderRegionList(detailRegions, detailClaims, kind === 'incoming' ? 'result' : 'claimed', item.regionSourceLabels || {}) : '';
-    const flavorHtml = flavorText ? `<span class="claimCardFlavor">${escapeHtml(flavorText)}</span>` : '';
-    return `<div class="claimListGroup${active ? ' active' : ''}"><button type="button" class="claimListItem${active ? ' active' : ''}" data-claim-kind="${kind}" data-claim-index="${i}" data-claim-key="${escapeHtml(key)}" title="${escapeHtml(claimTitle + ' · ' + detailRegions.map(prettyRegion).join(', '))}">${claimTitleHtml}${flavorHtml}<span class="claimListMeta">${escapeHtml(direction + cumulativeText + statsText)}</span></button>${regionDetails}</div>`;
+    return `<div class="claimListGroup${active ? ' active' : ''}"><button type="button" class="claimListItem${active ? ' active' : ''}" data-claim-kind="${kind}" data-claim-index="${i}" data-claim-key="${escapeHtml(key)}" title="${escapeHtml(claimTitle + ' · ' + detailRegions.map(prettyRegion).join(', '))}">${claimTitleHtml}<span class="claimListMeta">${escapeHtml(direction + cumulativeText + statsText)}</span></button>${regionDetails}</div>`;
   }).join('');
   return `<details class="infoSubsection claimSection" data-info-section="${sectionKey}"${infoSectionOpenAttribute(sectionKey)}><summary><span>${escapeHtml(title)}</span></summary><div class="infoSubsectionBody claimList">${rows}</div></details>`;
 }

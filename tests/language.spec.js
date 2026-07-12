@@ -1291,12 +1291,13 @@ test('claim cards show localized project flavor text from catalog metadata', asy
 
   await chooseNation(page, 'Brazil', 'BRA');
   const stewardCard = page.locator('.claimListItem[data-claim-kind="outgoing"][data-claim-key="Project_StewardoftheSouth"]');
-  await expect(stewardCard.locator('.claimCardFlavor')).toHaveText(
+  const projectQuote = stewardCard.locator('.claimCardTitleField--project .claimCardQuote');
+  await expect(projectQuote).toHaveText(
     'An expansionist Brazil anoints itself as leader of an unwilling continent.'
   );
 
   await page.selectOption('#languageSel', 'ko');
-  await expect(stewardCard.locator('.claimCardFlavor')).toHaveText(
+  await expect(projectQuote).toHaveText(
     '팽창주의 국가인 브라질이 의지 없는 대륙의 지도자를 자처합니다.'
   );
 });
