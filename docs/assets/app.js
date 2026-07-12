@@ -79,7 +79,6 @@ import {
   bindNationSearchControl,
   renderNationDropdown as renderNationDropdownUi,
   renderScenarioOptions as renderScenarioOptionsUi,
-  renderScenarioSummary,
   renderSearchResults,
   updateReachableCapitalsButton,
 } from './ui/controls.js';
@@ -249,9 +248,9 @@ const search = document.getElementById('search');
 const nationDropdown = document.getElementById('nationDropdown');
 const nationSearchCombo = document.getElementById('nationSearchCombo');
 const scenarioSel = document.getElementById('scenarioSel');
-const scenarioSummary = document.getElementById('scenarioSummary');
 const pinnedRegionsPanel = document.getElementById('pinnedRegionsPanel');
 const reachableCandidatesPanel = document.getElementById('reachableCandidatesPanel');
+const expansionNodesCard = document.querySelector('[data-aside-card="expansionNodes"]');
 const baseModeSel = document.getElementById('baseMode');
 const claimModeSel = document.getElementById('claimMode');
 const projectSel = document.getElementById('projectSel');
@@ -462,10 +461,8 @@ const {
   englishCount,
   regionCountText,
   uniqueRegionCountText,
-  claimTierCountText,
   claimTierCountShortText,
   claimGroupCountText,
-  claimModeLabel,
 } = i18n;
 const asideCards = createAsideCardController({document, t, updateMapViewControlsLabels});
 const {
@@ -475,18 +472,6 @@ const {
   initAsideCards,
 } = asideCards;
 
-function activeScenarioSummary() {
-  const entry = appData.scenarios[activeScenarioId()] || activeData || {};
-  const claimMap = entry.claimMap || activeData?.claimMap || {};
-  const researchCatalog = entry.catalogs?.research || activeData?.catalogs?.research || {};
-  const summary = entry.summary || activeData?.summary || {};
-  return {
-    regions: summary.regionCount ?? entry.regionMap?.regions?.length ?? activeData?.regionMap?.regions?.length ?? 0,
-    nations: summary.nationCount ?? Object.keys(entry.catalogs?.nations?.nations || activeData?.catalogs?.nations?.nations || {}).length,
-    claims: summary.claimRowsNormalized ?? claimMap.claimStats?.claimRowsNormalized ?? claimMap.summary?.claimRowsNormalized ?? 0,
-    projects: summary.claimGrantingProjectCount ?? summary.projectCount ?? researchCatalog.counts?.claimGrantingProjects ?? claimMap.claimStats?.projectCount ?? 0,
-  };
-}
 function renderScenarioOptions() {
   renderScenarioOptionsUi({
     select: scenarioSel,
@@ -496,13 +481,6 @@ function renderScenarioOptions() {
 }
 function syncScenarioControls() {
   renderScenarioOptions();
-  renderScenarioSummary({
-    root: scenarioSummary,
-    t,
-    scenarioId: activeScenarioId(),
-    summary: activeScenarioSummary(),
-    formatNumber,
-  });
 }
 function setHoverPill(region=null) {
   const el = document.getElementById('hoverPill');
@@ -3269,6 +3247,9 @@ function renderReachableCapitalCandidatesPanel(anchorModel = currentOverlayModel
     formatNumber,
     onSelect: (regionName, nationId) => commitReachableCapitalSelection(regionByName[regionName], nationId),
   });
+  if (expansionNodesCard) {
+    expansionNodesCard.hidden = !resolvedCandidates.length && getPinnedRegionIds().size === 0;
+  }
 }
 function reachableCapitalCandidateRenderKey(candidates, copyContexts = worldCopyContexts) {
   if (!getShowReachableCapitalCandidates() || !candidates.length) return REACHABLE_CAPITAL_CANDIDATES_EMPTY_RENDER_KEY;
@@ -3734,23 +3715,13 @@ function renderClaimSummaryPill(model) {
 function renderNationInfoPanel(panelRoot, model) {
   const activeNationName = nationDisplayName(model.nation);
   const activeNationTierText = claimTierCountShortText(nationClaimTierCount(model.nation));
-  const summaryLines = [
-    t('nationInfo.summary.baseTerritory', {owned: regionCountText(model.ownedCount)}),
-    t('nationInfo.summary.visibleClaims', {claims: regionCountText(model.claimCount)}),
-  ];
-  if (model.data.breakawayFrom) summaryLines.push(t('nationInfo.summary.breakaway', {nation: model.data.breakawayFrom}));
-  const summaryHtml = summaryLines.map(line => `<div class="small nationSummaryLine">${escapeHtml(line)}</div>`).join('');
   const kvRows = [
-    [t('nationInfo.kv.status'), statusLabel(model.data.status)],
     [t('nationInfo.kv.capitalRegion'), capitalRegionsText(model.data)],
-    [t('nationInfo.kv.baseTerritory'), regionCountText(model.ownedCount)],
     [t('nationInfo.kv.directClaims'), uniqueRegionCountText(model.data.totalClaimRegions || 0)],
     [t('nationInfo.kv.targetedRegions'), `${regionCountText(incomingTargetRegions(model.data, model.baseSet).size)} · ${claimGroupCountText(model.incomingEntries.length)}`],
     [t('nationInfo.kv.conditional'), regionCountText(model.gatedCount)],
-    [t('nationInfo.kv.claimProjects'), claimTierCountText(nationClaimTierCount(model.nation))],
-    [t('nationInfo.kv.displayMode'), claimModeLabel(claimModeSel.value)],
   ].map(([label, value]) => `<div>${escapeHtml(label)}</div><div>${escapeHtml(value)}</div>`).join('');
-  const basicInfo = `<details class="infoSubsection nationBasicSection" data-info-section="basic"${infoSectionOpenAttribute('basic')}><summary><span>${escapeHtml(t('nationInfo.basic.title'))}</span></summary><div class="infoSubsectionBody"><div class="nationTitle"><b>${escapeHtml(activeNationName)}</b> <span class="status tierBadge">${escapeHtml(activeNationTierText)}</span> ${statusBadge(model.data.status)}</div><div class="nationSummary">${summaryHtml}</div><div class="kv">${kvRows}</div><div class="hint">${escapeHtml(t('nationInfo.hint'))}</div></div></details>`;
+  const basicInfo = `<details class="infoSubsection nationBasicSection" data-info-section="basic"${infoSectionOpenAttribute('basic')}><summary><span>${escapeHtml(t('nationInfo.basic.title'))}</span></summary><div class="infoSubsectionBody"><div class="nationTitle"><b>${escapeHtml(activeNationName)}</b> <span class="status tierBadge">${escapeHtml(activeNationTierText)}</span> ${statusBadge(model.data.status)}</div><div class="kv">${kvRows}</div></div></details>`;
   panelRoot.innerHTML = `${basicInfo}<div class="claimSections">${renderClaimSection(t('claimSection.outgoing.title'), model.outgoingEntries, t('claimSection.outgoing.empty'), 'outgoing')}${renderClaimSection(t('claimSection.incoming.title'), model.incomingEntries, t('claimSection.incoming.empty'), 'incoming')}</div>`;
 }
 function bindNationOverlayPanelEvents(panelRoot, model) {

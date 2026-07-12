@@ -124,7 +124,8 @@ test('language selector switches static and dynamic UI copy', async ({ page }) =
   await expect(page.locator('#search')).toHaveAttribute('placeholder', 'Enter a nation tag, region, or project: CHN, Korea, Greater India...');
   await expect(page.locator('#claimMode option[value="project"]')).toHaveText('Selected project only');
   await expect(page.locator('#claimPill')).toHaveText('Claims: -');
-  await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
+  await expect(page.locator('[data-aside-card="expansionNodes"]')).toBeHidden();
+  await expect(page.locator('#nationInfo')).toHaveText('Click a region on the map.');
 
   await page.locator('#search').click();
   await expect(page.locator('#nationDropdown')).toBeVisible();
@@ -135,18 +136,19 @@ test('language selector switches static and dynamic UI copy', async ({ page }) =
   await expect(page.locator('h1')).toHaveText('Terra Invicta 영유권 / 통합 지도');
   await expect(page.locator('#search')).toHaveAttribute('placeholder', '국가 태그, 지역명, 프로젝트명 입력: CHN, Korea, Greater India...');
   await expect(page.locator('#claimPill')).toHaveText('영유권: -');
-  await expect(page.locator('#pinnedRegionsPanel')).toContainText('고정된 확장 노드가 없습니다.');
+  await expect(page.locator('[data-aside-card="expansionNodes"]')).toBeHidden();
+  await expect(page.locator('#nationInfo')).toHaveText('지도에서 지역을 클릭하세요.');
 
   await page.selectOption('#languageSel', 'en');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.locator('#claimPill')).toHaveText('Claims: -');
-  await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
+  await expect(page.locator('[data-aside-card="expansionNodes"]')).toBeHidden();
+  await expect(page.locator('#nationInfo')).toHaveText('Click a region on the map.');
 });
 
 test('sidebar falls back when persisted settings have unexpected JSON types', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('ti-map-language', 'en');
-    localStorage.setItem('ti-map-aside-card-order', JSON.stringify('selected'));
     localStorage.setItem('ti-map-aside-card-collapsed', JSON.stringify(42));
     localStorage.setItem('ti-map-nation-info-sections', JSON.stringify(null));
   });
@@ -160,9 +162,9 @@ test('sidebar falls back when persisted settings have unexpected JSON types', as
   await expect(cards.nth(1)).toHaveAttribute('data-aside-card', 'expansionNodes');
   await expect(cards.nth(2)).toHaveAttribute('data-aside-card', 'selected');
   await expect(cards.nth(0).locator('.sideCardBody')).toBeVisible();
-  await expect(cards.nth(1).locator('.sideCardBody')).toBeVisible();
-  await expect(cards.nth(1).locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
+  await expect(cards.nth(1)).toBeHidden();
   await expect(cards.nth(2).locator('.sideCardBody')).toBeVisible();
+  await expect(cards.nth(2).locator('#nationInfo')).toContainText('Click a region on the map.');
 });
 
 test('nation search uses catalog names and keeps region names separate', async ({ page }) => {
@@ -755,8 +757,7 @@ test('selected nation claim controls update overlays without losing state', asyn
   await expect(page.locator('#claimMode')).toHaveValue('off');
   await expect(page.locator('#claimPill')).toHaveText('Brazil: territory 9, claims 0, research tiers 0');
   await expect(page.locator('#claimOverlays .claim-overlay')).toHaveCount(0);
-  await expect(page.locator('#nationInfo')).toContainText('Display mode');
-  await expect(page.locator('#nationInfo')).toContainText('Off');
+  await expect(page.locator('#nationInfo')).not.toContainText('Display mode');
 });
 
 test('pinned expansion nodes update compact rows and map markers through clicks', async ({ page }) => {
@@ -798,7 +799,7 @@ test('pinned expansion nodes update compact rows and map markers through clicks'
   await expect(page.locator('#regions .region[data-region="FrenchGuiana"]')).not.toHaveClass(/pinned-node/);
 
   await page.locator('[data-pinned-clear]').click();
-  await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
+  await expect(page.locator('#pinnedRegionsPanel [data-pinned-region]')).toHaveCount(0);
   await expect(page.locator('#pinnedRegionMarkers .pinned-node-marker-group')).toHaveCount(0);
   await expect(page.locator('#regions .region[data-region="Amazonia"]')).not.toHaveClass(/pinned-node/);
 });
@@ -838,7 +839,7 @@ test('empty map clicks clear pinned regions and selection together', async ({ pa
   await expect(page.locator('#selectionOutlines > *')).not.toHaveCount(0);
 
   await clearMap(page);
-  await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
+  await expect(page.locator('[data-aside-card="expansionNodes"]')).toBeHidden();
   await expect(page.locator('#pinnedRegionMarkers .pinned-node-marker-group')).toHaveCount(0);
   await expect(page.locator('#search')).toHaveValue('');
   await expect(page.locator('#claimPill')).toHaveText('Claims: -');
@@ -1269,7 +1270,7 @@ test('claim cards synchronize map overlays, panel state, and empty map clear', a
 
   await expect(page.locator('#pinnedRegionsPanel [data-pinned-region]')).toHaveCount(1);
   await clearMap(page);
-  await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
+  await expect(page.locator('[data-aside-card="expansionNodes"]')).toBeHidden();
   await expect(page.locator('#search')).toHaveValue('');
   await expect(page.locator('#claimMode')).toHaveValue('all');
   await expect(page.locator('#claimPill')).toHaveText('Claims: -');

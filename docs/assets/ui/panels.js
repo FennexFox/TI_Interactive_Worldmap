@@ -31,7 +31,6 @@ function pinnedRegionRow({
           <b>${escapeHtml(label)}</b>
           <span>${escapeHtml(meta)}</span>
         </span>
-        <span class="pinnedRegionFocusText">${escapeHtml(t('expansionNodes.focus'))}</span>
       </button>
       <button type="button" class="pinnedRegionUnpin" data-pinned-unpin="${escapeHtml(regionName)}" title="${escapeHtml(t('expansionNodes.unpinRegion', {region: label}))}" aria-label="${escapeHtml(t('expansionNodes.unpinRegion', {region: label}))}">\u00d7</button>
     </div>
@@ -54,7 +53,7 @@ export function renderPinnedRegionsPanel({
   if (!root) return;
   const pinned = [...(pinnedRegionIds || [])].filter(regionName => regionByName[regionName]);
   if (!pinned.length) {
-    root.innerHTML = `<div class="pinnedRegionEmpty small">${escapeHtml(t('expansionNodes.empty'))}</div>`;
+    root.innerHTML = '';
     return;
   }
   root.innerHTML = `
@@ -107,7 +106,6 @@ function reachableCandidateRow({
           <b>${escapeHtml(label)}</b>
           <span>${escapeHtml(`${depth} · ${nations}`)}</span>
         </span>
-        <span class="reachableCandidateFocusText">${escapeHtml(t('reachableCandidates.focus'))}</span>
       </button>
     </div>
   `;
@@ -130,16 +128,18 @@ export function renderReachableCapitalCandidatesPanel({
     return;
   }
   const resolvedCandidates = candidates || [];
-  const body = resolvedCandidates.length
-    ? `<div class="reachableCandidateList">${resolvedCandidates.map(candidate => reachableCandidateRow({
+  if (!resolvedCandidates.length) {
+    root.innerHTML = '';
+    return;
+  }
+  const body = `<div class="reachableCandidateList">${resolvedCandidates.map(candidate => reachableCandidateRow({
       candidate,
       regionByName,
       localizedRegionName,
       candidateNationsText,
       t,
       formatNumber,
-    })).join('')}</div>`
-    : `<div class="reachableCandidateEmpty small">${escapeHtml(t('reachableCandidates.empty'))}</div>`;
+    })).join('')}</div>`;
   root.innerHTML = `
     <div class="reachableCandidateToolbar">
       <span class="reachableCandidateCount">${escapeHtml(t('reachableCandidates.count', {count: formatNumber(resolvedCandidates.length)}))}</span>
