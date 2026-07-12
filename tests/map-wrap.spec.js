@@ -202,7 +202,7 @@ test('baseline hit layer resolves one canonical region for hover and click', asy
   await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveText('Manaus');
 
   await page.locator('#hitRegions').dispatchEvent('click', { bubbles: true });
-  await expect(page.locator('[data-aside-card="expansionNodes"]')).toBeHidden();
+  await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
   await expect(page.locator('#search')).toHaveValue('');
   await expect(page.locator('#claimPill')).toHaveText('Claims: -');
   await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
@@ -781,7 +781,7 @@ test('world-wrap default panning preserves click selection but suppresses drag s
   await expect(page.locator('#selectionOutlines .selection-label[data-region="Amazonia"]')).toHaveText(['Manaus', 'Manaus', 'Manaus']);
 
   await page.locator('#hitRegions').dispatchEvent('click', {bubbles: true});
-  await expect(page.locator('[data-aside-card="expansionNodes"]')).toBeHidden();
+  await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
   await expect(page.locator('#search')).toHaveValue('');
   await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
 
@@ -963,7 +963,7 @@ test('world-wrap seam candidates keep hit, selection, and claim overlays project
     await copiedHit.dispatchEvent('click', { bubbles: true });
     await expectProjectedRegion(page, '#selectionOutlines .selection-label', regionName);
     await page.locator('#hitRegions').dispatchEvent('click', { bubbles: true });
-    await expect(page.locator('[data-aside-card="expansionNodes"]')).toBeHidden();
+    await expect(page.locator('#pinnedRegionsPanel')).toContainText('No pinned expansion nodes.');
     await expect(page.locator('#selectionOutlines > *')).toHaveCount(0);
   }
 

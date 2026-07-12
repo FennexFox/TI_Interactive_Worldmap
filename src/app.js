@@ -250,7 +250,6 @@ const nationSearchCombo = document.getElementById('nationSearchCombo');
 const scenarioSel = document.getElementById('scenarioSel');
 const pinnedRegionsPanel = document.getElementById('pinnedRegionsPanel');
 const reachableCandidatesPanel = document.getElementById('reachableCandidatesPanel');
-const expansionNodesCard = document.querySelector('[data-aside-card="expansionNodes"]');
 const baseModeSel = document.getElementById('baseMode');
 const claimModeSel = document.getElementById('claimMode');
 const projectSel = document.getElementById('projectSel');
@@ -3247,9 +3246,6 @@ function renderReachableCapitalCandidatesPanel(anchorModel = currentOverlayModel
     formatNumber,
     onSelect: (regionName, nationId) => commitReachableCapitalSelection(regionByName[regionName], nationId),
   });
-  if (expansionNodesCard) {
-    expansionNodesCard.hidden = !resolvedCandidates.length && getPinnedRegionIds().size === 0;
-  }
 }
 function reachableCapitalCandidateRenderKey(candidates, copyContexts = worldCopyContexts) {
   if (!getShowReachableCapitalCandidates() || !candidates.length) return REACHABLE_CAPITAL_CANDIDATES_EMPTY_RENDER_KEY;

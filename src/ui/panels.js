@@ -53,7 +53,7 @@ export function renderPinnedRegionsPanel({
   if (!root) return;
   const pinned = [...(pinnedRegionIds || [])].filter(regionName => regionByName[regionName]);
   if (!pinned.length) {
-    root.innerHTML = '';
+    root.innerHTML = `<div class="pinnedRegionEmpty small">${escapeHtml(t('expansionNodes.empty'))}</div>`;
     return;
   }
   root.innerHTML = `
@@ -128,18 +128,16 @@ export function renderReachableCapitalCandidatesPanel({
     return;
   }
   const resolvedCandidates = candidates || [];
-  if (!resolvedCandidates.length) {
-    root.innerHTML = '';
-    return;
-  }
-  const body = `<div class="reachableCandidateList">${resolvedCandidates.map(candidate => reachableCandidateRow({
+  const body = resolvedCandidates.length
+    ? `<div class="reachableCandidateList">${resolvedCandidates.map(candidate => reachableCandidateRow({
       candidate,
       regionByName,
       localizedRegionName,
       candidateNationsText,
       t,
       formatNumber,
-    })).join('')}</div>`;
+    })).join('')}</div>`
+    : `<div class="reachableCandidateEmpty small">${escapeHtml(t('reachableCandidates.empty'))}</div>`;
   root.innerHTML = `
     <div class="reachableCandidateToolbar">
       <span class="reachableCandidateCount">${escapeHtml(t('reachableCandidates.count', {count: formatNumber(resolvedCandidates.length)}))}</span>
