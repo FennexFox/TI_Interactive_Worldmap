@@ -24,7 +24,7 @@ from catalog_utils import (
 from scenario_rows import DEFAULT_SCENARIO, SUPPORTED_SCENARIOS, filter_bilateral_rows_for_scenario
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 DEFAULT_OUTPUT = Path("data/generated/research.catalog.json")
 RESEARCH_TEMPLATE_FILES = {
     "tech": "TITechTemplate.json",
@@ -75,7 +75,7 @@ def load_research_localizations(
             entries: dict[str, dict[str, str]] = {}
             for key, value in loc_values.items():
                 parts = key.split(".")
-                if len(parts) != 3 or parts[0] != prefix or parts[1] != "displayName":
+                if len(parts) != 3 or parts[0] != prefix or parts[1] not in {"displayName", "summary"}:
                     continue
                 _, field, data_name = parts
                 entries.setdefault(data_name, {})[field] = value
@@ -148,10 +148,11 @@ def localized_fields(
     localizations: dict[str, dict[str, dict[str, dict[str, str]]]],
     kind: str,
     data_name: str,
+    field: str = "displayName",
 ) -> dict[str, str]:
     values: dict[str, str] = {}
     for language, entries in localizations.get(kind, {}).items():
-        value = entries.get(data_name, {}).get("displayName")
+        value = entries.get(data_name, {}).get(field)
         if value:
             values[language] = value
     return dict(sorted(values.items()))
@@ -218,6 +219,7 @@ def normalize_research_node(
             "endGameTech": bool(template.get("endGameTech")),
         }
     else:
+        node["summary"] = localized_fields(localizations, kind, data_name, "summary")
         node["flags"] = {
             "oneTimeGlobally": bool(template.get("oneTimeGlobally")),
             "repeatable": bool(template.get("repeatable")),
