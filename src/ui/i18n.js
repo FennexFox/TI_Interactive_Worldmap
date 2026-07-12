@@ -8,12 +8,10 @@ const I18N = {
     'app.title': 'Terra Invicta 영유권 / 통합 지도',
     'section.explore': '탐색 및 선택',
     'scenario.label': '시작 시나리오',
-    'scenario.summary': '{scenario} · 지역 {regions}개 · 국가 {nations}개 · 영유권 행 {claims}개 · 프로젝트 {projects}개',
     'mapWrap.label': '월드 랩',
     'mapWrap.warning': '복잡한 오버레이가 보일 때 성능이 낮아질 수 있습니다.',
     'search.label': '국가/지역 검색 및 선택',
     'search.placeholder': '국가 태그, 지역명, 프로젝트명 입력: CHN, Korea, Greater India...',
-    'search.help': '입력창을 클릭하면 국가 목록이 열립니다. 입력하면 국가, 지역, 영유권 프로젝트 목록이 필터링되고, 항목을 클릭하면 선택됩니다. 빈 지도 공간을 클릭하면 고정된 확장 노드와 선택이 함께 해제됩니다.',
     'search.noResults': '검색 결과 없음',
     'search.regionTag': '지역',
     'claimMode.label': '영유권 표시',
@@ -29,7 +27,6 @@ const I18N = {
     'baseMode.label': '기본 지도 색상',
     'baseMode.nation': '국가별',
     'baseMode.plain': '단색',
-    'baseMode.points': '경계 복잡도',
     'button.toggleLabels': '지역 라벨 토글',
     'button.showReachableCapitals': '도달 가능한 수도 표시',
     'button.hideReachableCapitals': '도달 가능한 수도 숨기기',
@@ -37,7 +34,6 @@ const I18N = {
     'expansionNodes.empty': '고정된 확장 노드가 없습니다.',
     'expansionNodes.count': '고정 노드 {count}개',
     'expansionNodes.clear': '모두 해제',
-    'expansionNodes.focus': '초점',
     'expansionNodes.focusRegion': '{region}에 초점',
     'expansionNodes.pin': '고정',
     'expansionNodes.pinRegion': '{region} 고정',
@@ -56,13 +52,10 @@ const I18N = {
     'manualEnvelope.overlap': '{region}: {count}개 수동 확장 출처 중첩',
     'reachableCandidates.count': '후보 수도 {count}개',
     'reachableCandidates.empty': '도달 가능한 수도 후보가 없습니다.',
-    'reachableCandidates.focus': '초점',
     'reachableCandidates.focusRegion': '{region}에 초점',
     'reachableCandidates.marker': '도달 가능한 수도 {region}: {nations}',
     'reachableCandidates.depth': '깊이 {depth}',
     'section.selectedNation': '선택한 지역',
-    'sectionCard.moveUp': '카드 위로 이동',
-    'sectionCard.moveDown': '카드 아래로 이동',
     'sectionCard.collapse': '카드 접기',
     'sectionCard.expand': '카드 펼치기',
     'nationInfo.basic.title': '국가 기본정보',
@@ -80,7 +73,6 @@ const I18N = {
     'status.existing': '기존 국가',
     'count.regions': '{count}개 지역',
     'count.uniqueRegions': '고유 지역 {count}개',
-    'count.claimTiers': '연구 단계 {count}개',
     'count.claimTiersShort': '단계 {count}개',
     'count.claimGroups': '영유권 묶음 {count}개',
     'pill.hoverEmpty': '호버: -',
@@ -123,20 +115,11 @@ const I18N = {
     'claimStat.hostile': ' · 적대 {count}',
     'claimStat.capital': ' · 수도 {count}',
     'claimStat.gated': ' · 조건부 {count}',
-    'nationInfo.summary': '현재/시작 영토 {owned} · 표시 중인 영유권 {claims} · {projects}{breakaway}',
-    'nationInfo.summary.baseTerritory': '현재/시작 영토 {owned}',
-    'nationInfo.summary.visibleClaims': '표시 중인 영유권 {claims}',
-    'nationInfo.summary.breakaway': '분리 원국 {nation}',
     'nationInfo.breakaway': ' · 분리 원국 {nation}',
-    'nationInfo.kv.status': '상태',
     'nationInfo.kv.capitalRegion': '수도 지역',
-    'nationInfo.kv.baseTerritory': '기본 영토',
     'nationInfo.kv.directClaims': '직접 영유권',
     'nationInfo.kv.targetedRegions': '대상 지역',
     'nationInfo.kv.conditional': '조건부',
-    'nationInfo.kv.claimProjects': '연구 단계',
-    'nationInfo.kv.displayMode': '표시 모드',
-    'nationInfo.hint': '가장 밝은 시작색은 초기/현재 영토입니다. 빈 노란 별은 수도 지역, 채워진 노란 별은 현재 선택된 수도 지역입니다. 영유권 색상은 기본 영유권에서 연구 단계가 높아질수록 같은 색상 축을 따라 이동합니다. 푸른 테두리는 평화적 영유권, 붉은 테두리는 적대적 영유권, 점선은 수도 영유권, 보라색/잠금 스타일은 조건부 분리 영유권입니다.',
     'results.nation': '국가 선택 · 태그 {tag}',
     'error.loadFailed': 'Terra Invicta 지도 데이터를 불러오지 못했습니다.',
   },
@@ -145,12 +128,10 @@ const I18N = {
     'app.title': 'Terra Invicta Claim / Unification Map',
     'section.explore': 'Explore and Select',
     'scenario.label': 'Start scenario',
-    'scenario.summary': '{scenario} · {regions} regions · {nations} nations · {claims} claim rows · {projects} projects',
     'mapWrap.label': 'World wrap',
     'mapWrap.warning': 'It may reduce performance when complex overlays are visible.',
     'search.label': 'Search and select nation/region',
     'search.placeholder': 'Enter a nation tag, region, or project: CHN, Korea, Greater India...',
-    'search.help': 'Click the field to open the nation list. Typing filters nations, regions, and claim projects; click an item to select it. Click empty map space to clear the selection and pinned expansion nodes together.',
     'search.noResults': 'No results',
     'search.regionTag': 'REGION',
     'claimMode.label': 'Claim display',
@@ -166,7 +147,6 @@ const I18N = {
     'baseMode.label': 'Base map color',
     'baseMode.nation': 'By nation',
     'baseMode.plain': 'Plain',
-    'baseMode.points': 'Boundary complexity',
     'button.toggleLabels': 'Toggle region labels',
     'button.showReachableCapitals': 'Show reachable capitals',
     'button.hideReachableCapitals': 'Hide reachable capitals',
@@ -174,7 +154,6 @@ const I18N = {
     'expansionNodes.empty': 'No pinned expansion nodes.',
     'expansionNodes.count': '{count} pinned nodes',
     'expansionNodes.clear': 'Clear all',
-    'expansionNodes.focus': 'Focus',
     'expansionNodes.focusRegion': 'Focus {region}',
     'expansionNodes.pin': 'Pin',
     'expansionNodes.pinRegion': 'Pin {region}',
@@ -193,13 +172,10 @@ const I18N = {
     'manualEnvelope.overlap': '{region}: {count} overlapping manual expansion sources',
     'reachableCandidates.count': '{count} candidate capitals',
     'reachableCandidates.empty': 'No reachable capital candidates.',
-    'reachableCandidates.focus': 'Focus',
     'reachableCandidates.focusRegion': 'Focus {region}',
     'reachableCandidates.marker': 'Reachable capital {region}: {nations}',
     'reachableCandidates.depth': 'Depth {depth}',
     'section.selectedNation': 'Selected Region',
-    'sectionCard.moveUp': 'Move card up',
-    'sectionCard.moveDown': 'Move card down',
     'sectionCard.collapse': 'Collapse card',
     'sectionCard.expand': 'Expand card',
     'nationInfo.basic.title': 'Basic Nation Info',
@@ -217,7 +193,6 @@ const I18N = {
     'status.existing': 'existing nation',
     'count.regions': '{count} regions',
     'count.uniqueRegions': '{count} unique regions',
-    'count.claimTiers': '{count} research tiers',
     'count.claimTiersShort': '{count} tiers',
     'count.claimGroups': '{count} claim groups',
     'pill.hoverEmpty': 'Hover: -',
@@ -260,20 +235,11 @@ const I18N = {
     'claimStat.hostile': ' · hostile {count}',
     'claimStat.capital': ' · capital {count}',
     'claimStat.gated': ' · conditional {count}',
-    'nationInfo.summary': 'Current/starting territory {owned} · visible claims {claims} · {projects}{breakaway}',
-    'nationInfo.summary.baseTerritory': 'Current/starting territory {owned}',
-    'nationInfo.summary.visibleClaims': 'Visible claims {claims}',
-    'nationInfo.summary.breakaway': 'Breakaway from {nation}',
     'nationInfo.breakaway': ' · breakaway from {nation}',
-    'nationInfo.kv.status': 'Status',
     'nationInfo.kv.capitalRegion': 'Capital region',
-    'nationInfo.kv.baseTerritory': 'Base territory',
     'nationInfo.kv.directClaims': 'Direct claims',
     'nationInfo.kv.targetedRegions': 'Targeted regions',
     'nationInfo.kv.conditional': 'Conditional',
-    'nationInfo.kv.claimProjects': 'Research tiers',
-    'nationInfo.kv.displayMode': 'Display mode',
-    'nationInfo.hint': 'The brightest starting color marks initial/current territory. A hollow yellow star marks the capital region; a filled yellow star means the selected region is also the capital. Claim colors move along one color scale from baseline claims through higher research tiers. Blue outlines are peaceful claims, red outlines are hostile claims, dashed outlines are capital claims, and purple/locked styling marks conditional breakaway claims.',
     'results.nation': 'Select nation · tag {tag}',
     'error.loadFailed': 'Failed to load generated Terra Invicta map data.',
   },
@@ -323,12 +289,6 @@ export function createI18n({initialLanguage = 'ko'} = {}) {
       : `${formatNumber(count)} unique ${Number(count) === 1 ? 'region' : 'regions'}`;
   }
 
-  function claimTierCountText(count) {
-    return currentLanguage === 'ko'
-      ? t('count.claimTiers', {count: formatNumber(count)})
-      : `${formatNumber(count)} research ${Number(count) === 1 ? 'tier' : 'tiers'}`;
-  }
-
   function claimTierCountShortText(count) {
     return currentLanguage === 'ko'
       ? t('count.claimTiersShort', {count: formatNumber(count)})
@@ -337,10 +297,6 @@ export function createI18n({initialLanguage = 'ko'} = {}) {
 
   function claimGroupCountText(count) {
     return currentLanguage === 'ko' ? t('count.claimGroups', {count: formatNumber(count)}) : englishCount(count, 'claim group');
-  }
-
-  function claimModeLabel(value) {
-    return t(`claimMode.${value || 'all'}`);
   }
 
   return {
@@ -355,9 +311,7 @@ export function createI18n({initialLanguage = 'ko'} = {}) {
     englishCount,
     regionCountText,
     uniqueRegionCountText,
-    claimTierCountText,
     claimTierCountShortText,
     claimGroupCountText,
-    claimModeLabel,
   };
 }

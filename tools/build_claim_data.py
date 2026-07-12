@@ -61,6 +61,7 @@ def project_metadata_from_research_catalog(research_catalog: dict[str, Any] | No
         project = str(node["dataName"])
         metadata[project] = {
             "displayName": node.get("displayName") or {},
+            "summary": node.get("summary") or {},
             "friendlyName": node.get("friendlyName"),
             "researchCost": node.get("researchCost"),
             "category": node.get("category"),

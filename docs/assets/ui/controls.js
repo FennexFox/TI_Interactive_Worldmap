@@ -22,23 +22,6 @@ export function renderScenarioOptions({
   select.value = activeScenarioId;
 }
 
-export function renderScenarioSummary({
-  root,
-  t,
-  scenarioId = '',
-  summary = {},
-  formatNumber,
-} = {}) {
-  if (!root) return;
-  root.textContent = t('scenario.summary', {
-    scenario: scenarioId,
-    regions: formatNumber(summary.regions),
-    nations: formatNumber(summary.nations),
-    claims: formatNumber(summary.claims),
-    projects: formatNumber(summary.projects),
-  });
-}
-
 export function updateReachableCapitalsButton({
   button,
   visible,
