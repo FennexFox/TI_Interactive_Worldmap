@@ -363,6 +363,7 @@
   .claimCardTitleField--research .claimCardTitleLabel, .claimCardTitleField--research .claimCardTitleValue { white-space:nowrap; }
   .claimCardTitleField--research .claimCardTitleValue { font-size:12px; line-height:1.15; }
   .claimCardTitleField--nation .claimCardTitleValue, .claimCardTitleField--project .claimCardTitleValue { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; white-space:normal; }
+  .claimCardFlavor { display:block; color:#cbd5e1; font-size:11.5px; line-height:1.4; }
   .claimListMeta { color:var(--muted); font-size:12px; }
   .muted { color:var(--muted); }
   @media (max-width:1000px) { .app { grid-template-columns:1fr; height:auto; } aside { border-right:0; border-bottom:1px solid rgba(255,255,255,.08); } main { height:72vh; } }

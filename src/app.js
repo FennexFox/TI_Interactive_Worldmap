@@ -1048,6 +1048,12 @@ function projectDisplay(p) {
   const meta = PROJECT_META[p] || {};
   return meta.displayName?.[dataLanguageKey()] || meta.displayName?.en || meta.displayName?.kor || meta.friendlyName || meta.label || p.replace('Project_','');
 }
+function projectSummary(p) {
+  if (!p) return '';
+  const summary = PROJECT_META[p]?.summary;
+  if (!summary || typeof summary !== 'object') return '';
+  return summary[dataLanguageKey()] || summary.en || summary.kor || Object.values(summary).find(Boolean) || '';
+}
 function prettyRegion(s) { return String(s || '').replace(/([a-z])([A-Z])/g,'$1 $2'); }
 function localizedRegionName(regionOrName) {
   const region = typeof regionOrName === 'string' ? regionByName[regionOrName] : regionOrName;
@@ -2158,6 +2164,7 @@ function renderClaimSection(title, items, emptyText, kind) {
     const capital = item.capital ?? targetRegions.filter(rn => item.targetClaims?.[rn]?.capitalClaim || item.claims?.[rn]?.capitalClaim).length;
     const claimTitle = claimCardTitle(item, kind);
     const claimTitleHtml = renderClaimCardTitle(item, kind);
+    const flavorText = projectSummary(project);
     const key = kind === 'incoming' ? incomingClaimKey(item) : outgoingClaimKey(item);
     const active = kind === 'incoming' ? getActiveIncomingClaimKey() === key : activeOutgoing === key;
     const targetNames = targetRegions.map(prettyRegion);
@@ -2170,7 +2177,8 @@ function renderClaimSection(title, items, emptyText, kind) {
     const cumulativeText = kind === 'outgoing' && inherited ? t('claimDirection.cumulative', {direct, inherited}) : '';
     const statsText = `${hostile ? t('claimStat.hostile', {count: hostile}) : ''}${capital ? t('claimStat.capital', {count: capital}) : ''}${gated ? t('claimStat.gated', {count: gated}) : ''}`;
     const regionDetails = active ? renderRegionList(detailRegions, detailClaims, kind === 'incoming' ? 'result' : 'claimed', item.regionSourceLabels || {}) : '';
-    return `<div class="claimListGroup${active ? ' active' : ''}"><button type="button" class="claimListItem${active ? ' active' : ''}" data-claim-kind="${kind}" data-claim-index="${i}" data-claim-key="${escapeHtml(key)}" title="${escapeHtml(claimTitle + ' · ' + detailRegions.map(prettyRegion).join(', '))}">${claimTitleHtml}<span class="claimListMeta">${escapeHtml(direction + cumulativeText + statsText)}</span></button>${regionDetails}</div>`;
+    const flavorHtml = flavorText ? `<span class="claimCardFlavor">${escapeHtml(flavorText)}</span>` : '';
+    return `<div class="claimListGroup${active ? ' active' : ''}"><button type="button" class="claimListItem${active ? ' active' : ''}" data-claim-kind="${kind}" data-claim-index="${i}" data-claim-key="${escapeHtml(key)}" title="${escapeHtml(claimTitle + ' · ' + detailRegions.map(prettyRegion).join(', '))}">${claimTitleHtml}${flavorHtml}<span class="claimListMeta">${escapeHtml(direction + cumulativeText + statsText)}</span></button>${regionDetails}</div>`;
   }).join('');
   return `<details class="infoSubsection claimSection" data-info-section="${sectionKey}"${infoSectionOpenAttribute(sectionKey)}><summary><span>${escapeHtml(title)}</span></summary><div class="infoSubsectionBody claimList">${rows}</div></details>`;
 }
