@@ -1,10 +1,8 @@
 // SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
 // SPDX-License-Identifier: MIT
 
-const ASIDE_CARD_ORDER_STORAGE_KEY = 'ti-map-aside-card-order';
 const ASIDE_CARD_COLLAPSE_STORAGE_KEY = 'ti-map-aside-card-collapsed';
 const NATION_INFO_SECTION_STORAGE_KEY = 'ti-map-nation-info-sections';
-const DEFAULT_ASIDE_CARD_ORDER = ['explore', 'expansionNodes', 'selected'];
 
 function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -57,7 +55,6 @@ export function createAsideCardController({
 
   function saveAsideCardState() {
     const cards = [...document.querySelectorAll('#asideCardList .sideCard[data-aside-card]')];
-    saveJsonSetting(storage, ASIDE_CARD_ORDER_STORAGE_KEY, cards.map(card => card.dataset.asideCard));
     saveJsonSetting(
       storage,
       ASIDE_CARD_COLLAPSE_STORAGE_KEY,
@@ -67,20 +64,8 @@ export function createAsideCardController({
 
   function updateAsideCardControls() {
     const cards = [...document.querySelectorAll('#asideCardList .sideCard[data-aside-card]')];
-    cards.forEach((card, index) => {
-      const up = card.querySelector('[data-card-move="up"]');
-      const down = card.querySelector('[data-card-move="down"]');
+    cards.forEach(card => {
       const toggle = card.querySelector('[data-card-toggle]');
-      if (up) {
-        up.disabled = index === 0;
-        up.title = t('sectionCard.moveUp');
-        up.setAttribute('aria-label', t('sectionCard.moveUp'));
-      }
-      if (down) {
-        down.disabled = index === cards.length - 1;
-        down.title = t('sectionCard.moveDown');
-        down.setAttribute('aria-label', t('sectionCard.moveDown'));
-      }
       if (toggle) {
         const collapsed = card.dataset.collapsed === 'true';
         toggle.textContent = collapsed ? '+' : '\u2212';
@@ -94,12 +79,9 @@ export function createAsideCardController({
   function initAsideCards() {
     const list = document.getElementById('asideCardList');
     if (!list) return;
-    const cardsByKey = new Map([...list.querySelectorAll('.sideCard[data-aside-card]')].map(card => [card.dataset.asideCard, card]));
-    const savedOrder = readJsonSetting(storage, ASIDE_CARD_ORDER_STORAGE_KEY, DEFAULT_ASIDE_CARD_ORDER, Array.isArray);
-    const order = [...savedOrder.filter(key => cardsByKey.has(key)), ...DEFAULT_ASIDE_CARD_ORDER.filter(key => !savedOrder.includes(key))];
-    order.forEach(key => list.appendChild(cardsByKey.get(key)));
+    const cards = [...list.querySelectorAll('.sideCard[data-aside-card]')];
     const collapsed = readJsonSetting(storage, ASIDE_CARD_COLLAPSE_STORAGE_KEY, {}, isPlainObject);
-    cardsByKey.forEach((card, key) => setAsideCardCollapsed(card, !!collapsed[key]));
+    cards.forEach(card => setAsideCardCollapsed(card, !!collapsed[card.dataset.asideCard]));
     list.addEventListener('click', event => {
       const card = event.target.closest('.sideCard[data-aside-card]');
       if (!card || !list.contains(card)) return;
@@ -109,13 +91,6 @@ export function createAsideCardController({
         updateAsideCardControls();
         return;
       }
-      const moveButton = event.target.closest('[data-card-move]');
-      if (!moveButton) return;
-      const direction = moveButton.dataset.cardMove;
-      if (direction === 'up' && card.previousElementSibling) list.insertBefore(card, card.previousElementSibling);
-      if (direction === 'down' && card.nextElementSibling) list.insertBefore(card.nextElementSibling, card);
-      saveAsideCardState();
-      updateAsideCardControls();
     });
     updateAsideCardControls();
     updateMapViewControlsLabels();

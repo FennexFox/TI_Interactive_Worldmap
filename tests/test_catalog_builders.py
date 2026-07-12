@@ -479,7 +479,8 @@ class CatalogBuilderTests(unittest.TestCase):
             )
             write_text(
                 root / "Localization" / "en" / "TIProjectTemplate.en",
-                "TIProjectTemplate.displayName.Project_TestClaim=Test Claim Project\n",
+                "TIProjectTemplate.displayName.Project_TestClaim=Test Claim Project\n"
+                "TIProjectTemplate.summary.Project_TestClaim=A test nation presses its disputed claim.\n",
             )
 
             catalog = rc.build_catalog(
@@ -497,7 +498,9 @@ class CatalogBuilderTests(unittest.TestCase):
             )
             node = catalog["nodes"][catalog["byDataName"]["Project_TestClaim"]]
 
+            self.assertEqual(catalog["schemaVersion"], 2)
             self.assertEqual(node["displayName"]["en"], "Test Claim Project")
+            self.assertEqual(node["summary"]["en"], "A test nation presses its disputed claim.")
             self.assertEqual(node["claimGrant"]["nations"], ["SAU"])
             self.assertEqual(node["claimGrant"]["regions"], ["Senegambia"])
             self.assertEqual(
@@ -531,6 +534,7 @@ class CatalogBuilderTests(unittest.TestCase):
                     "dataName": "Project_TestClaim",
                     "kind": "project",
                     "displayName": {"en": "Test Claim Project"},
+                    "summary": {"en": "A test nation presses its disputed claim."},
                     "friendlyName": "Test Claim",
                     "researchCost": 500,
                     "category": "SocialScience",
@@ -566,6 +570,10 @@ class CatalogBuilderTests(unittest.TestCase):
         self.assertEqual(data["nationMeta"]["CAN"]["unionDisplayName"]["en"], "Dominion of Canada")
         self.assertEqual(data["nationMeta"]["SEN"]["aliases"], ["SEN"])
         self.assertEqual(data["projects"]["Project_TestClaim"]["label"], "Test Claim Project")
+        self.assertEqual(
+            data["projects"]["Project_TestClaim"]["summary"]["en"],
+            "A test nation presses its disputed claim.",
+        )
         self.assertEqual(data["projects"]["Project_TestClaim"]["prerequisiteNodes"], ["Tech_Alpha"])
 
 

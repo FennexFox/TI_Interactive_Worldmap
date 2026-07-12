@@ -31,7 +31,6 @@ function pinnedRegionRow({
           <b>${escapeHtml(label)}</b>
           <span>${escapeHtml(meta)}</span>
         </span>
-        <span class="pinnedRegionFocusText">${escapeHtml(t('expansionNodes.focus'))}</span>
       </button>
       <button type="button" class="pinnedRegionUnpin" data-pinned-unpin="${escapeHtml(regionName)}" title="${escapeHtml(t('expansionNodes.unpinRegion', {region: label}))}" aria-label="${escapeHtml(t('expansionNodes.unpinRegion', {region: label}))}">\u00d7</button>
     </div>
@@ -107,7 +106,6 @@ function reachableCandidateRow({
           <b>${escapeHtml(label)}</b>
           <span>${escapeHtml(`${depth} · ${nations}`)}</span>
         </span>
-        <span class="reachableCandidateFocusText">${escapeHtml(t('reachableCandidates.focus'))}</span>
       </button>
     </div>
   `;

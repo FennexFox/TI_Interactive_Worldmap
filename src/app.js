@@ -79,7 +79,6 @@ import {
   bindNationSearchControl,
   renderNationDropdown as renderNationDropdownUi,
   renderScenarioOptions as renderScenarioOptionsUi,
-  renderScenarioSummary,
   renderSearchResults,
   updateReachableCapitalsButton,
 } from './ui/controls.js';
@@ -249,7 +248,6 @@ const search = document.getElementById('search');
 const nationDropdown = document.getElementById('nationDropdown');
 const nationSearchCombo = document.getElementById('nationSearchCombo');
 const scenarioSel = document.getElementById('scenarioSel');
-const scenarioSummary = document.getElementById('scenarioSummary');
 const pinnedRegionsPanel = document.getElementById('pinnedRegionsPanel');
 const reachableCandidatesPanel = document.getElementById('reachableCandidatesPanel');
 const baseModeSel = document.getElementById('baseMode');
@@ -462,10 +460,8 @@ const {
   englishCount,
   regionCountText,
   uniqueRegionCountText,
-  claimTierCountText,
   claimTierCountShortText,
   claimGroupCountText,
-  claimModeLabel,
 } = i18n;
 const asideCards = createAsideCardController({document, t, updateMapViewControlsLabels});
 const {
@@ -475,18 +471,6 @@ const {
   initAsideCards,
 } = asideCards;
 
-function activeScenarioSummary() {
-  const entry = appData.scenarios[activeScenarioId()] || activeData || {};
-  const claimMap = entry.claimMap || activeData?.claimMap || {};
-  const researchCatalog = entry.catalogs?.research || activeData?.catalogs?.research || {};
-  const summary = entry.summary || activeData?.summary || {};
-  return {
-    regions: summary.regionCount ?? entry.regionMap?.regions?.length ?? activeData?.regionMap?.regions?.length ?? 0,
-    nations: summary.nationCount ?? Object.keys(entry.catalogs?.nations?.nations || activeData?.catalogs?.nations?.nations || {}).length,
-    claims: summary.claimRowsNormalized ?? claimMap.claimStats?.claimRowsNormalized ?? claimMap.summary?.claimRowsNormalized ?? 0,
-    projects: summary.claimGrantingProjectCount ?? summary.projectCount ?? researchCatalog.counts?.claimGrantingProjects ?? claimMap.claimStats?.projectCount ?? 0,
-  };
-}
 function renderScenarioOptions() {
   renderScenarioOptionsUi({
     select: scenarioSel,
@@ -496,13 +480,6 @@ function renderScenarioOptions() {
 }
 function syncScenarioControls() {
   renderScenarioOptions();
-  renderScenarioSummary({
-    root: scenarioSummary,
-    t,
-    scenarioId: activeScenarioId(),
-    summary: activeScenarioSummary(),
-    formatNumber,
-  });
 }
 function setHoverPill(region=null) {
   const el = document.getElementById('hoverPill');
@@ -1071,6 +1048,12 @@ function projectDisplay(p) {
   const meta = PROJECT_META[p] || {};
   return meta.displayName?.[dataLanguageKey()] || meta.displayName?.en || meta.displayName?.kor || meta.friendlyName || meta.label || p.replace('Project_','');
 }
+function projectSummary(p) {
+  if (!p) return '';
+  const summary = PROJECT_META[p]?.summary;
+  if (!summary || typeof summary !== 'object') return '';
+  return summary[dataLanguageKey()] || summary.en || summary.kor || Object.values(summary).find(Boolean) || '';
+}
 function prettyRegion(s) { return String(s || '').replace(/([a-z])([A-Z])/g,'$1 $2'); }
 function localizedRegionName(regionOrName) {
   const region = typeof regionOrName === 'string' ? regionByName[regionOrName] : regionOrName;
@@ -1415,12 +1398,18 @@ function claimCardTitle(entry, kind) {
 }
 function renderClaimCardTitle(entry, kind) {
   const parts = claimCardTitleParts(entry, kind);
+  const flavorText = projectSummary(entry?.project);
   const fields = [
     ['nation', t('claimCard.fieldNation'), parts.nation],
     ['research', t('claimCard.fieldResearch'), parts.research],
     ['project', t('claimCard.fieldProject'), parts.project],
   ];
-  return `<div class="claimCardTitle">${fields.map(([key, label, value]) => `<span class="claimCardTitleField claimCardTitleField--${key}"><span class="claimCardTitleLabel">${escapeHtml(label)}</span><b class="claimCardTitleValue">${escapeHtml(value)}</b></span>`).join('')}</div>`;
+  return `<div class="claimCardTitle">${fields.map(([key, label, value]) => {
+    const quoteHtml = key === 'project' && flavorText
+      ? `<q class="claimCardQuote">${escapeHtml(flavorText)}</q>`
+      : '';
+    return `<span class="claimCardTitleField claimCardTitleField--${key}"><span class="claimCardTitleLabel">${escapeHtml(label)}</span><b class="claimCardTitleValue">${escapeHtml(value)}</b>${quoteHtml}</span>`;
+  }).join('')}</div>`;
 }
 function buildNationChoices() {
   const tags = [...new Set([...REGIONS.map(r => r.nationTag), ...Object.keys(CLAIMS_BY_NATION), ...Object.keys(NATION_META)])].filter(Boolean).sort();
@@ -2171,7 +2160,6 @@ function renderClaimSection(title, items, emptyText, kind) {
   if (!items.length) return `<details class="infoSubsection claimSection" data-info-section="${sectionKey}"${infoSectionOpenAttribute(sectionKey)}><summary><span>${escapeHtml(title)}</span></summary><div class="infoSubsectionBody small">${escapeHtml(emptyText)}</div></details>`;
   const activeOutgoing = claimModeSel.value === 'project' ? getProjectFilter() : '';
   const rows = items.map((item, i) => {
-    const project = item.project || '';
     const regions = item.regions || [];
     const targetRegions = kind === 'incoming' ? (item.targetRegions || regions) : regions;
     const detailRegions = kind === 'incoming' ? (item.resultRegions || regions) : regions;
@@ -3734,23 +3722,13 @@ function renderClaimSummaryPill(model) {
 function renderNationInfoPanel(panelRoot, model) {
   const activeNationName = nationDisplayName(model.nation);
   const activeNationTierText = claimTierCountShortText(nationClaimTierCount(model.nation));
-  const summaryLines = [
-    t('nationInfo.summary.baseTerritory', {owned: regionCountText(model.ownedCount)}),
-    t('nationInfo.summary.visibleClaims', {claims: regionCountText(model.claimCount)}),
-  ];
-  if (model.data.breakawayFrom) summaryLines.push(t('nationInfo.summary.breakaway', {nation: model.data.breakawayFrom}));
-  const summaryHtml = summaryLines.map(line => `<div class="small nationSummaryLine">${escapeHtml(line)}</div>`).join('');
   const kvRows = [
-    [t('nationInfo.kv.status'), statusLabel(model.data.status)],
     [t('nationInfo.kv.capitalRegion'), capitalRegionsText(model.data)],
-    [t('nationInfo.kv.baseTerritory'), regionCountText(model.ownedCount)],
     [t('nationInfo.kv.directClaims'), uniqueRegionCountText(model.data.totalClaimRegions || 0)],
     [t('nationInfo.kv.targetedRegions'), `${regionCountText(incomingTargetRegions(model.data, model.baseSet).size)} · ${claimGroupCountText(model.incomingEntries.length)}`],
     [t('nationInfo.kv.conditional'), regionCountText(model.gatedCount)],
-    [t('nationInfo.kv.claimProjects'), claimTierCountText(nationClaimTierCount(model.nation))],
-    [t('nationInfo.kv.displayMode'), claimModeLabel(claimModeSel.value)],
   ].map(([label, value]) => `<div>${escapeHtml(label)}</div><div>${escapeHtml(value)}</div>`).join('');
-  const basicInfo = `<details class="infoSubsection nationBasicSection" data-info-section="basic"${infoSectionOpenAttribute('basic')}><summary><span>${escapeHtml(t('nationInfo.basic.title'))}</span></summary><div class="infoSubsectionBody"><div class="nationTitle"><b>${escapeHtml(activeNationName)}</b> <span class="status tierBadge">${escapeHtml(activeNationTierText)}</span> ${statusBadge(model.data.status)}</div><div class="nationSummary">${summaryHtml}</div><div class="kv">${kvRows}</div><div class="hint">${escapeHtml(t('nationInfo.hint'))}</div></div></details>`;
+  const basicInfo = `<details class="infoSubsection nationBasicSection" data-info-section="basic"${infoSectionOpenAttribute('basic')}><summary><span>${escapeHtml(t('nationInfo.basic.title'))}</span></summary><div class="infoSubsectionBody"><div class="nationTitle"><b>${escapeHtml(activeNationName)}</b> <span class="status tierBadge">${escapeHtml(activeNationTierText)}</span> ${statusBadge(model.data.status)}</div><div class="kv">${kvRows}</div></div></details>`;
   panelRoot.innerHTML = `${basicInfo}<div class="claimSections">${renderClaimSection(t('claimSection.outgoing.title'), model.outgoingEntries, t('claimSection.outgoing.empty'), 'outgoing')}${renderClaimSection(t('claimSection.incoming.title'), model.incomingEntries, t('claimSection.incoming.empty'), 'incoming')}</div>`;
 }
 function bindNationOverlayPanelEvents(panelRoot, model) {

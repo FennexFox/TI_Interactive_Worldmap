@@ -247,6 +247,7 @@ def main() -> int:
     docs_scenario_bundle = object_value(load_json(ROOT / "docs/data/scenario_bundle.generated.json", "docs scenario bundle JSON"))
     generated_js_data = decode_generated_js_data(ROOT / "docs/assets/data.generated.js")
     scenarios = object_value(scenario_bundle.get("scenarios"))
+    require(research_catalog.get("schemaVersion") == 2, "research catalog schemaVersion must be 2")
     require(scenario_bundle.get("schemaVersion") == 2, "scenario bundle schemaVersion must be 2")
     require(scenario_bundle.get("defaultScenario") == DEFAULT_SCENARIO, "scenario bundle default scenario must be 2026")
     require(tuple(sorted(scenarios)) == EXPECTED_SCENARIOS, "scenario bundle must contain exactly 2022, 2026, and 2070")
