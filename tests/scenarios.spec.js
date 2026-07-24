@@ -139,3 +139,51 @@ test('scenario ownership drives one consistent base fill per nation', async ({ p
   const restored = await canonicalRegionBaseState(page, 'Crimea');
   expect(restored).toEqual(state2026);
 });
+
+test('one scenario transition prepares each runtime index and refresh exactly once', async ({ page }) => {
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({timeout: 10000});
+
+  for (const scenario of ['2070', '2022', '2026']) {
+    await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+    expect(await page.evaluate(nextScenario => (
+      window.__TI_SCENARIO_API__.setActiveScenario(nextScenario)
+    ), scenario)).toBe(true);
+    await expect(page.locator('#scenarioSel')).toHaveValue(scenario);
+    const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+    expect(stats.scenarioRuntimeBuilds).toBe(1);
+    expect(stats.searchCatalogBuilds).toBe(1);
+    expect(stats.incomingClaimIndexBuilds).toBe(1);
+    expect(stats.scenarioRefreshRuns).toBe(1);
+  }
+});
+
+test('base mode changes preserve region, hit, and label node identity', async ({ page }) => {
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({timeout: 10000});
+  await page.locator('#showLabels').click();
+  await expect(page.locator('#labels text').first()).toBeVisible();
+
+  await page.evaluate(() => {
+    window.__TI_BASE_MODE_IDENTITY__ = {
+      region: document.querySelector('#regions .region'),
+      hit: document.querySelector('#hitRegions .region-hit'),
+      label: document.querySelector('#labels text'),
+    };
+    window.__TI_DEBUG_RENDER_STATS__.reset();
+  });
+  await page.locator('#baseMode').selectOption('plain');
+
+  const result = await page.evaluate(() => ({
+    region: window.__TI_BASE_MODE_IDENTITY__.region === document.querySelector('#regions .region'),
+    hit: window.__TI_BASE_MODE_IDENTITY__.hit === document.querySelector('#hitRegions .region-hit'),
+    label: window.__TI_BASE_MODE_IDENTITY__.label === document.querySelector('#labels text'),
+    stats: {...window.__TI_DEBUG_RENDER_STATS__},
+  }));
+  expect(result.region).toBe(true);
+  expect(result.hit).toBe(true);
+  expect(result.label).toBe(true);
+  expect(result.stats.regionGeometryRenderCalls).toBe(0);
+  expect(result.stats.labelRenderCalls).toBe(0);
+  expect(result.stats.baseColorRenderCalls).toBe(1);
+});

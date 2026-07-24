@@ -28,7 +28,10 @@
 - `src/data/search-catalog.js`
 - `src/data/overlay-descriptors.js`
 - `src/data/claim-model.js`
-- `src/data/claim-model/*.js`
+- `src/data/claim-project-graph.js`
+- `src/data/claim-cumulative-model.js`
+- `src/data/claim-incoming-overlay.js`
+- `src/data/claim-manual-envelope.js`
 - `src/render/map-layers.js`
 - `src/ui/nation-info-panel.js`
 - browser unit tests under `tests/unit/**`
@@ -87,15 +90,15 @@
 ## Evidence
 
 - Baseline: `src/app.js` is 4,038 lines; scenario setup and `populate()` duplicate both runtime index builds; `renderRegions()` performs geometry, labels, base colors, filters, and overlay refresh before the scenario registry repeats several stages.
-- After: pending.
-- Delta: pending.
-- Interpretation: pending.
+- After: `src/app.js` is 3,656 lines and the `createClaimModel` facade is 109 lines. Runtime, search, descriptors, panel control, and four claim-model domains now live in focused modules. Scenario E2E instrumentation records one runtime build, search build, incoming index build, and refresh per transition. Base-mode E2E preserves region/hit/label node identity.
+- Delta: lint and 37 unit checks passed; the complete 94-test Playwright suite passed three times (282/282), followed by 36 targeted language/scenario checks. The full five-run render-stat comparison kept every SVG node count unchanged and 10 of 12 pan-average medians unchanged or lower. One sub-millisecond cold-order case initially measured 0.925 ms versus 0.8 ms; an isolated five-run recheck measured 0.75 ms average and 2.2 ms maximum, with language label DOM replacements restored to zero.
+- Interpretation: this is a preparatory architecture refactor, not a claimed performance improvement. It removes duplicate scenario preparation and hidden geometry side effects without increasing node/replacement counts or breaching the 10% timing gate after the isolated recheck.
 - Commit: pending.
 - Commit blocker: none.
 
 ## Progress
 
-- Not started.
+- Complete; phase gate passed.
 
 ## Decision log
 
@@ -104,4 +107,4 @@
 
 ## Outcomes / Retrospective
 
-- Awaiting phase implementation and evidence.
+- Public browser globals and the claim-model facade remain compatible. Base-mode changes now rebuild only the base-color layer; language changes localize existing label nodes in place; scenario changes rebuild each derived runtime structure once. The remaining `app.js` size is recorded as follow-up composition-root debt rather than hidden as a performance claim.

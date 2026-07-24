@@ -175,6 +175,7 @@ function parseArgs(argv) {
     panSteps: 24,
     includeCanonicalHitPaths: false,
     canonicalHitPathsOnly: false,
+    scenarioNames: [],
   };
   for (const arg of argv) {
     if (arg === '--build') args.build = true;
@@ -193,6 +194,9 @@ function parseArgs(argv) {
     else if (arg.startsWith('--extra-nations=')) {
       const raw = arg.slice('--extra-nations='.length).trim();
       args.extraNations = raw ? raw.split(',').map(value => value.trim()).filter(Boolean) : [];
+    }
+    else if (arg.startsWith('--scenarios=')) {
+      args.scenarioNames = arg.slice('--scenarios='.length).split(',').map(value => value.trim()).filter(Boolean);
     }
     else if (arg.startsWith('--pan-steps=')) args.panSteps = Number(arg.slice('--pan-steps='.length));
     else throw new Error(`Unknown argument: ${arg}`);
@@ -833,11 +837,15 @@ async function main() {
     const canonicalHitPathScenarios = baseScenarios
       .filter(scenario => scenario.canonicalHitPaths !== false)
       .map(canonicalHitPathScenario);
-    const scenarios = args.canonicalHitPathsOnly
+    const configuredScenarios = args.canonicalHitPathsOnly
       ? canonicalHitPathScenarios
       : args.includeCanonicalHitPaths
         ? [...baseScenarios, ...canonicalHitPathScenarios]
         : baseScenarios;
+    const scenarios = args.scenarioNames.length
+      ? configuredScenarios.filter(scenario => args.scenarioNames.includes(scenario.name))
+      : configuredScenarios;
+    if (!scenarios.length) throw new Error('No render-stat scenarios matched --scenarios.');
     const results = [];
 
     for (const scenario of scenarios) {
