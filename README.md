@@ -73,6 +73,31 @@ catalog data for `2022`, `2026`, and `2070`; `2026` remains the default scenario
 also copied to the legacy top-level generated files for compatibility. The static app
 loads the bundle and exposes those three scenarios through the sidebar selector.
 
+### Scenario-specific region ownership
+
+Starting ownership comes from the active scenario's `TIBilateralTemplate.json` Claim
+rows where `initialOwner` is `true`. In those rows, `nation1` is the starting owner and
+`region1` identifies the scenario region template. The region builder resolves that
+template through `TIRegionTemplate.mapRegionName` before writing the canonical
+`regions[].nationTag`. `outlineNationTag` remains separate as Unity geometry/extraction
+provenance.
+
+Do not derive starting ownership from `TIRegionTemplate.sortNation` or
+`TIMapRegionTemplate.friendlyNationName`; those are sorting/display metadata and do not
+represent scenario-specific 2070 ownership. The generated-output verifier cross-checks
+every region's `nationTag` against its scenario-filtered `initialOwner` Claim, and the
+catalog-builder tests require generation to fail when initial-owner rows conflict or a
+scenario region has no initial owner.
+
+Ownership/color regression coverage spans three levels:
+
+- generator fixtures prove one canonical region can have different owners by scenario,
+  and reject conflicting or missing initial-owner relations;
+- `npm run verify` semantically compares generated region ownership with the
+  authoritative Claims carried in each scenario claim map;
+- Playwright checks every supported scenario for one base fill per non-empty
+  `data-nation` and verifies a real 2026/2070 ownership switch restores correctly.
+
 ## Windows workflows
 
 ### Rebuild locally from checked-in generated data

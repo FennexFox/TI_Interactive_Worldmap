@@ -9,8 +9,8 @@
     },
     "projectTemplate": {
       "file": "TIProjectTemplate.json",
-      "size": 444389,
-      "sha256": "82d395f682ec37ac9844f996d7459eaebb0622c949773c1bd613b95f1d3f4641"
+      "size": 445389,
+      "sha256": "65c4af0411555b0babe86001f1cf5d0e83999b831d6d72e7319702c2c03542d7"
     },
     "localizationLanguages": [
       "kor",
@@ -22824,7 +22824,7 @@
         "disable": false
       },
       "claimGrant": {
-        "claimRows": 22,
+        "claimRows": 21,
         "nations": [
           "ARG",
           "BRA",

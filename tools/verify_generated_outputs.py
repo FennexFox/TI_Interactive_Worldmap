@@ -174,6 +174,12 @@ def verify_scenario_entry(scenario: str, entry: dict[str, object]) -> None:
     research_projects = research_project_ids(research_catalog)
     regions = [row for row in list_value(region.get("regions")) if isinstance(row, dict)]
     region_names = {str(row.get("regionName")) for row in regions if row.get("regionName")}
+    region_owners = {
+        str(row.get("regionName")): str(row.get("nationTag") or "")
+        for row in regions
+        if row.get("regionName")
+    }
+    initial_owners: dict[str, str] = {}
 
     require(str(region_summary.get("scenarioYear")) == scenario, f"{scenario} region map scenarioYear mismatch")
     require(str(claim_summary.get("scenarioYear")) == scenario, f"{scenario} claim map scenarioYear mismatch")
@@ -225,6 +231,34 @@ def verify_scenario_entry(scenario: str, entry: dict[str, object]) -> None:
                 require(str(region_name) in region_names, f"{scenario} claim payload region missing: {region_name}")
                 current_owner = str(object_value(payload).get("currentOwner") or "")
                 require(not current_owner or current_owner in nations, f"{scenario} current owner missing from nation catalog: {current_owner}")
+                if object_value(payload).get("initialOwner") is True:
+                    owner = str(nation_id)
+                    previous = initial_owners.get(str(region_name))
+                    require(
+                        not previous or previous == owner,
+                        f"{scenario} conflicting initial owners for {region_name}: {previous}, {owner}",
+                    )
+                    initial_owners[str(region_name)] = owner
+                    require(
+                        current_owner == owner,
+                        f"{scenario} initial-owner Claim disagrees with current owner for "
+                        f"{region_name}: {owner} != {current_owner}",
+                    )
+                    require(
+                        region_owners.get(str(region_name)) == owner,
+                        f"{scenario} initial-owner Claim disagrees with region map for "
+                        f"{region_name}: {owner} != {region_owners.get(str(region_name), '')}",
+                    )
+    missing_initial_owners = sorted(region_names - set(initial_owners))
+    unexpected_initial_owners = sorted(set(initial_owners) - region_names)
+    require(
+        not missing_initial_owners,
+        f"{scenario} regions missing authoritative initial-owner Claims: {missing_initial_owners[:5]}",
+    )
+    require(
+        not unexpected_initial_owners,
+        f"{scenario} initial-owner Claims reference missing regions: {unexpected_initial_owners[:5]}",
+    )
 
 
 def main() -> int:
@@ -265,7 +299,20 @@ def main() -> int:
     require_json_equal(nation_catalog, docs_nation_catalog, "docs nation catalog differs from source")
     require_json_equal(research_catalog, docs_research_catalog, "docs research catalog differs from source")
     for scenario, entry in sorted(scenarios.items()):
-        verify_scenario_entry(str(scenario), object_value(entry))
+        scenario_id = str(scenario)
+        scenario_entry_data = object_value(entry)
+        standalone_region = object_value(
+            load_json(
+                ROOT / f"data/generated/scenarios/{scenario_id}/region_map.generated.json",
+                f"{scenario_id} standalone region map JSON",
+            )
+        )
+        require_json_equal(
+            standalone_region,
+            object_value(scenario_entry_data.get("regionMap")),
+            f"{scenario_id} standalone region map differs from scenario bundle",
+        )
+        verify_scenario_entry(scenario_id, scenario_entry_data)
     region_summary = object_value(region.get("summary"))
     claim_stats = object_value(claim.get("claimStats"))
     nations = object_value(nation_catalog.get("nations"))

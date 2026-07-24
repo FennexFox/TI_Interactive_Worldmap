@@ -2211,6 +2211,7 @@ function renderNormalRegionColors(renderContext = {}) {
       const fillKey = `base:${baseMode}:${fill}`;
       return {
         path: region.path,
+        regionName: region.regionName,
         className: 'normal-region-color visual-fill-group',
         fill,
         groupKey: fillKey,

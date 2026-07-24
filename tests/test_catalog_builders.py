@@ -27,6 +27,57 @@ def write_text(path: Path, value: str) -> None:
     path.write_text(value, encoding="utf-8")
 
 
+def write_region_owner_fixture(
+    templates_dir: Path,
+    *,
+    regions: tuple[str, ...],
+    claims: tuple[tuple[str, str], ...],
+) -> None:
+    nation_tags = sorted({nation for nation, _ in claims})
+    write_json(
+        templates_dir / "TINationTemplate.json",
+        [
+            {"dataName": f"2026_{nation}", "friendlyName": f"2026_{nation}"}
+            for nation in nation_tags
+        ],
+    )
+    write_json(
+        templates_dir / "TIRegionTemplate.json",
+        [
+            {
+                "dataName": f"2026_{region}",
+                "mapRegionName": f"map_{region}",
+                "primaryCity": region,
+                "sortNation": "Display Only",
+            }
+            for region in regions
+        ],
+    )
+    write_json(
+        templates_dir / "TIMapRegionTemplate.json",
+        [
+            {
+                "dataName": f"map_{region}",
+                "friendlyNationName": "Display Only",
+            }
+            for region in regions
+        ],
+    )
+    write_json(
+        templates_dir / "TIBilateralTemplate.json",
+        [
+            {
+                "dataName": f"Claim2026_{nation}2026_{region}_{index}",
+                "relationType": "Claim",
+                "nation1": f"2026_{nation}",
+                "region1": f"2026_{region}",
+                "initialOwner": True,
+            }
+            for index, (nation, region) in enumerate(claims)
+        ],
+    )
+
+
 class CatalogBuilderTests(unittest.TestCase):
     def test_region_map_uses_scenario_template_display_and_owner_names(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -61,6 +112,25 @@ class CatalogBuilderTests(unittest.TestCase):
                     {"dataName": "map_Hijaz", "friendlyNationName": "Saudi Arabia"},
                     {"dataName": "map_Ireland", "friendlyNationName": "Ireland"},
                     {"dataName": "map_Guatemala", "friendlyNationName": "Guatemala"},
+                ],
+            )
+            write_json(
+                templates_dir / "TIBilateralTemplate.json",
+                [
+                    {
+                        "dataName": f"Claim2026_{nation}2026_{region}",
+                        "relationType": "Claim",
+                        "nation1": f"2026_{nation}",
+                        "region1": f"2026_{region}",
+                        "initialOwner": True,
+                    }
+                    for nation, region in (
+                        ("USA", "RockyMountains"),
+                        ("KOR", "SouthKorea"),
+                        ("SAU", "Hijaz"),
+                        ("IRL", "Ireland"),
+                        ("GTM", "Guatemala"),
+                    )
                 ],
             )
             write_text(
@@ -100,6 +170,154 @@ class CatalogBuilderTests(unittest.TestCase):
             self.assertEqual(by_name["Guatemala"]["nationTag"], "GTM")
             self.assertEqual(by_name["Guatemala"]["outlineNationTag"], "GUA")
 
+    def test_region_map_uses_scenario_initial_owner_claims(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            templates_dir = root / "Templates"
+            write_json(
+                templates_dir / "TINationTemplate.json",
+                [
+                    {"dataName": "2026_AAA", "friendlyName": "2026_Alpha"},
+                    {"dataName": "2026_BBB", "friendlyName": "2026_Beta"},
+                    {"dataName": "2026_WRONG", "friendlyName": "2026_Misleading Owner"},
+                    {"dataName": "2070_AAA", "friendlyName": "2070_Alpha"},
+                    {"dataName": "2070_BBB", "friendlyName": "2070_Beta"},
+                    {"dataName": "2070_WRONG", "friendlyName": "2070_Misleading Owner"},
+                ],
+            )
+            write_json(
+                templates_dir / "TIRegionTemplate.json",
+                [
+                    {
+                        "dataName": "2026_ContestedRegion",
+                        "mapRegionName": "map_SharedGeometry",
+                        "primaryCity": "Scenario City",
+                        "sortNation": "Misleading Owner",
+                    },
+                    {
+                        "dataName": "2070_ContestedRegion",
+                        "mapRegionName": "map_SharedGeometry",
+                        "primaryCity": "Scenario City",
+                        "sortNation": "Misleading Owner",
+                    },
+                ],
+            )
+            write_json(
+                templates_dir / "TIMapRegionTemplate.json",
+                [
+                    {
+                        "dataName": "map_SharedGeometry",
+                        "friendlyNationName": "Misleading Owner",
+                    }
+                ],
+            )
+            write_json(
+                templates_dir / "TIBilateralTemplate.json",
+                [
+                    {
+                        "dataName": "Claim2026_AAA2026_ContestedRegion",
+                        "relationType": "Claim",
+                        "nation1": "2026_AAA",
+                        "region1": "2026_ContestedRegion",
+                        "initialOwner": True,
+                    },
+                    {
+                        "dataName": "Claim2070_BBB2070_ContestedRegion",
+                        "relationType": "Claim",
+                        "nation1": "2070_BBB",
+                        "region1": "2070_ContestedRegion",
+                        "initialOwner": True,
+                    },
+                ],
+            )
+            raw = {
+                "collectionName": "fixture",
+                "width": 10,
+                "height": 10,
+                "regions": [
+                    {
+                        "regionName": "SharedGeometry",
+                        "nationTag": "OUT",
+                        "path": "M 0 0 L 1 0 L 0 1 Z",
+                    }
+                ],
+            }
+
+            maps = {}
+            for scenario in ("2026", "2070"):
+                metadata = ro.load_region_metadata(templates_dir, ["en"], scenario)
+                maps[scenario] = ro.compact_region_outlines(
+                    raw,
+                    region_metadata=metadata,
+                    scenario_year=scenario,
+                )
+
+            row_2026 = maps["2026"]["regions"][0]
+            row_2070 = maps["2070"]["regions"][0]
+            self.assertEqual(row_2026["nationTag"], "AAA")
+            self.assertEqual(row_2070["nationTag"], "BBB")
+            self.assertEqual(row_2026["outlineNationTag"], "OUT")
+            self.assertEqual(row_2070["outlineNationTag"], "OUT")
+            self.assertEqual(row_2026["source"]["regionTemplate"], "2026_ContestedRegion")
+            self.assertEqual(row_2070["source"]["regionTemplate"], "2070_ContestedRegion")
+
+    def test_region_map_rejects_conflicting_initial_owner_claims(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            templates_dir = Path(tmp) / "Templates"
+            write_region_owner_fixture(
+                templates_dir,
+                regions=("ContestedRegion",),
+                claims=(
+                    ("AAA", "ContestedRegion"),
+                    ("BBB", "ContestedRegion"),
+                ),
+            )
+
+            with self.assertRaisesRegex(
+                ValueError,
+                "Conflicting 2026 initial owners for ContestedRegion: AAA, BBB",
+            ):
+                ro.load_region_metadata(templates_dir, ["en"], "2026")
+
+    def test_region_map_rejects_regions_without_initial_owner_claims(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            templates_dir = Path(tmp) / "Templates"
+            write_region_owner_fixture(
+                templates_dir,
+                regions=("OwnedRegion", "UnownedRegion"),
+                claims=(("AAA", "OwnedRegion"),),
+            )
+
+            with self.assertRaisesRegex(
+                ValueError,
+                "No 2026 initial-owner Claim found for region template 2026_UnownedRegion",
+            ):
+                ro.load_region_metadata(templates_dir, ["en"], "2026")
+
+    def test_region_map_rejects_initial_owner_claims_without_scenario_template(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            templates_dir = Path(tmp) / "Templates"
+            write_region_owner_fixture(
+                templates_dir,
+                regions=(),
+                claims=(("AAA", "FutureRegion"),),
+            )
+            write_json(
+                templates_dir / "TIRegionTemplate.json",
+                [
+                    {
+                        "dataName": "2070_FutureRegion",
+                        "mapRegionName": "map_FutureRegion",
+                    }
+                ],
+            )
+
+            with self.assertRaisesRegex(
+                ValueError,
+                r"2026 initial-owner Claims reference unknown region templates: \['FutureRegion'\]",
+            ):
+                ro.load_region_metadata(templates_dir, ["en"], "2026")
+
     def test_region_map_strips_inline_data_comments_from_display_names(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -122,6 +340,18 @@ class CatalogBuilderTests(unittest.TestCase):
             write_json(
                 templates_dir / "TIMapRegionTemplate.json",
                 [{"dataName": "map_DireDiwa", "friendlyNationName": "Ethiopia"}],
+            )
+            write_json(
+                templates_dir / "TIBilateralTemplate.json",
+                [
+                    {
+                        "dataName": "Claim2026_ETH2026_DireDiwa",
+                        "relationType": "Claim",
+                        "nation1": "2026_ETH",
+                        "region1": "2026_DireDiwa",
+                        "initialOwner": True,
+                    }
+                ],
             )
             write_text(
                 root / "Localization" / "en" / "TIRegionTemplate.en",
@@ -396,6 +626,18 @@ class CatalogBuilderTests(unittest.TestCase):
             write_json(
                 templates_dir / "TIMapRegionTemplate.json",
                 [{"dataName": "map_Java", "friendlyNationName": "Indonesia"}],
+            )
+            write_json(
+                templates_dir / "TIBilateralTemplate.json",
+                [
+                    {
+                        "dataName": "Claim2026_INO2026_Java",
+                        "relationType": "Claim",
+                        "nation1": "2026_INO",
+                        "region1": "2026_Java",
+                        "initialOwner": True,
+                    }
+                ],
             )
             write_text(
                 root / "Localization" / "en" / "TINationTemplate.en",
