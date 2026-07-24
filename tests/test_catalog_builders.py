@@ -27,6 +27,57 @@ def write_text(path: Path, value: str) -> None:
     path.write_text(value, encoding="utf-8")
 
 
+def write_region_owner_fixture(
+    templates_dir: Path,
+    *,
+    regions: tuple[str, ...],
+    claims: tuple[tuple[str, str], ...],
+) -> None:
+    nation_tags = sorted({nation for nation, _ in claims})
+    write_json(
+        templates_dir / "TINationTemplate.json",
+        [
+            {"dataName": f"2026_{nation}", "friendlyName": f"2026_{nation}"}
+            for nation in nation_tags
+        ],
+    )
+    write_json(
+        templates_dir / "TIRegionTemplate.json",
+        [
+            {
+                "dataName": f"2026_{region}",
+                "mapRegionName": f"map_{region}",
+                "primaryCity": region,
+                "sortNation": "Display Only",
+            }
+            for region in regions
+        ],
+    )
+    write_json(
+        templates_dir / "TIMapRegionTemplate.json",
+        [
+            {
+                "dataName": f"map_{region}",
+                "friendlyNationName": "Display Only",
+            }
+            for region in regions
+        ],
+    )
+    write_json(
+        templates_dir / "TIBilateralTemplate.json",
+        [
+            {
+                "dataName": f"Claim2026_{nation}2026_{region}_{index}",
+                "relationType": "Claim",
+                "nation1": f"2026_{nation}",
+                "region1": f"2026_{region}",
+                "initialOwner": True,
+            }
+            for index, (nation, region) in enumerate(claims)
+        ],
+    )
+
+
 class CatalogBuilderTests(unittest.TestCase):
     def test_region_map_uses_scenario_template_display_and_owner_names(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -209,6 +260,39 @@ class CatalogBuilderTests(unittest.TestCase):
             self.assertEqual(row_2070["outlineNationTag"], "OUT")
             self.assertEqual(row_2026["source"]["regionTemplate"], "2026_ContestedRegion")
             self.assertEqual(row_2070["source"]["regionTemplate"], "2070_ContestedRegion")
+
+    def test_region_map_rejects_conflicting_initial_owner_claims(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            templates_dir = Path(tmp) / "Templates"
+            write_region_owner_fixture(
+                templates_dir,
+                regions=("ContestedRegion",),
+                claims=(
+                    ("AAA", "ContestedRegion"),
+                    ("BBB", "ContestedRegion"),
+                ),
+            )
+
+            with self.assertRaisesRegex(
+                ValueError,
+                "Conflicting 2026 initial owners for ContestedRegion: AAA, BBB",
+            ):
+                ro.load_region_metadata(templates_dir, ["en"], "2026")
+
+    def test_region_map_rejects_regions_without_initial_owner_claims(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            templates_dir = Path(tmp) / "Templates"
+            write_region_owner_fixture(
+                templates_dir,
+                regions=("OwnedRegion", "UnownedRegion"),
+                claims=(("AAA", "OwnedRegion"),),
+            )
+
+            with self.assertRaisesRegex(
+                ValueError,
+                "No 2026 initial-owner Claim found for region template 2026_UnownedRegion",
+            ):
+                ro.load_region_metadata(templates_dir, ["en"], "2026")
 
     def test_region_map_strips_inline_data_comments_from_display_names(self):
         with tempfile.TemporaryDirectory() as tmp:
