@@ -7,8 +7,7 @@ const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 const inCI = Boolean(process.env.CI);
 
 export default defineConfig({
-  testDir: './tests',
-  testIgnore: ['unit/**'],
+  testDir: './tests/e2e',
   fullyParallel: true,
   retries: inCI ? 2 : 0,
   workers: inCI ? 2 : undefined,

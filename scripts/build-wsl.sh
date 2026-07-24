@@ -283,7 +283,6 @@ run_from_game_build() {
     tools/rebuild_pages.py
     --templates-dir "$templates"
     --catalog-languages "$CATALOG_LANGUAGES"
-    --no-commit
   )
 
   if [[ "$SCENARIO_YEAR" != "2026" ]]; then

@@ -89,21 +89,55 @@
 ## Evidence
 
 - Baseline: `deploy` currently invokes `python tools/rebuild_pages.py` without an explicit publish flag; Playwright has two very large suites and no shared project fixture.
-- After: pending.
-- Delta: pending.
-- Interpretation: pending.
-- Commit: pending.
+- After:
+  - plain `rebuild_pages.py` leaves changes uncommitted; `--commit` and `--push`
+    explicitly opt into manifest-scoped publication, and `--push` selects the
+    explicit/current branch;
+  - seven Python publishing tests cover the safe default, exact staging list,
+    selected/current branches, push implication, and deprecated aliases without
+    running a real Git write;
+  - `npm run rebuild:game` is non-publishing and `npm run deploy` explicitly passes
+    `--push`; WSL from-game rebuilds rely on the safe default;
+  - duplicated Playwright helpers moved to `tests/fixtures/app.js`; the 1,303-line
+    language and 1,063-line wrap suites were split into behavior specs no larger
+    than 611 lines while preserving every test title;
+  - browser-free coverage moved out of Playwright into the Node unit command:
+    30 Node tests and 42 Python tests pass, while 73 browser E2E tests pass as
+    shards 37/37 and 36/36 and as a three-repeat run 219/219;
+  - `npm run lint`, `npm run build`, `npm run check:generated`, and
+    `npm run verify` pass; `bash -n` passes and ShellCheck was unavailable locally;
+  - Graphify's code-only incremental refresh completed with 999 nodes, 2,526 edges,
+    and 54 communities. Its runtime leads were checked against real imports/symbols.
+- Delta: publication changed from implicit Git writes to explicit opt-in; browser-free
+  tests no longer start the Pages server; E2E organization now exposes language,
+  search, debug, pins, overlays, rendering, pan, scenario, and world-wrap ownership.
+- Interpretation: phase scope is complete with no UI, generated schema, external
+  debug/scenario API, or runtime hot-path change.
+- Commit: phase-scoped implementation commit follows this gate.
 - Commit blocker: none.
 
 ## Progress
 
-- Not started.
+- Complete.
 
 ## Decision log
 
 - Do not execute a real push as part of implementation verification.
 - Preserve deprecated negative flags only for one documented transition cycle.
+- Reuse the completed phase-3 five-run baseline/browser-after/recheck evidence for the
+  final audit. The user approved skipping a redundant final measurement because this
+  phase changes CLI, tests, docs, and Graphify output only; the briefly started run
+  was cancelled without using partial results.
+- Use Graphify's code-only `update --force` path because semantic document refresh
+  requires an unavailable API key and the user explicitly prohibited subagents.
+- Defer from-game/Unity geometry smoke because `TI_TEMPLATES_DIR`, region outlines,
+  and ShellCheck are unavailable in this environment.
 
 ## Outcomes / Retrospective
 
-- Awaiting phase implementation and evidence.
+- Safe publishing defaults are now enforced in code, package scripts, WSL workflow,
+  tests, and durable documentation.
+- Test ownership is clearer and faster: pure tests run under Node, browser tests are
+  confined to `tests/e2e`, and CI/local shard behavior matches.
+- Graphify's structural code graph is current; document semantics remain cached until
+  a future run has an approved LLM backend.

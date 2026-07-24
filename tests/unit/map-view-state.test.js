@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
 // SPDX-License-Identifier: MIT
 
-import { expect, test } from '@playwright/test';
+import {expect} from '@playwright/test';
+import {test} from 'node:test';
 import {
   clampMapViewY,
   createMapViewState,
@@ -11,7 +12,7 @@ import {
   panMapView,
   viewBoxForMapView,
   zoomMapView,
-} from '../src/state/map-view-state.js';
+} from '../../src/state/map-view-state.js';
 
 const SUMMARY_VIEW_BOX = [-3.17409138, -1.543560305, 6.52568676, 2.58888961];
 

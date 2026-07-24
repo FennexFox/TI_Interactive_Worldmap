@@ -1,15 +1,7 @@
 // SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
 // SPDX-License-Identifier: MIT
 
-import { expect, test } from '@playwright/test';
-
-async function chooseNation(page, query, tag) {
-  await page.locator('#search').fill(query);
-  await page.locator('#nationDropdown .searchOption')
-    .filter({ has: page.locator('.searchOptionTag', { hasText: tag }) })
-    .first()
-    .click();
-}
+import {chooseNation, expect, test} from '../fixtures/app.js';
 
 async function groupedClaimRegionCount(page) {
   return page.locator('#claimOverlays .claim-fill-group').evaluateAll(nodes => nodes.reduce((sum, node) => (

@@ -30,6 +30,12 @@ src/index.html
      -> src/data/active-data.js
      -> src/data/derived-indices.js
      -> src/data/claim-model.js
+        -> claim-project-graph.js
+        -> claim-cumulative-model.js
+        -> claim-incoming-overlay.js
+        -> claim-manual-envelope.js
+     -> src/data/search-catalog.js
+     -> src/data/overlay-descriptors.js
      -> src/state/app-state.js
      -> src/state/map-view-state.js
      -> src/state/map-visual-state.js
@@ -37,6 +43,10 @@ src/index.html
      -> src/interaction/tooltip.js
      -> src/render/map-layers.js
      -> src/runtime/refresh-flow.js
+     -> src/runtime/refresh-actions.js
+     -> src/runtime/scenario-runtime.js
+     -> src/runtime/debug-runtime.js
+     -> src/runtime/lru-cache.js
      -> src/ui/*
 ```
 
@@ -68,9 +78,16 @@ Resolves the active scenario data exposed to the app. It is the boundary between
 
 Builds lookup indices derived from active scenario data. Keep this module deterministic and data-only.
 
-### `src/data/claim-model.js`
+### `src/data/claim-model.js` and claim submodels
 
-Builds claim/overlay models and related pure data used by the browser runtime. Keep this module testable without DOM access.
+`claim-model.js` preserves the external `createClaimModel` facade. Project graph,
+cumulative/hostility, incoming-overlay, and manual-envelope/reachable-capital logic
+live in focused pure submodels and remain testable without DOM access.
+
+### `src/data/search-catalog.js` and `src/data/overlay-descriptors.js`
+
+Build localized search entries/query results and deterministic overlay descriptors.
+Neither module reads or mutates the DOM.
 
 ## Interaction modules
 
@@ -86,7 +103,10 @@ Owns tooltip position scheduling, cached layout measurements, and hide/show stat
 
 ### `src/render/map-layers.js`
 
-Contains low-level SVG layer rendering helpers. It should receive state-derived values through parameters or render context rather than importing app state directly.
+Contains low-level SVG layer rendering helpers. Geometry, base colors, and labels are
+separate stages. Base-mode refreshes must preserve region, hit-path, and label node
+identity. The module receives state-derived values through parameters or render
+context rather than importing app state directly.
 
 Keep this module careful around:
 
@@ -105,13 +125,24 @@ Keep this module careful around:
 
 Defines named refresh step order for scenario and language refresh paths. It should describe orchestration sequence without owning app data, state, DOM references, or render implementation.
 
+### `src/runtime/refresh-actions.js` and `src/runtime/scenario-runtime.js`
+
+Bind explicit scenario/language refresh actions and create one active-scenario runtime
+context with derived indices. Scenario preparation builds those indices once per
+transition; view refresh consumes the prepared context.
+
+### `src/runtime/debug-runtime.js` and `src/runtime/lru-cache.js`
+
+Own debug flag/stat/timing lifecycle and reusable bounded cache behavior. They are
+dependency-injected and browser-unit-testable.
+
 ## UI modules
 
 ### `src/ui/i18n.js`
 
 Owns app-local translation strings, language normalization/storage helpers, and formatting helpers.
 
-### `src/ui/aside-cards.js`, `src/ui/panels.js`, `src/ui/controls.js`, and `src/ui/map-controls.js`
+### `src/ui/aside-cards.js`, `src/ui/panels.js`, `src/ui/controls.js`, `src/ui/map-controls.js`, and `src/ui/nation-info-panel.js`
 
 Own focused UI rendering or event-binding concerns. They should keep DOM structure stable and receive callbacks for state transitions instead of importing app state directly.
 
@@ -137,6 +168,28 @@ Terra Invicta Templates + committed/manual geometry inputs
 ```
 
 Region outline refresh is intentionally separate and should only happen when validating or updating Unity region geometry.
+
+`tools/build_manifest.py` is the shared source-to-Pages and generated-staging
+contract. `tools/scenario_config.py`, `tools/input_contracts.py`, and
+`tools/localization.py` own common scenario, strict input, and localization
+contracts. `tools/build_pages.py` reads generated inputs and writes only `docs/**`;
+it never rewrites `data/generated/**`.
+
+`tools/rebuild_pages.py` rebuilds and verifies without Git work by default.
+`--commit` and `--push` opt into manifest-scoped publication. General build/verify
+uses the standard library; Unity geometry refresh alone installs
+`requirements-geometry.txt` (`UnityPy>=1.10,<2`).
+
+## Test boundaries
+
+- `npm run test:unit`: browser-free Node tests plus Python unit tests.
+- `npm run verify`: compilation, unit coverage, deployment parity, semantic bundle
+  checks, and dataset sentinels.
+- `tests/e2e/**`: behavior-focused Playwright specs for language, search, debug/pins,
+  overlays, rendering, pan, and world-wrap behavior.
+- `tests/fixtures/app.js`: shared app readiness, nation selection, region
+  hover/click, and animation-frame helpers/fixtures.
+- CI runs Playwright in two shards with two retries and limited workers.
 
 ## Performance-sensitive areas
 
