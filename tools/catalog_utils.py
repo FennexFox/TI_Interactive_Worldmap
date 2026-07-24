@@ -10,6 +10,13 @@ import re
 from pathlib import Path
 from typing import Any
 
+try:
+    from tools.input_contracts import load_required_json, validate_template_rows
+except ModuleNotFoundError as exc:
+    if exc.name != "tools":
+        raise
+    from input_contracts import load_required_json, validate_template_rows
+
 
 def compact_number(value: Any, digits: int = 6) -> Any:
     if not isinstance(value, float):
@@ -48,7 +55,7 @@ def sanitize_data_value(value: Any) -> Any:
 
 
 def load_json(path: Path) -> Any:
-    return sanitize_data_value(json.loads(path.read_text(encoding="utf-8")))
+    return sanitize_data_value(load_required_json(path))
 
 
 def write_json_output(path: Path, value: Any) -> Path:
@@ -114,13 +121,10 @@ def resolve_templates_dir(templates_arg: str | None) -> Path | None:
 
 
 def load_named_templates(templates_dir: Path, filename: str) -> dict[str, dict[str, Any]]:
-    rows = load_json(templates_dir / filename)
-    if not isinstance(rows, list):
-        return {}
+    path = templates_dir / filename
+    rows = validate_template_rows(load_json(path), path)
     templates: dict[str, dict[str, Any]] = {}
     for row in rows:
-        if not isinstance(row, dict) or not row.get("dataName"):
-            continue
         templates[str(row["dataName"])] = row
     return dict(sorted(templates.items()))
 

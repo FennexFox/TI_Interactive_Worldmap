@@ -2,10 +2,11 @@
 # SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
 # SPDX-License-Identifier: MIT
 
-"""Rebuild Terra Invicta worldmap pages from local game data and optionally push.
+"""Rebuild Terra Invicta worldmap pages from local game data.
 
-This mirrors the TI_Engine_Charts workflow: build generated data, build docs/, run
-verification, then optionally commit and push only generated paths.
+The safe default builds generated data and docs/, runs verification, and leaves
+all changes in the working tree. Publishing is explicitly enabled with
+``--commit`` or ``--push`` and remains constrained to manifest-declared paths.
 """
 from __future__ import annotations
 
@@ -15,31 +16,16 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Sequence
+
+from build_manifest import GENERATED_STAGING_PATHS
+from scenario_config import DEFAULT_SCENARIO, SUPPORTED_SCENARIOS
 
 ROOT = Path(__file__).resolve().parents[1]
-SCENARIO_YEARS = ("2022", "2026", "2070")
-DEFAULT_SCENARIO_YEAR = "2026"
+SCENARIO_YEARS = SUPPORTED_SCENARIOS
+DEFAULT_SCENARIO_YEAR = DEFAULT_SCENARIO
 SCENARIO_OUTPUT_ROOT = Path("data/generated/scenarios")
-GENERATED_PATHS = (
-    "data/generated/nations.catalog.json",
-    "data/generated/research.catalog.json",
-    "data/generated/region_map.generated.json",
-    "data/generated/claim_map.generated.json",
-    "data/generated/scenario_bundle.generated.json",
-    "data/generated/scenarios",
-    "docs/data/generated/nations.catalog.json",
-    "docs/data/generated/research.catalog.json",
-    "docs/data/region_map.generated.json",
-    "docs/data/claim_map.generated.json",
-    "docs/data/scenario_bundle.generated.json",
-    "docs/assets/data.generated.js",
-    "docs/assets/app.js",
-    "docs/assets/state",
-    "docs/assets/data",
-    "docs/assets/render",
-    "docs/assets/styles.css",
-    "docs/index.html",
-)
+GENERATED_PATHS = GENERATED_STAGING_PATHS
 
 
 def run(command: list[str], *, capture: bool = False) -> subprocess.CompletedProcess[str]:
@@ -285,29 +271,29 @@ def remote_exists(remote: str) -> bool:
     return subprocess.run(["git", "remote", "get-url", remote], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
 
 
-def commit_and_push(args: argparse.Namespace) -> None:
+def publish_generated_changes(args: argparse.Namespace) -> None:
     changed = generated_paths_changed()
-    if args.no_commit:
+    if not args.commit:
         if changed:
-            print("Generated page changes exist; leaving them uncommitted because --no-commit was passed.")
+            print("Generated page changes exist; leaving them uncommitted (publishing was not requested).")
         else:
-            print("Build completed; no git change check was needed or no generated page changes were detected.")
+            print("Build completed; no generated page changes were detected.")
         return
     if not changed:
         print("No generated page changes.")
         return
-    if not args.no_push and not remote_exists(args.remote):
-        raise SystemExit(f"Remote '{args.remote}' is not configured. Add it or rerun with --no-push.")
+    if args.push and not remote_exists(args.remote):
+        raise SystemExit(f"Remote '{args.remote}' is not configured. Add it or rerun without --push.")
     run(["git", "add", "--", *GENERATED_PATHS])
     message = args.commit_message or "chore: rebuild worldmap pages"
     run(["git", "commit", "-m", message])
-    if args.no_push:
-        print("Committed generated page changes; skipping push because --no-push was passed.")
+    if not args.push:
+        print("Committed generated page changes; push was not requested.")
         return
     run(["git", "push", args.remote, args.branch or current_branch()])
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--templates-dir", help="Path to TerraInvicta_Data/StreamingAssets/Templates.")
     parser.add_argument("--bilateral-template", help="Explicit path to TIBilateralTemplate.json.")
@@ -317,21 +303,42 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--scenario-year", default=DEFAULT_SCENARIO_YEAR, choices=SCENARIO_YEARS, help="Deprecated compatibility option. Rebuilds now generate all scenarios and keep 2026 as the default.")
     parser.add_argument("--catalog-languages", default="kor,en", help="Comma-separated localization languages for generated catalogs.")
     parser.add_argument("--skip-verify", action="store_true", help="Skip npm verify.")
-    parser.add_argument("--no-commit", action="store_true", help="Build and verify without committing generated changes.")
-    parser.add_argument("--no-push", action="store_true", help="Do not push after committing generated changes.")
-    parser.add_argument("--remote", default="origin", help="Git remote to push when changes are committed.")
-    parser.add_argument("--branch", help="Branch to push. Defaults to the current branch.")
-    parser.add_argument("--commit-message", help="Commit message for generated page updates.")
-    args = parser.parse_args()
+    parser.add_argument("--commit", action="store_true", help="Commit manifest-declared generated changes after verification.")
+    parser.add_argument("--push", action="store_true", help="Commit and push manifest-declared generated changes after verification.")
+    parser.add_argument("--no-commit", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--no-push", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--remote", default="origin", help="Git remote used with --push.")
+    parser.add_argument("--branch", help="Branch to push with --push. Defaults to the current branch.")
+    parser.add_argument("--commit-message", help="Commit message used with --commit or --push.")
+    args = parser.parse_args(argv)
     if args.refresh_region_outlines and not args.region_outlines:
         parser.error("--refresh-region-outlines requires --region-outlines.")
+    if args.no_commit:
+        print("warning: --no-commit is deprecated; publishing is now disabled by default.", file=sys.stderr)
+    if args.no_push:
+        print("warning: --no-push is deprecated; use --commit for commit-only publishing.", file=sys.stderr)
+    if args.no_commit and (args.commit or args.push):
+        parser.error("--no-commit cannot be combined with --commit or --push.")
+    if args.no_push and args.push:
+        parser.error("--no-push cannot be combined with --push.")
+    if args.no_commit:
+        args.commit = False
+        args.push = False
+    elif args.no_push:
+        # Preserve the old commit-without-push contract for one transition cycle.
+        args.commit = True
+        args.push = False
+    elif args.push:
+        args.commit = True
+    if args.branch and not args.push:
+        parser.error("--branch requires --push.")
     return args
 
 
 def main() -> int:
     args = parse_args()
     build_pages(args)
-    commit_and_push(args)
+    publish_generated_changes(args)
     return 0
 
 

@@ -22,11 +22,22 @@ from catalog_utils import (
     resolve_templates_dir,
     sanitize_data_value,
 )
+from input_contracts import load_override_map, load_required_json
+from localization import (
+    load_nation_localization_layers as load_shared_nation_localization_layers,
+    project_region_nation_localizations,
+)
+from scenario_config import (
+    DEFAULT_SCENARIO,
+    SUPPORTED_SCENARIOS,
+    scenario_template_name as shared_scenario_template_name,
+    strip_scenario_prefix,
+)
 from scenario_rows import filter_bilateral_rows_for_scenario
 
 
-SCENARIO_YEARS = ("2022", "2026", "2070")
-DEFAULT_SCENARIO_YEAR = "2026"
+SCENARIO_YEARS = SUPPORTED_SCENARIOS
+DEFAULT_SCENARIO_YEAR = DEFAULT_SCENARIO
 DEFAULT_NATION_DISPLAY_OVERRIDES = Path("data/manual/nation_display_overrides.json")
 NATION_COLOR_PALETTE = [
     "#4f83cc",
@@ -49,30 +60,19 @@ NATION_COLOR_PALETTE = [
 
 
 def load_json(path: Path) -> Any:
-    return sanitize_data_value(json.loads(path.read_text(encoding="utf-8")))
+    return sanitize_data_value(load_required_json(path))
 
 
 def norm_id(value: Any) -> str:
-    if value is None:
-        return ""
-    return re.sub(r"^(?:2022|2026|2070)_", "", clean_data_string(str(value)))
+    return strip_scenario_prefix(clean_data_string(str(value))) if value is not None else ""
 
 
 def scenario_template_name(name: str, scenario_year: str) -> str:
-    return f"{scenario_year}_{norm_id(name)}"
+    return shared_scenario_template_name(name, scenario_year)
 
 
 def load_nation_display_overrides(path: Path = DEFAULT_NATION_DISPLAY_OVERRIDES) -> dict[str, dict[str, Any]]:
-    if not path.is_file():
-        return {}
-    raw = load_json(path)
-    if not isinstance(raw, dict):
-        return {}
-    return {
-        norm_id(tag): value
-        for tag, value in raw.items()
-        if norm_id(tag) and isinstance(value, dict)
-    }
+    return load_override_map(path)
 
 
 def select_scenario_template(
@@ -113,11 +113,13 @@ def load_nation_localizations(
     languages: list[str],
     scenario_year: str = DEFAULT_SCENARIO_YEAR,
 ) -> dict[str, dict[str, str]]:
-    layers = load_nation_localization_layers(templates_dir, languages, scenario_year)
-    return {
-        tag: dict(sorted((values.get("scenario") or values.get("base") or {}).items()))
-        for tag, values in sorted(layers.items())
-    }
+    layers = load_shared_nation_localization_layers(
+        templates_dir,
+        languages,
+        scenario_year,
+        families=("displayName",),
+    )
+    return project_region_nation_localizations(layers)
 
 
 def load_nation_localization_layers(
@@ -125,26 +127,18 @@ def load_nation_localization_layers(
     languages: list[str],
     scenario_year: str = DEFAULT_SCENARIO_YEAR,
 ) -> dict[str, dict[str, dict[str, str]]]:
-    root = templates_dir.parent / "Localization"
-    localizations: dict[str, dict[str, dict[str, str]]] = {}
-    for language in languages:
-        values = read_localization_file(root / language / f"TINationTemplate.{language}")
-        for key, value in values.items():
-            parts = key.split(".")
-            if len(parts) != 3 or parts[0] != "TINationTemplate" or parts[1] != "displayName":
-                continue
-            _, _, data_name = parts
-            tag = norm_id(data_name)
-            if not tag:
-                continue
-            priority = nation_localization_priority(data_name, tag, scenario_year)
-            if priority == 2:
-                localizations.setdefault(tag, {}).setdefault("scenario", {})[language] = value
-            elif priority == 1:
-                localizations.setdefault(tag, {}).setdefault("base", {})[language] = value
+    shared = load_shared_nation_localization_layers(
+        templates_dir,
+        languages,
+        scenario_year,
+        families=("displayName",),
+    )
     return {
-        tag: {kind: dict(sorted(names.items())) for kind, names in sorted(values.items())}
-        for tag, values in sorted(localizations.items())
+        tag: {
+            layer: dict(sorted((families.get("displayName") or {}).items()))
+            for layer, families in sorted(values.items())
+        }
+        for tag, values in sorted(shared.items())
     }
 
 

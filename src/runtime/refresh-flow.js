@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 export const ACTIVE_SCENARIO_REFRESH_STEPS = Object.freeze([
-  'populate',
+  'updateWarning',
   'clearOverlayVisualState',
   'renderGrid',
-  'renderRegions',
+  'renderRegionGeometry',
   'renderLabels',
   'renderSelectionOutlines',
   'renderPinnedRegionsPanel',
@@ -13,6 +13,7 @@ export const ACTIVE_SCENARIO_REFRESH_STEPS = Object.freeze([
   'renderCapitalMarkers',
   'updateNationOverlay',
   'applyFilters',
+  'renderBaseRegionColors',
   'updateSelectedRegions',
   'renderNationDropdown',
   'refreshReachableCapitalCandidateOutputs',
@@ -22,10 +23,12 @@ export const ACTIVE_SCENARIO_REFRESH_STEPS = Object.freeze([
 
 export const LANGUAGE_REFRESH_STEPS = Object.freeze([
   'applyStaticTranslations',
-  'populate',
+  'rebuildSearchCatalog',
+  'updateWarning',
   'syncSearchSelectedNationLabel',
   'renderNationDropdown',
   'refreshNationOverlayForLanguage',
+  'renderLabels',
   'applyFilters',
   'updateSelectedRegions',
   'renderPinnedRegionsPanel',

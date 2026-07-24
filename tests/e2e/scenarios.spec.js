@@ -1,15 +1,7 @@
 // SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
 // SPDX-License-Identifier: MIT
 
-import { expect, test } from '@playwright/test';
-
-async function chooseNation(page, query, tag) {
-  await page.locator('#search').fill(query);
-  await page.locator('#nationDropdown .searchOption')
-    .filter({ has: page.locator('.searchOptionTag', { hasText: tag }) })
-    .first()
-    .click();
-}
+import {chooseNation, expect, test} from '../fixtures/app.js';
 
 async function groupedClaimRegionCount(page) {
   return page.locator('#claimOverlays .claim-fill-group').evaluateAll(nodes => nodes.reduce((sum, node) => (
@@ -138,4 +130,61 @@ test('scenario ownership drives one consistent base fill per nation', async ({ p
   await expect(crimeaRegion).toHaveAttribute('data-nation', 'RUS');
   const restored = await canonicalRegionBaseState(page, 'Crimea');
   expect(restored).toEqual(state2026);
+});
+
+test('one scenario transition prepares each runtime index and refresh exactly once', async ({ page }) => {
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({timeout: 10000});
+
+  for (const scenario of ['2070', '2022', '2026']) {
+    await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
+    expect(await page.evaluate(nextScenario => (
+      window.__TI_SCENARIO_API__.setActiveScenario(nextScenario)
+    ), scenario)).toBe(true);
+    await expect(page.locator('#scenarioSel')).toHaveValue(scenario);
+    const stats = await page.evaluate(() => ({...window.__TI_DEBUG_RENDER_STATS__}));
+    expect(stats.scenarioRuntimeBuilds).toBe(1);
+    expect(stats.searchCatalogBuilds).toBe(1);
+    expect(stats.incomingClaimIndexBuilds).toBe(1);
+    expect(stats.scenarioRefreshRuns).toBe(1);
+  }
+});
+
+test('base mode changes preserve region, hit, and label node identity', async ({ page }) => {
+  await page.goto('/?worldWrap=0&debugRenderStats=1');
+  await expect(page.locator('#regions .region').first()).toBeVisible({timeout: 10000});
+  await page.locator('#showLabels').click();
+  await expect(page.locator('#labels text').first()).toBeVisible();
+
+  await page.evaluate(() => {
+    window.__TI_BASE_MODE_IDENTITY__ = {
+      regions: [...document.querySelectorAll('#regions .region')],
+      hits: [...document.querySelectorAll('#hitRegions .region-hit')],
+      labels: [...document.querySelectorAll('#labels text')],
+    };
+    window.__TI_DEBUG_RENDER_STATS__.reset();
+  });
+  await page.locator('#baseMode').selectOption('plain');
+
+  const result = await page.evaluate(() => {
+    const regions = [...document.querySelectorAll('#regions .region')];
+    const hits = [...document.querySelectorAll('#hitRegions .region-hit')];
+    const labels = [...document.querySelectorAll('#labels text')];
+    const identity = window.__TI_BASE_MODE_IDENTITY__;
+    return {
+      region: identity.regions.length === regions.length
+        && identity.regions.every((node, index) => node === regions[index]),
+      hit: identity.hits.length === hits.length
+        && identity.hits.every((node, index) => node === hits[index]),
+      label: identity.labels.length === labels.length
+        && identity.labels.every((node, index) => node === labels[index]),
+      stats: {...window.__TI_DEBUG_RENDER_STATS__},
+    };
+  });
+  expect(result.region).toBe(true);
+  expect(result.hit).toBe(true);
+  expect(result.label).toBe(true);
+  expect(result.stats.regionGeometryRenderCalls).toBe(0);
+  expect(result.stats.labelRenderCalls).toBe(0);
+  expect(result.stats.baseColorRenderCalls).toBe(1);
 });

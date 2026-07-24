@@ -6,14 +6,12 @@
 from __future__ import annotations
 
 import argparse
-import re
 from pathlib import Path
 from typing import Any
 
 from catalog_utils import (
     as_float,
     compact_number,
-    load_json,
     load_named_templates,
     parse_languages,
     read_localization_file,
@@ -21,7 +19,9 @@ from catalog_utils import (
     source_fingerprint,
     write_json_output,
 )
-from scenario_rows import DEFAULT_SCENARIO, SUPPORTED_SCENARIOS, filter_bilateral_rows_for_scenario
+from input_contracts import load_alias_map, load_template_rows
+from scenario_config import DEFAULT_SCENARIO, SUPPORTED_SCENARIOS, strip_scenario_prefix
+from scenario_rows import filter_bilateral_rows_for_scenario
 
 
 SCHEMA_VERSION = 2
@@ -37,9 +37,7 @@ LOCALIZATION_FILES = {
 
 
 def norm_id(value: Any) -> str:
-    if value is None:
-        return ""
-    return re.sub(r"^(?:2022|2026|2070)_", "", str(value))
+    return strip_scenario_prefix(value)
 
 
 def clean_value(value: Any) -> Any:
@@ -333,8 +331,8 @@ def main() -> int:
         raise SystemExit("Templates directory not found. Pass --templates-dir.")
     languages = parse_languages(args.languages)
     bilateral_path = Path(args.bilateral_template) if args.bilateral_template else templates_dir / "TIBilateralTemplate.json"
-    bilateral_rows = load_json(bilateral_path) if bilateral_path.is_file() else None
-    aliases = load_json(Path(args.aliases)) if args.aliases and Path(args.aliases).is_file() else {}
+    bilateral_rows = load_template_rows(bilateral_path, required=False) or None
+    aliases = load_alias_map(Path(args.aliases)) if args.aliases else {}
     catalog = build_catalog(
         templates_dir,
         languages,

@@ -4,6 +4,7 @@ This folder holds temporary per-issue and per-PR planning context.
 
 ## Current folders
 
+- `architecture-refactor/`: implemented repository-wide architecture, build-safety, runtime, pipeline, and publishing refactor plan; retained through PR review for evidence.
 - `issue_16/`: SVG overlay performance follow-up loop and related profiling reports.
 - `issue_56/`: hostile-claim visual hatch implementation prompt.
 - `issue_62/`: label rendering performance profiling plan and results.
