@@ -54,6 +54,7 @@ export function createNationInfoPanelController({
       currentModel = null;
       context = {};
       root?.removeEventListener?.('click', onClick);
+      if (root) root.textContent = '';
     },
     get model() {
       return activeModel();

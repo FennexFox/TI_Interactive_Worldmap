@@ -91,6 +91,15 @@ export function createSearchController({
     return true;
   };
   const parseNationSearchValue = value => parseCatalogValue(catalog, value);
+  const getSelectedNation = () => search?.dataset?.selectedNation || '';
+  const setSelectedNation = (nation = '', {updateValue = true} = {}) => {
+    if (destroyed || !search) return;
+    const nextNation = nation || '';
+    search.dataset.selectedNation = nextNation;
+    if (updateValue) {
+      search.value = nextNation ? context.nationLabel?.(nextNation) || nextNation : '';
+    }
+  };
   const filterText = () => {
     const tag = search?.dataset?.selectedNation || '';
     const selectedNationMatches = !!tag && parseNationSearchValue(search?.value) === tag;
@@ -190,9 +199,11 @@ export function createSearchController({
       if (dropdown) dropdown.textContent = '';
       if (results) results.textContent = '';
     },
+    getSelectedNation,
+    setSelectedNation,
     syncSelectedNationLabel() {
-      const selectedNation = search?.dataset?.selectedNation || '';
-      if (selectedNation) search.value = context.nationLabel(selectedNation);
+      const selectedNation = getSelectedNation();
+      if (selectedNation) setSelectedNation(selectedNation);
     },
     destroy() {
       if (destroyed) return;

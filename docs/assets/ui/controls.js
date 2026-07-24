@@ -230,12 +230,23 @@ export function bindAppControls({
   onLabelsToggle,
   onReachableCapitalsToggle,
 } = {}) {
-  languageSelect?.addEventListener('change', () => onLanguageChange?.(languageSelect.value));
-  scenarioSelect?.addEventListener('change', () => onScenarioChange?.(scenarioSelect.value));
-  baseModeSelect?.addEventListener('change', () => onBaseModeChange?.());
-  claimModeSelect?.addEventListener('change', () => onClaimModeChange?.(claimModeSelect.value));
-  claimKindSelect?.addEventListener('change', () => onClaimKindChange?.(claimKindSelect.value));
-  projectSelect?.addEventListener('change', () => onProjectChange?.(projectSelect.value));
-  labelsToggle?.addEventListener('click', () => onLabelsToggle?.());
-  reachableCapitalsButton?.addEventListener('click', () => onReachableCapitalsToggle?.());
+  const bindings = [
+    [languageSelect, 'change', () => onLanguageChange?.(languageSelect.value)],
+    [scenarioSelect, 'change', () => onScenarioChange?.(scenarioSelect.value)],
+    [baseModeSelect, 'change', () => onBaseModeChange?.()],
+    [claimModeSelect, 'change', () => onClaimModeChange?.(claimModeSelect.value)],
+    [claimKindSelect, 'change', () => onClaimKindChange?.(claimKindSelect.value)],
+    [projectSelect, 'change', () => onProjectChange?.(projectSelect.value)],
+    [labelsToggle, 'click', () => onLabelsToggle?.()],
+    [reachableCapitalsButton, 'click', () => onReachableCapitalsToggle?.()],
+  ].filter(([element]) => element);
+  bindings.forEach(([element, type, listener]) => element.addEventListener(type, listener));
+  let destroyed = false;
+  return Object.freeze({
+    destroy() {
+      if (destroyed) return;
+      destroyed = true;
+      bindings.forEach(([element, type, listener]) => element.removeEventListener(type, listener));
+    },
+  });
 }

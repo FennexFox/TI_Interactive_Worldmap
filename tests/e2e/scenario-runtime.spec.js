@@ -48,4 +48,18 @@ test('app runtime scenario API rebuilds active scenario context without stale ma
     '#regions .region[data-wrap-canonical="1"][data-region="Crimea"]'
   )).toHaveAttribute('data-nation', initial.crimeaNation);
   await expect(page.locator('#nationDropdown')).toContainText('Canada');
+
+  for (const scenarioId of ['2022', '2026', '2070', '2022']) {
+    await page.evaluate(id => window.__TI_SCENARIO_API__.setActiveScenario(id), scenarioId);
+    await page.waitForFunction(
+      id => window.__TI_SCENARIO_API__?.activeScenario === id,
+      scenarioId
+    );
+    await expect(page.locator(
+      '#hitRegions .region-hit[data-wrap-canonical="1"]'
+    )).toHaveCount(initial.canonicalRegions);
+    await expect(page.locator('#selectedPill')).toBeHidden();
+    await expect(page.locator('#map')).not.toHaveClass(/claims-active/);
+    await expect(page.locator('#nationDropdown')).toContainText('Canada');
+  }
 });

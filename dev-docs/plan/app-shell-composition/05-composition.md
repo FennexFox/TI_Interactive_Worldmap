@@ -23,7 +23,7 @@
 - `src/runtime/app-runtime.js`
 - `src/runtime/refresh-actions.js`/`refresh-flow.js` only for narrow composition contracts
 - extracted service/controller modules only for final wiring fixes
-- focused `tests/unit/app-runtime.test.js`
+- focused runtime/service unit tests and `tests/e2e/runtime-lifecycle.spec.js`
 - relevant scenario/debug E2E specs
 - derived `docs/assets/**` only through build
 - this phase file
@@ -72,21 +72,41 @@
 
 ## Evidence
 
-- Baseline: phase-1 public API/scenario/language/debug evidence.
-- After: pending.
-- Delta: pending.
-- Interpretation: pending.
+- Baseline:
+  - Phase 04 ended with a 2,505-line `src/app.js` that still owned runtime data aliases, selection/claim orchestration, marker aggregation, and refresh wiring.
+  - Phase 01 recorded the public debug/scenario APIs, render counters, scenario/language behavior, and DOM identity requirements preserved by this phase.
+- After:
+  - `src/app.js` is 18 lines and now owns only generated-data promise handling, runtime creation/start, loading dismissal, and failure presentation.
+  - `createAppRuntime({window, document, generatedData})` returns an exact frozen `{start, destroy, setActiveScenario, setLanguage}` API. A browser lifecycle test covers one-shot start, repeated start, idempotent destroy, API cleanup, and inert post-destroy transitions.
+  - runtime composition uses one live `scenarioSnapshot`; the former mutable `REGIONS`/claims/indices/color/meta aliases and `syncRuntimeDataAliases` have been removed.
+  - renderer/UI/interaction services read current scenario/model inputs through `getContext()` callbacks. `app-runtime.js` has no direct DOM query, class, dataset, style, value, or option access.
+  - claim presentation, map presentation, map output aggregation, selection coordination, app-state adaptation, browser API installation, map-view behavior, app-shell UI, loading UI, and presentation formatting now have focused modules and lifecycle boundaries.
+  - `npm run lint:js`: passed.
+  - `npm run verify`: passed, including 61 Node tests, 48 Python tests, Pages rebuild, and generated-output verification.
+  - full Playwright with a fresh two-worker server: 74/74 passed.
+  - explicit `2022 → 2026 → 2070 → 2022` scenario sequence passed with stable canonical region count, cleared selection/claim state, and retained search results.
+  - source audit found no `appState` imports in render/UI/interaction modules and no changes under `data/generated/**` or `graphify-out/**`.
+- Delta:
+  - low-level claim/manual/marker rendering and cache ownership, pointer/view interaction, search/nation UI state, output aggregation, and semantic selection transitions moved out of the entrypoint/runtime.
+  - reachable-capital presentation deliberately performs the historical cached descriptor reads for panel and marker output, preserving debug cache-hit counter semantics without increasing descriptor builds or DOM replacements.
+  - search selection clearing now preserves an in-progress replacement query, preventing stale default dropdown choices after changing an already selected nation.
+- Interpretation: the entrypoint is now minimal and the runtime is a composition/refresh root rather than a data, DOM, interaction, or rendering implementation module. Scenario services consume a single live snapshot, lifecycle teardown is explicit and idempotent, and the public/browser/rendering contracts remain compatible across the complete automated suite.
 - Commit: pending.
-- Commit blocker: none.
+- Commit blocker: none; phase commit is owned by the parent agent.
 
 ## Progress
 
-- Not started.
+- Implementation and required validation complete; awaiting phase commit.
 
 ## Decision log
 
 - The runtime may own service construction and refresh sequencing only; algorithms and DOM construction stay in dedicated modules.
+- A single immutable `scenarioSnapshot` is the runtime source of current scenario data; parallel mutable field aliases are prohibited because they can diverge during scenario transitions.
+- Search and filter control DOM semantics stay behind app-shell/search APIs, and map class/label/path semantics stay behind the scene renderer.
+- Runtime lifecycle behavior is verified in a real browser document with automatic entrypoint startup disabled for the test, avoiding a second runtime on the same DOM.
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- The composition boundary is explicit: state/data/presentation/interaction/UI services own their algorithms and local lifecycle, while `app-runtime.js` constructs them, connects callbacks, and orders scenario/language refreshes.
+- `destroy()` now tears down interaction scheduling/listeners, selection context, map view controls, output/presentation services, scene state, UI controllers, and installed browser globals once.
+- Focused cache-counter and replacement-query regressions found during cross-section E2E were corrected before the full suite, strengthening compatibility at the new service boundaries.

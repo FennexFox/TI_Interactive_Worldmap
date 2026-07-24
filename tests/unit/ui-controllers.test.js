@@ -257,4 +257,5 @@ test('nation overlay controller renders panel/options/pill and resolves events f
   controller.destroy();
   assert.doesNotThrow(() => controller.destroy());
   assert.equal(root.listeners.get('click').length, 0);
+  assert.equal(root.textContent, '');
 });
