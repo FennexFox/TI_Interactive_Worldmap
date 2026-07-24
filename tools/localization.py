@@ -77,8 +77,9 @@ def project_region_nation_localizations(
     layers: dict[str, dict[str, dict[str, dict[str, str]]]],
 ) -> dict[str, dict[str, str]]:
     return {
-        tag: dict(sorted(
-            ((values.get("scenario") or values.get("base") or {}).get("displayName") or {}).items()
-        ))
+        tag: dict(sorted({
+            **((values.get("base") or {}).get("displayName") or {}),
+            **((values.get("scenario") or {}).get("displayName") or {}),
+        }.items()))
         for tag, values in sorted(layers.items())
     }

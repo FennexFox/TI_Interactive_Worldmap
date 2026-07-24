@@ -9,8 +9,11 @@ test('nation search uses catalog names and keeps region names separate', async (
 
   const search = page.locator('#search');
   const options = page.locator('#nationDropdown .searchOption');
-  const nationOption = tag => options.filter({has: page.locator('.searchOptionTag', {hasText: tag})});
-  const regionOption = options.filter({has: page.locator('.searchOptionTag', {hasText: 'REGION'})});
+  const taggedOption = tag => page.locator('.searchOptionTag', {hasText: new RegExp(`^${tag}$`)});
+  const nationOption = tag => options
+    .filter({has: taggedOption(tag)})
+    .filter({hasNot: taggedOption('REGION')});
+  const regionOption = options.filter({has: taggedOption('REGION')});
 
   await search.fill('Canada');
   await expect(nationOption('CAN').first()).toContainText('Canada');
@@ -59,7 +62,10 @@ test('nation search matches claim project names to claimant nations', async ({pa
 
   const search = page.locator('#search');
   const options = page.locator('#nationDropdown .searchOption');
-  const nationOption = tag => options.filter({has: page.locator('.searchOptionTag', {hasText: tag})});
+  const taggedOption = tag => page.locator('.searchOptionTag', {hasText: new RegExp(`^${tag}$`)});
+  const nationOption = tag => options
+    .filter({has: taggedOption(tag)})
+    .filter({hasNot: taggedOption('REGION')});
 
   await search.fill('United Turkestan');
   await expect(nationOption('TUR').first()).toBeVisible();

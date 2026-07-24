@@ -668,6 +668,51 @@ test('generated Indonesia and Ethiopia claims do not taint unrelated project cla
   }
 });
 
+test('incoming claims keep an empty cumulative claim region set authoritative', () => {
+  const claimsByNation = {
+    AAA: {
+      nation: 'AAA',
+      baseRegions: ['Alpha'],
+      projects: [{
+        project: '',
+        label: 'Base claims',
+        regions: ['Alpha'],
+        claims: {Alpha: {hostileClaim: false}},
+      }],
+    },
+    BBB: {
+      nation: 'BBB',
+      baseRegions: ['Alpha'],
+      projects: [],
+    },
+  };
+  let incomingClaimsByRegion = new Map();
+  const model = createClaimModel({
+    claimsByNation: () => claimsByNation,
+    nationRegions: () => new Map([
+      ['AAA', ['Alpha']],
+      ['BBB', ['Alpha']],
+    ]),
+    incomingClaimsByRegion: () => incomingClaimsByRegion,
+  });
+  incomingClaimsByRegion = model.buildIncomingClaimIndex();
+
+  const [incoming] = model.incomingClaimsForTarget(
+    'BBB',
+    claimsByNation.BBB,
+    new Set(['Alpha'])
+  );
+  expect(incoming.entryRegions).toEqual(['Alpha']);
+  expect(incoming.regions).toEqual([]);
+  expect(incoming.resultRegions).toEqual(['Alpha']);
+});
+
+test('reachable capital candidates tolerate an unavailable capital index', () => {
+  const model = createClaimModel({capitalNationsByRegion: () => null});
+
+  expect(model.reachableCapitalCandidateNations('Alpha', 'AAA')).toEqual([]);
+});
+
 test('claim model filters reachable capitals and assembles manual envelope data', () => {
   const fixture = sampleClaimModelFixture();
   const {model} = fixture;

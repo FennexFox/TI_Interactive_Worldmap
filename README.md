@@ -35,9 +35,17 @@ npx playwright install chromium
 
 WSL:
 
+Install `nvm` and `pyenv` inside WSL, then select the repository-pinned
+toolchain from the repository root:
+
 ```bash
-sudo apt update
-sudo apt install -y python3 python3-venv python3-pip nodejs npm
+set -euo pipefail
+nvm install "$(cat .nvmrc)"
+nvm use "$(cat .nvmrc)"
+pyenv install --skip-existing "$(cat .python-version)"
+pyenv local "$(cat .python-version)"
+node -e "if (process.versions.node.split('.')[0] !== '24') process.exit(1)"
+python3 -c "import sys; assert sys.version_info[:2] == (3, 12), sys.version"
 ./scripts/build-wsl.sh --help
 ```
 

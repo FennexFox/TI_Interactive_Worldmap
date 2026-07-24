@@ -4,7 +4,7 @@
 import { defineConfig } from '@playwright/test';
 
 const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
-const inCI = Boolean(process.env.CI);
+const inCI = ['1', 'true', 'yes', 'on'].includes((process.env.CI ?? '').toLowerCase());
 
 export default defineConfig({
   testDir: './tests/e2e',

@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from build_manifest import (
+    SCENARIO_OUTPUT_BUNDLE_KEYS,
     SCENARIO_OUTPUT_FILENAMES,
     browser_source_mappings,
     deployment_source_mappings,
@@ -27,6 +28,7 @@ EXPECTED_SCENARIOS = SUPPORTED_SCENARIOS
 INLINE_DATA_COMMENT_RE = re.compile(r"(^|\s)//")
 JS_IMPORT_RE = re.compile(r"import\s+(?:[^;]*?\s+from\s+)?[\"'](\.[^\"']+)[\"']\s*;", re.DOTALL)
 GENERATED_DATA_CHUNKS_RE = re.compile(r"const compressed = \[\s*(.*?)\s*\]\.join", re.DOTALL)
+NODE_CHECK_TIMEOUT_SECONDS = 10
 
 
 @dataclass(frozen=True)
@@ -80,14 +82,34 @@ def collect_javascript_syntax_diagnostics(root: Path = ROOT) -> list[Diagnostic]
     if generated_data.exists():
         paths.append(generated_data)
     for path in paths:
-        result = subprocess.run(
-            ["node", "--check", str(path)],
-            cwd=root,
-            check=False,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
+        try:
+            result = subprocess.run(
+                ["node", "--check", str(path)],
+                cwd=root,
+                check=False,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=NODE_CHECK_TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired:
+            diagnostics.append(
+                Diagnostic(
+                    "javascript-syntax",
+                    str(path.relative_to(root)),
+                    f"node --check timed out after {NODE_CHECK_TIMEOUT_SECONDS} seconds",
+                )
+            )
+            continue
+        except OSError as exc:
+            diagnostics.append(
+                Diagnostic(
+                    "javascript-syntax",
+                    str(path.relative_to(root)),
+                    f"could not run node --check: {exc}",
+                )
+            )
+            continue
         if result.returncode:
             detail = (result.stderr or result.stdout).strip().splitlines()
             diagnostics.append(
@@ -217,6 +239,14 @@ def research_project_ids(research_catalog: dict[str, object]) -> set[str]:
         if isinstance(node, dict) and node.get("kind") == "project" and isinstance(node.get("dataName"), str):
             projects.add(str(node["dataName"]))
     return projects
+
+
+def scenario_bundle_value(scenario_entry: dict[str, object], filename: str) -> dict[str, object]:
+    bundle_key = SCENARIO_OUTPUT_BUNDLE_KEYS.get(filename)
+    require(bundle_key is not None, f"unsupported scenario output filename: {filename}")
+    if filename.endswith(".catalog.json"):
+        return object_value(object_value(scenario_entry.get("catalogs")).get(bundle_key))
+    return object_value(scenario_entry.get(bundle_key))
 
 
 def verify_scenario_entry(scenario: str, entry: dict[str, object]) -> None:
@@ -365,22 +395,14 @@ def verify_structure_and_replication() -> None:
     for scenario, entry in sorted(scenarios.items()):
         scenario_id = str(scenario)
         scenario_entry_data = object_value(entry)
-        standalone_keys = {
-            "region_map.generated.json": "regionMap",
-            "claim_map.generated.json": "claimMap",
-            "nations.catalog.json": "nations",
-            "research.catalog.json": "research",
-        }
-        catalogs = object_value(scenario_entry_data.get("catalogs"))
         for filename in SCENARIO_OUTPUT_FILENAMES:
-            bundle_key = standalone_keys[filename]
             standalone = object_value(
                 load_json(
                     ROOT / f"data/generated/scenarios/{scenario_id}/{filename}",
                     f"{scenario_id} standalone {filename}",
                 )
             )
-            bundled = object_value(catalogs.get(bundle_key)) if filename.endswith(".catalog.json") else object_value(scenario_entry_data.get(bundle_key))
+            bundled = scenario_bundle_value(scenario_entry_data, filename)
             require_json_equal(
                 standalone,
                 bundled,
@@ -458,10 +480,15 @@ def collect_dataset_sentinel_diagnostics() -> list[Diagnostic]:
 
 
 def collect_all_diagnostics(root: Path = ROOT) -> list[Diagnostic]:
-    diagnostics = [
-        *collect_deployment_diagnostics(root),
-        *collect_javascript_syntax_diagnostics(root),
-    ]
+    diagnostics: list[Diagnostic] = []
+    for code, collector in (
+        ("deployment-collector", collect_deployment_diagnostics),
+        ("javascript-syntax-collector", collect_javascript_syntax_diagnostics),
+    ):
+        try:
+            diagnostics.extend(collector(root))
+        except Exception as exc:
+            diagnostics.append(Diagnostic(code, "", f"collector failed: {exc}"))
     if root == ROOT:
         diagnostics.extend(collect_structure_diagnostics())
         diagnostics.extend(collect_dataset_sentinel_diagnostics())

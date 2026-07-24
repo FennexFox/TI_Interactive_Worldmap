@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -69,6 +70,66 @@ class VerifyGeneratedOutputsTests(unittest.TestCase):
         diagnostics = verify_generated_outputs.collect_javascript_syntax_diagnostics(root)
 
         self.assertIn(("javascript-syntax", "src/runtime/broken.js"), {(item.code, item.path) for item in diagnostics})
+
+    def test_node_check_runtime_failures_are_aggregated(self):
+        root = self.make_root()
+        with mock.patch.object(
+            verify_generated_outputs.subprocess,
+            "run",
+            side_effect=[
+                subprocess.TimeoutExpired(["node", "--check"], 10),
+                OSError("node unavailable"),
+            ],
+        ) as run:
+            diagnostics = verify_generated_outputs.collect_javascript_syntax_diagnostics(root)
+
+        self.assertEqual(run.call_count, 2)
+        self.assertEqual(
+            [(item.code, item.path) for item in diagnostics],
+            [
+                ("javascript-syntax", "src/app.js"),
+                ("javascript-syntax", "src/runtime/flow.js"),
+            ],
+        )
+        self.assertIn("timed out", diagnostics[0].message)
+        self.assertIn("node unavailable", diagnostics[1].message)
+
+    def test_unknown_scenario_output_filename_is_a_verification_failure(self):
+        with self.assertRaisesRegex(
+            verify_generated_outputs.VerificationFailure,
+            "unsupported scenario output filename",
+        ):
+            verify_generated_outputs.scenario_bundle_value({}, "unknown.generated.json")
+
+    def test_collector_failure_does_not_discard_later_diagnostics(self):
+        root = self.make_root()
+        syntax_diagnostic = verify_generated_outputs.Diagnostic(
+            "javascript-syntax",
+            "src/app.js",
+            "broken syntax",
+        )
+        with (
+            mock.patch.object(
+                verify_generated_outputs,
+                "collect_deployment_diagnostics",
+                side_effect=OSError("deployment unavailable"),
+            ),
+            mock.patch.object(
+                verify_generated_outputs,
+                "collect_javascript_syntax_diagnostics",
+                return_value=[syntax_diagnostic],
+            ) as syntax_collector,
+        ):
+            diagnostics = verify_generated_outputs.collect_all_diagnostics(root)
+
+        syntax_collector.assert_called_once_with(root)
+        self.assertEqual(
+            [(item.code, item.message) for item in diagnostics],
+            [
+                ("deployment-collector", "collector failed: deployment unavailable"),
+                ("javascript-syntax", "broken syntax"),
+            ],
+        )
 
     def test_sentinel_failures_are_returned_as_diagnostics(self):
         with mock.patch.object(

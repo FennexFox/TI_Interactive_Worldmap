@@ -27,6 +27,7 @@ test('language selector switches static and dynamic UI copy', async ({page}) => 
   await expect(page.locator('html')).toHaveAttribute('lang', 'ko');
   await expect(page.locator('h1')).toHaveText('Terra Invicta 영유권 / 통합 지도');
   await expect(page.locator('#search')).toHaveAttribute('placeholder', '국가 태그, 지역명, 프로젝트명 입력: CHN, Korea, Greater India...');
+  await expect(page.locator('#claimMode option[value="project"]')).toHaveText('선택한 프로젝트만');
   await expect(page.locator('#claimPill')).toHaveText('영유권: -');
   await expect(page.locator('#reachableCandidatesPanel')).toContainText('후보 수도 0개');
   await expect(page.locator('#reachableCandidatesPanel')).toContainText('도달 가능한 수도 후보가 없습니다.');

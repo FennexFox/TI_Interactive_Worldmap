@@ -25,12 +25,13 @@ TOP_LEVEL_GENERATED_FILES = (
     Path("data/generated/scenario_bundle.generated.json"),
 )
 
-SCENARIO_OUTPUT_FILENAMES = (
-    "region_map.generated.json",
-    "claim_map.generated.json",
-    "nations.catalog.json",
-    "research.catalog.json",
-)
+SCENARIO_OUTPUT_BUNDLE_KEYS = {
+    "region_map.generated.json": "regionMap",
+    "claim_map.generated.json": "claimMap",
+    "nations.catalog.json": "nations",
+    "research.catalog.json": "research",
+}
+SCENARIO_OUTPUT_FILENAMES = tuple(SCENARIO_OUTPUT_BUNDLE_KEYS)
 
 PAGES_DATA_FILES = (
     Path("docs/data/region_map.generated.json"),
@@ -41,27 +42,11 @@ PAGES_DATA_FILES = (
     Path("docs/assets/data.generated.js"),
 )
 
-# These paths are intentionally explicit: rebuild publishing must never stage the
-# whole repository, while every derived browser module directory must be covered.
-GENERATED_STAGING_PATHS = (
-    *(str(path) for path in TOP_LEVEL_GENERATED_FILES),
-    "data/generated/scenarios",
-    *(str(path) for path in PAGES_DATA_FILES),
-    "docs/index.html",
-    "docs/assets/styles.css",
-    "docs/assets/app.js",
-    "docs/assets/state",
-    "docs/assets/data",
-    "docs/assets/interaction",
-    "docs/assets/render",
-    "docs/assets/runtime",
-    "docs/assets/ui",
-)
-
-
 def browser_source_mappings(root: Path = ROOT) -> tuple[tuple[Path, Path], ...]:
     """Return every browser JS source and its Pages destination."""
     source_root = root / "src"
+    if not source_root.is_dir():
+        raise FileNotFoundError(f"browser source directory is missing: {source_root}")
     mappings = []
     for source in sorted(source_root.rglob("*.js")):
         relative = source.relative_to(source_root)
@@ -72,6 +57,16 @@ def browser_source_mappings(root: Path = ROOT) -> tuple[tuple[Path, Path], ...]:
 def deployment_source_mappings(root: Path = ROOT) -> tuple[tuple[Path, Path], ...]:
     """Return the complete source-to-Pages static asset manifest."""
     return (*STATIC_SOURCE_MAPPINGS, *browser_source_mappings(root))
+
+
+# Rebuild publishing stages only known generated paths and destinations from the
+# deployment manifest, so new browser modules cannot be omitted from a commit.
+GENERATED_STAGING_PATHS = (
+    *(str(path) for path in TOP_LEVEL_GENERATED_FILES),
+    "data/generated/scenarios",
+    *(str(path) for path in PAGES_DATA_FILES),
+    *(str(destination) for _, destination in deployment_source_mappings()),
+)
 
 
 def expected_browser_deployment_files(root: Path = ROOT) -> frozenset[Path]:

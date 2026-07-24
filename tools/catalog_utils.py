@@ -10,7 +10,12 @@ import re
 from pathlib import Path
 from typing import Any
 
-from input_contracts import load_required_json, validate_template_rows
+try:
+    from tools.input_contracts import load_required_json, validate_template_rows
+except ModuleNotFoundError as exc:
+    if exc.name != "tools":
+        raise
+    from input_contracts import load_required_json, validate_template_rows
 
 
 def compact_number(value: Any, digits: int = 6) -> Any:

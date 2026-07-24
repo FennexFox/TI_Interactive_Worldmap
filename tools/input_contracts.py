@@ -10,7 +10,12 @@ import re
 from pathlib import Path
 from typing import Any
 
-from scenario_config import strip_scenario_prefix
+try:
+    from tools.scenario_config import strip_scenario_prefix
+except ModuleNotFoundError as exc:
+    if exc.name != "tools":
+        raise
+    from scenario_config import strip_scenario_prefix
 
 
 class InputContractError(ValueError):
@@ -34,11 +39,22 @@ def _reject_duplicate_pairs(path: Path):
     return hook
 
 
+def _reject_non_finite_number(path: Path):
+    def reject(value: str) -> Any:
+        raise _error(path, "$", f"non-finite number {value!r} is not valid JSON")
+
+    return reject
+
+
 def load_required_json(path: Path, *, expected_type: type[Any] | tuple[type[Any], ...] | None = None) -> Any:
     if not path.is_file():
         raise _error(path, "$", "required file is missing")
     try:
-        value = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_reject_duplicate_pairs(path))
+        value = json.loads(
+            path.read_text(encoding="utf-8"),
+            object_pairs_hook=_reject_duplicate_pairs(path),
+            parse_constant=_reject_non_finite_number(path),
+        )
     except InputContractError:
         raise
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:

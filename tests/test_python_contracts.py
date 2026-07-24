@@ -29,6 +29,11 @@ from scenario_config import (  # noqa: E402
 
 
 class PythonContractTests(unittest.TestCase):
+    def test_catalog_utils_supports_package_imports(self):
+        from tools import catalog_utils
+
+        self.assertEqual(catalog_utils.load_required_json.__module__, "tools.input_contracts")
+
     def test_scenario_contract_is_shared_and_strict(self):
         self.assertEqual(strip_scenario_prefix("2070_CAN"), "CAN")
         self.assertEqual(scenario_template_name("2022_CAN", "2026"), "2026_CAN")
@@ -44,6 +49,15 @@ class PythonContractTests(unittest.TestCase):
             self.assertIn(str(path), str(caught.exception))
             self.assertIn("at $", str(caught.exception))
             self.assertIn("line 1", str(caught.exception))
+
+    def test_required_json_rejects_non_finite_numbers(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            for token in ("NaN", "Infinity", "-Infinity"):
+                with self.subTest(token=token):
+                    path = Path(temporary) / "non-finite.json"
+                    path.write_text(f'{{"value":{token}}}', encoding="utf-8")
+                    with self.assertRaisesRegex(InputContractError, "non-finite number"):
+                        load_required_json(path)
 
     def test_template_rows_report_duplicate_identifier_and_row(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -69,7 +83,7 @@ class PythonContractTests(unittest.TestCase):
     def test_localization_projections_keep_distinct_fallback_rules(self):
         layers = {
             "IDN": {
-                "base": {"displayName": {"en": "Java"}},
+                "base": {"displayName": {"en": "Java", "kor": "인도네시아 기본"}},
                 "scenario": {"displayName": {"kor": "인도네시아"}},
             }
         }
@@ -79,7 +93,7 @@ class PythonContractTests(unittest.TestCase):
         )
         self.assertEqual(
             project_region_nation_localizations(layers)["IDN"],
-            {"kor": "인도네시아"},
+            {"en": "Java", "kor": "인도네시아"},
         )
 
 

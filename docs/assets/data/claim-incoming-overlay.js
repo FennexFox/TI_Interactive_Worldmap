@@ -112,9 +112,9 @@ export function createClaimIncomingOverlayModel({
         if (claimEffectiveHostile(item.claim)) group.hostile += 1;
         if (item.claim?.gatedClaim) group.gated += 1;
         if (item.claim?.capitalClaim) group.capital += 1;
-        group.regions = uniqueSorted(item.resultClaimRegions || item.entryRegions || []);
+        group.regions = uniqueSorted(item.resultClaimRegions || []);
         group.claims = item.entryClaims || {};
-        group.resultRegions = uniqueSorted(item.resultRegions || item.entryRegions || []);
+        group.resultRegions = uniqueSorted(item.resultRegions || []);
         group.claimantBaseRegions = uniqueSorted(item.claimantBaseRegions || []);
         group.regionSourceLabels = item.resultRegionSourceLabels || {};
       }

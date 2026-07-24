@@ -207,7 +207,7 @@ export function createClaimManualEnvelopeModel({
   }
 
   function reachableCapitalCandidateNations(regionName, anchorNation, resultSet = new Set()) {
-    return [...new Set(capitalNationsByRegion().get?.(regionName) || [])]
+    return [...new Set(capitalNationsByRegion()?.get?.(regionName) || [])]
       .filter(nation => isReachableCapitalCandidateNation(regionName, nation, anchorNation, resultSet));
   }
 

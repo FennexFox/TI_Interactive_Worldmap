@@ -178,7 +178,7 @@ it never rewrites `data/generated/**`.
 `tools/rebuild_pages.py` rebuilds and verifies without Git work by default.
 `--commit` and `--push` opt into manifest-scoped publication. General build/verify
 uses the standard library; Unity geometry refresh alone installs
-`requirements-geometry.txt` (`UnityPy>=1.10,<2`).
+`requirements-geometry.txt` (`UnityPy==1.25.0`).
 
 ## Test boundaries
 

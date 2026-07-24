@@ -54,6 +54,18 @@ test('LRU cache promotes hits, reports them, and evicts the oldest value', () =>
   assert.equal(cache.size, 0);
 });
 
+test('LRU cache rejects non-finite limits and floors fractional limits', () => {
+  assert.throws(() => createLruCache({limit: Infinity}), RangeError);
+  assert.throws(() => createLruCache({limit: Number.NaN}), RangeError);
+
+  const cache = createLruCache({limit: 2.9});
+  cache.set('a', 1);
+  cache.set('b', 2);
+  cache.set('c', 3);
+  assert.equal(cache.size, 2);
+  assert.equal(cache.has('a'), false);
+});
+
 test('scenario runtime exposes one immutable context around derived indices', () => {
   const indices = {
     regions: [{regionName: 'A'}],

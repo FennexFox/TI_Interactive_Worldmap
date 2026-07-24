@@ -35,7 +35,7 @@ jobs:
       - name: Build Pages
         run: npm run build
       - name: Verify checked-in build is reproducible
-        run: git diff --exit-code -- docs data/generated
+        run: npm run check:generated
       - name: Verify generated data and unit tests
         run: npm run verify
 

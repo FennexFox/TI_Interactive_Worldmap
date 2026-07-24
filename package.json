@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "python tools/build_pages.py",
-    "check:generated": "git diff --exit-code -- docs data/generated",
+    "check:generated": "git diff --exit-code HEAD -- docs data/generated && python -c \"import subprocess, sys; output = subprocess.check_output(['git', 'ls-files', '--others', '--exclude-standard', '--', 'docs', 'data/generated'], text=True); sys.stderr.write(output); sys.exit(bool(output))\"",
     "lint": "npm run lint:js && npm run lint:py && npm run lint:shell",
     "lint:js": "eslint src tests tools/*.mjs playwright.config.js eslint.config.js",
     "lint:py": "python -m ruff check tools tests",

@@ -8,7 +8,7 @@ from __future__ import annotations
 import re
 from typing import Any, Iterable
 
-from scenario_config import DEFAULT_SCENARIO, SUPPORTED_SCENARIOS, validate_scenario
+from scenario_config import SUPPORTED_SCENARIOS, validate_scenario
 
 
 SCENARIO_TOKEN_RE = re.compile(rf"({'|'.join(SUPPORTED_SCENARIOS)})_")

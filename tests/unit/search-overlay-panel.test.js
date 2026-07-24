@@ -62,7 +62,10 @@ test('nation info controller renders a model and delegates claim and region clic
   const root = {
     innerHTML: '',
     textContent: '',
-    addEventListener: (name, listener) => { listeners[name] = listener; },
+    addEventListener: (name, listener) => {
+      listeners[name] ??= [];
+      listeners[name].push(listener);
+    },
     contains: () => true,
   };
   const claims = [];
@@ -75,12 +78,14 @@ test('nation info controller renders a model and delegates claim and region clic
   });
   const model = {nation: 'KOR', incomingEntries: [], outgoingEntries: [{project: 'Project_Test'}]};
   controller.render(model);
+  controller.render(model);
+  assert.equal(listeners.click.length, 1);
   assert.equal(root.innerHTML, '<p>KOR</p>');
 
   const claim = {dataset: {claimKind: 'outgoing', claimIndex: '0'}};
-  listeners.click({target: {closest: selector => selector === '.claimListItem' ? claim : null}});
+  listeners.click[0]({target: {closest: selector => selector === '.claimListItem' ? claim : null}});
   const region = {dataset: {regionName: 'SouthKorea'}};
-  listeners.click({
+  listeners.click[0]({
     target: {closest: selector => selector.startsWith('.legendRegionItem') ? region : null},
     stopPropagation() {},
   });

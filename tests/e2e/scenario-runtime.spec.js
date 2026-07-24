@@ -11,10 +11,14 @@ test('app runtime scenario API rebuilds active scenario context without stale ma
     scenarios: window.__TI_SCENARIO_API__.scenarios,
     activeScenario: window.__TI_SCENARIO_API__.activeScenario,
     canonicalRegions: document.querySelectorAll('#hitRegions .region-hit[data-wrap-canonical="1"]').length,
+    crimeaNation: document.querySelector(
+      '#regions .region[data-wrap-canonical="1"][data-region="Crimea"]'
+    )?.dataset.nation || '',
   }));
   expect(initial.scenarios).toEqual(['2022', '2026', '2070']);
   expect(initial.activeScenario).toBe('2026');
   expect(initial.canonicalRegions).toBeGreaterThan(300);
+  expect(initial.crimeaNation).toBe('RUS');
 
   await page.locator('#search').fill('Canada');
   await expect(page.locator('#nationDropdown')).toContainText('Canada');
@@ -24,16 +28,24 @@ test('app runtime scenario API rebuilds active scenario context without stale ma
   const switched = await page.evaluate(() => ({
     activeScenario: window.__TI_SCENARIO_API__.activeScenario,
     canonicalRegions: document.querySelectorAll('#hitRegions .region-hit[data-wrap-canonical="1"]').length,
+    crimeaNation: document.querySelector(
+      '#regions .region[data-wrap-canonical="1"][data-region="Crimea"]'
+    )?.dataset.nation || '',
     claimsActive: document.querySelector('#map')?.classList.contains('claims-active') || false,
     selectedPill: document.querySelector('#selectedPill')?.textContent || '',
   }));
   expect(switched.activeScenario).toBe('2070');
   expect(switched.canonicalRegions).toBe(initial.canonicalRegions);
+  expect(switched.crimeaNation).toBe('EUA');
+  expect(switched.crimeaNation).not.toBe(initial.crimeaNation);
   expect(switched.claimsActive).toBe(false);
   expect(switched.selectedPill).toBe('');
   await expect(page.locator('#nationDropdown')).toContainText('Canada');
 
   await page.evaluate(() => window.__TI_SCENARIO_API__.setActiveScenario('2026'));
   await page.waitForFunction(() => window.__TI_SCENARIO_API__?.activeScenario === '2026');
+  await expect(page.locator(
+    '#regions .region[data-wrap-canonical="1"][data-region="Crimea"]'
+  )).toHaveAttribute('data-nation', initial.crimeaNation);
   await expect(page.locator('#nationDropdown')).toContainText('Canada');
 });

@@ -158,20 +158,29 @@ test('base mode changes preserve region, hit, and label node identity', async ({
 
   await page.evaluate(() => {
     window.__TI_BASE_MODE_IDENTITY__ = {
-      region: document.querySelector('#regions .region'),
-      hit: document.querySelector('#hitRegions .region-hit'),
-      label: document.querySelector('#labels text'),
+      regions: [...document.querySelectorAll('#regions .region')],
+      hits: [...document.querySelectorAll('#hitRegions .region-hit')],
+      labels: [...document.querySelectorAll('#labels text')],
     };
     window.__TI_DEBUG_RENDER_STATS__.reset();
   });
   await page.locator('#baseMode').selectOption('plain');
 
-  const result = await page.evaluate(() => ({
-    region: window.__TI_BASE_MODE_IDENTITY__.region === document.querySelector('#regions .region'),
-    hit: window.__TI_BASE_MODE_IDENTITY__.hit === document.querySelector('#hitRegions .region-hit'),
-    label: window.__TI_BASE_MODE_IDENTITY__.label === document.querySelector('#labels text'),
-    stats: {...window.__TI_DEBUG_RENDER_STATS__},
-  }));
+  const result = await page.evaluate(() => {
+    const regions = [...document.querySelectorAll('#regions .region')];
+    const hits = [...document.querySelectorAll('#hitRegions .region-hit')];
+    const labels = [...document.querySelectorAll('#labels text')];
+    const identity = window.__TI_BASE_MODE_IDENTITY__;
+    return {
+      region: identity.regions.length === regions.length
+        && identity.regions.every((node, index) => node === regions[index]),
+      hit: identity.hits.length === hits.length
+        && identity.hits.every((node, index) => node === hits[index]),
+      label: identity.labels.length === labels.length
+        && identity.labels.every((node, index) => node === labels[index]),
+      stats: {...window.__TI_DEBUG_RENDER_STATS__},
+    };
+  });
   expect(result.region).toBe(true);
   expect(result.hit).toBe(true);
   expect(result.label).toBe(true);

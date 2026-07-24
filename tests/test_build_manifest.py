@@ -26,12 +26,20 @@ class BuildManifestTests(unittest.TestCase):
                 build_manifest.browser_source_mappings(root),
             )
 
-    def test_staging_manifest_covers_every_browser_module_directory(self):
+    def test_staging_manifest_includes_every_deployment_destination(self):
         staging = set(build_manifest.GENERATED_STAGING_PATHS)
 
-        for directory in ("state", "data", "interaction", "render", "runtime", "ui"):
-            self.assertIn(f"docs/assets/{directory}", staging)
+        destinations = {
+            str(destination)
+            for _, destination in build_manifest.deployment_source_mappings()
+        }
+        self.assertTrue(destinations <= staging)
         self.assertIn("data/generated/scenarios", staging)
+
+    def test_browser_manifest_rejects_missing_source_directory(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            with self.assertRaisesRegex(FileNotFoundError, "browser source directory is missing"):
+                build_manifest.browser_source_mappings(Path(temporary))
 
 
 if __name__ == "__main__":

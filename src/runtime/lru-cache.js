@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 export function createLruCache({limit = 128, onHit = () => {}} = {}) {
-  const maxEntries = Math.max(1, Number(limit) || 1);
+  const parsedLimit = Number(limit);
+  if (!Number.isFinite(parsedLimit)) throw new RangeError('limit must be a finite number');
+  const maxEntries = Math.max(1, Math.floor(parsedLimit));
   const values = new Map();
   return Object.freeze({
     get(key) {
