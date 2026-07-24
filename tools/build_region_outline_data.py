@@ -21,8 +21,8 @@ from catalog_utils import (
     read_localization_file,
     resolve_templates_dir,
     sanitize_data_value,
-    unique_strings,
 )
+from scenario_rows import filter_bilateral_rows_for_scenario
 
 
 SCENARIO_YEARS = ("2022", "2026", "2070")
@@ -56,10 +56,6 @@ def norm_id(value: Any) -> str:
     if value is None:
         return ""
     return re.sub(r"^(?:2022|2026|2070)_", "", clean_data_string(str(value)))
-
-
-def normalize_match_key(value: Any) -> str:
-    return re.sub(r"[^a-z0-9]", "", norm_id(value).lower())
 
 
 def scenario_template_name(name: str, scenario_year: str) -> str:
@@ -168,36 +164,6 @@ def load_scenario_nations(templates_dir: Path, scenario_year: str) -> dict[str, 
     return dict(sorted(by_tag.items()))
 
 
-def load_nation_name_lookup(
-    templates_dir: Path,
-    languages: list[str],
-    scenario_year: str,
-    nation_display_overrides: dict[str, dict[str, Any]] | None = None,
-) -> dict[str, str]:
-    localizations = load_nation_localizations(templates_dir, languages, scenario_year)
-    display_overrides = nation_display_overrides or {}
-    lookup: dict[str, str] = {}
-    for tag, template in load_scenario_nations(templates_dir, scenario_year).items():
-        override = display_overrides.get(tag, {})
-        override_display_name = override.get("displayName") if isinstance(override.get("displayName"), dict) else {}
-        override_aliases = override.get("aliases") if isinstance(override.get("aliases"), list) else []
-        names = unique_strings([
-            tag,
-            template.get("dataName"),
-            template.get("friendlyName"),
-            norm_id(template.get("friendlyName")),
-            *(template.get("ISOCodes") if isinstance(template.get("ISOCodes"), list) else []),
-            *localizations.get(tag, {}).values(),
-            *override_display_name.values(),
-            *override_aliases,
-        ])
-        for name in names:
-            key = normalize_match_key(name)
-            if key and key not in lookup:
-                lookup[key] = tag
-    return lookup
-
-
 def load_nation_display_names(
     templates_dir: Path,
     languages: list[str],
@@ -227,6 +193,39 @@ def load_nation_display_names(
     return dict(sorted(display_names.items()))
 
 
+def load_scenario_initial_owners(templates_dir: Path, scenario_year: str) -> dict[str, str]:
+    rows = list(load_named_templates(templates_dir, "TIBilateralTemplate.json").values())
+    scenario_rows = filter_bilateral_rows_for_scenario(rows, scenario_year, relation_types=("Claim",))
+    owners: dict[str, str] = {}
+    for row in scenario_rows:
+        if row.get("initialOwner") is not True:
+            continue
+        region_name = norm_id(row.get("region1"))
+        nation_tag = norm_id(row.get("nation1"))
+        if not region_name or not nation_tag:
+            raise ValueError(
+                f"Invalid {scenario_year} initial-owner Claim row: {row.get('dataName') or '<unnamed>'}"
+            )
+        previous = owners.get(region_name)
+        if previous and previous != nation_tag:
+            raise ValueError(
+                f"Conflicting {scenario_year} initial owners for {region_name}: {previous}, {nation_tag}"
+            )
+        owners[region_name] = nation_tag
+    if not owners:
+        raise ValueError(
+            f"No {scenario_year} initial-owner Claim rows found in TIBilateralTemplate.json"
+        )
+    return dict(sorted(owners.items()))
+
+
+def canonical_map_region_name(map_region_name: Any, fallback: str) -> str:
+    value = clean_data_string(str(map_region_name or f"map_{fallback}"))
+    if value.startswith("map_"):
+        value = value[4:]
+    return norm_id(value)
+
+
 def load_region_metadata(
     templates_dir: Path | None,
     languages: list[str],
@@ -238,8 +237,8 @@ def load_region_metadata(
     region_templates = load_named_templates(templates_dir, "TIRegionTemplate.json")
     map_region_templates = load_named_templates(templates_dir, "TIMapRegionTemplate.json")
     localizations = load_region_localizations(templates_dir, languages)
-    nation_lookup = load_nation_name_lookup(templates_dir, languages, scenario_year, nation_display_overrides)
     nation_display_names = load_nation_display_names(templates_dir, languages, scenario_year, nation_display_overrides)
+    initial_owners = load_scenario_initial_owners(templates_dir, scenario_year)
     metadata: dict[str, dict[str, Any]] = {}
     region_names = sorted({norm_id(name) for name in region_templates if norm_id(name)})
     for region_name in region_names:
@@ -251,19 +250,25 @@ def load_region_metadata(
         display_name = dict(sorted((localizations.get(region_name) or {}).items()))
         if not display_name and template.get("primaryCity"):
             display_name = {"en": str(template["primaryCity"])}
-        owner_candidates = [
-            template.get("sortNation"),
-            map_template.get("friendlyNationName") if isinstance(map_template, dict) else None,
-        ]
-        owner_tag = ""
-        for candidate in owner_candidates:
-            key = normalize_match_key(candidate)
-            if key and key in nation_lookup:
-                owner_tag = nation_lookup[key]
-                break
+        owner_tag = initial_owners.get(region_name, "")
+        if not owner_tag:
+            raise ValueError(
+                f"No {scenario_year} initial-owner Claim found for region template "
+                f"{template.get('dataName') or region_name}"
+            )
         owner_name = nation_display_names.get(owner_tag, "") if owner_tag else ""
-        metadata[region_name] = {
-            "regionName": region_name,
+        geometry_region_name = canonical_map_region_name(map_name, region_name)
+        if not geometry_region_name:
+            raise ValueError(
+                f"No canonical map region name for region template "
+                f"{template.get('dataName') or region_name}"
+            )
+        if geometry_region_name in metadata:
+            raise ValueError(
+                f"Multiple {scenario_year} region templates resolve to map region {geometry_region_name}"
+            )
+        metadata[geometry_region_name] = {
+            "regionName": geometry_region_name,
             "displayName": display_name,
             "primaryCity": template.get("primaryCity"),
             "sortNation": template.get("sortNation"),
@@ -273,6 +278,12 @@ def load_region_metadata(
             "ownerName": owner_name,
             "sourceDataName": template.get("dataName"),
         }
+    missing_templates = sorted(set(initial_owners) - set(region_names))
+    if missing_templates:
+        raise ValueError(
+            f"{scenario_year} initial-owner Claims reference unknown region templates: "
+            f"{missing_templates[:5]}"
+        )
     return metadata
 
 
