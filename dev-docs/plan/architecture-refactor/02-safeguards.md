@@ -84,15 +84,24 @@
 ## Evidence
 
 - Baseline: current `verify` manually checks a fixed list of `docs/assets/**/*.js`, does not syntax-check `src/**`, and Pages workflow deploys without quality checks.
-- After: pending.
-- Delta: pending.
-- Interpretation: pending.
-- Commit: pending.
+- After:
+  - `tools/build_manifest.py` dynamically maps every `src/**/*.js` path and centralizes generated staging paths, including `interaction`, `runtime`, and `ui`;
+  - builder removes stale deployed JS and copies nested modules;
+  - verifier emits structured source/deployment/syntax diagnostics, checks every source JS with Node, and semantically compares all four standalone scenario artifacts plus the compressed bundle;
+  - 2 Node unit tests, 28 Python unit tests, and 92 Playwright tests pass;
+  - Playwright is pinned at 1.61.1, ESLint at 10.7.0, Ruff at 0.16.0, and CI uses Node 24/Python 3.12;
+  - reusable quality/two-shard E2E checks gate both PR/develop CI and Pages deployment.
+- Delta: fixed filename checks were removed from `package.json`; the checked-in Pages rebuild produced zero `docs/**` or `data/generated/**` diff; manifest regression tests cover stale, extra, nested, and syntax-error cases.
+- Interpretation: this is a validated safety/build reproducibility improvement. It intentionally does not change runtime performance or user-visible map behavior.
+- Commit: this safeguards phase commit; the immutable hash is recorded in Git history.
 - Commit blocker: none.
 
 ## Progress
 
-- Not started.
+- Implemented the shared manifest, dynamic builder/verifier, correctness lint, separated unit command, pinned Playwright, reusable CI, gated Pages deployment, Dependabot, and runtime version documentation.
+- `npm run lint`, `npm run test:unit`, `npm run build`, `npm run check:generated`, `npm run verify`, `bash -n`, and the full E2E suite passed.
+- Local ShellCheck execution was deferred because the binary is not installed; the reusable Ubuntu workflow installs and runs it.
+- The first post-upgrade E2E attempt correctly reported the missing Playwright 1.61.1 browser binary; after `npx playwright install chromium`, all 92 tests passed in 18.1 seconds.
 
 ## Decision log
 
@@ -101,4 +110,4 @@
 
 ## Outcomes / Retrospective
 
-- Awaiting phase implementation and evidence.
+- Validated. Source/Pages drift, stale/new modules, invalid browser source syntax, standalone/bundle semantic drift, lint errors, nondeterministic builds, and un-gated Pages deployment now have automated guards. Runtime refactoring remains in phase 3.

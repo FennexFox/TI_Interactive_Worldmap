@@ -28,6 +28,7 @@ Windows PowerShell:
 
 ```powershell
 python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
 npm ci
 npx playwright install chromium
 ```
@@ -48,6 +49,22 @@ which node
 which npm
 which python3
 ```
+
+CI and contributor checks use Node 24 and Python 3.12 (also recorded in
+`.nvmrc` and `.python-version`). Run the correctness-focused safety gates with:
+
+```bash
+npm run lint
+npm run test:unit
+npm run build
+npm run verify
+npm run test:e2e
+```
+
+The Pages build manifest is shared by the builder, generated-output verifier, and
+publishing helper. Any new `src/**/*.js` module is copied to the matching
+`docs/assets/**` path automatically; stale or missing deployment copies fail
+`npm run verify`.
 
 ## Build workflow overview
 
@@ -212,6 +229,7 @@ The deploy helper only stages generated paths:
 - `data/generated/region_map.generated.json`
 - `data/generated/claim_map.generated.json`
 - `data/generated/scenario_bundle.generated.json`
+- `data/generated/scenarios/**`
 - `docs/data/generated/nations.catalog.json`
 - `docs/data/generated/research.catalog.json`
 - `docs/data/region_map.generated.json`
@@ -221,7 +239,10 @@ The deploy helper only stages generated paths:
 - `docs/assets/app.js`
 - `docs/assets/state/*.js`
 - `docs/assets/data/*.js`
+- `docs/assets/interaction/*.js`
 - `docs/assets/render/*.js`
+- `docs/assets/runtime/*.js`
+- `docs/assets/ui/*.js`
 - `docs/assets/styles.css`
 - `docs/index.html`
 

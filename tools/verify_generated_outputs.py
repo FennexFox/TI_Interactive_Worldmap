@@ -9,8 +9,17 @@ import base64
 import gzip
 import json
 import re
+import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
+
+from build_manifest import (
+    SCENARIO_OUTPUT_FILENAMES,
+    browser_source_mappings,
+    deployment_source_mappings,
+    expected_browser_deployment_files,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_SCENARIOS = ("2022", "2026", "2070")
@@ -18,23 +27,81 @@ DEFAULT_SCENARIO = "2026"
 INLINE_DATA_COMMENT_RE = re.compile(r"(^|\s)//")
 JS_IMPORT_RE = re.compile(r"import\s+(?:[^;]*?\s+from\s+)?[\"'](\.[^\"']+)[\"']\s*;", re.DOTALL)
 GENERATED_DATA_CHUNKS_RE = re.compile(r"const compressed = \[\s*(.*?)\s*\]\.join", re.DOTALL)
-EXPECTED_MODULE_ASSETS = (
-    "docs/assets/app.js",
-    "docs/assets/state/app-state.js",
-    "docs/assets/state/map-visual-state.js",
-    "docs/assets/data/active-data.js",
-    "docs/assets/data/claim-model.js",
-    "docs/assets/data/derived-indices.js",
-    "docs/assets/interaction/map-pan.js",
-    "docs/assets/interaction/tooltip.js",
-    "docs/assets/render/map-layers.js",
-    "docs/assets/runtime/refresh-flow.js",
-    "docs/assets/ui/aside-cards.js",
-    "docs/assets/ui/controls.js",
-    "docs/assets/ui/i18n.js",
-    "docs/assets/ui/map-controls.js",
-    "docs/assets/ui/panels.js",
-)
+
+
+@dataclass(frozen=True)
+class Diagnostic:
+    code: str
+    path: str
+    message: str
+
+    def format(self) -> str:
+        location = f" [{self.path}]" if self.path else ""
+        return f"{self.code}{location}: {self.message}"
+
+
+def collect_deployment_diagnostics(root: Path = ROOT) -> list[Diagnostic]:
+    """Compare every manifest source with its checked-in Pages deployment copy."""
+    diagnostics: list[Diagnostic] = []
+    mappings = deployment_source_mappings(root)
+    for source_relative, destination_relative in mappings:
+        source = root / source_relative
+        destination = root / destination_relative
+        if not source.exists():
+            diagnostics.append(Diagnostic("source-missing", str(source_relative), "manifest source file is missing"))
+            continue
+        if not destination.exists():
+            diagnostics.append(Diagnostic("deployment-missing", str(destination_relative), f"missing copy of {source_relative}"))
+            continue
+        if source.read_bytes() != destination.read_bytes():
+            diagnostics.append(Diagnostic("deployment-stale", str(destination_relative), f"differs from {source_relative}"))
+
+    expected_js = expected_browser_deployment_files(root)
+    assets = root / "docs/assets"
+    deployed_js = {
+        path.relative_to(root)
+        for path in assets.rglob("*.js")
+        if path.name != "data.generated.js"
+    } if assets.exists() else set()
+    for extra in sorted(deployed_js - expected_js):
+        diagnostics.append(Diagnostic("deployment-extra", str(extra), "no corresponding src/**/*.js file"))
+    return diagnostics
+
+
+def collect_javascript_syntax_diagnostics(root: Path = ROOT) -> list[Diagnostic]:
+    """Run Node's parser over every browser source module and generated data asset."""
+    diagnostics: list[Diagnostic] = []
+    paths = [root / source for source, _ in browser_source_mappings(root)]
+    generated_data = root / "docs/assets/data.generated.js"
+    if generated_data.exists():
+        paths.append(generated_data)
+    for path in paths:
+        result = subprocess.run(
+            ["node", "--check", str(path)],
+            cwd=root,
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        if result.returncode:
+            detail = (result.stderr or result.stdout).strip().splitlines()
+            diagnostics.append(
+                Diagnostic(
+                    "javascript-syntax",
+                    str(path.relative_to(root)),
+                    detail[-1] if detail else "node --check failed",
+                )
+            )
+    return diagnostics
+
+
+def require_no_diagnostics(diagnostics: list[Diagnostic]) -> None:
+    if not diagnostics:
+        return
+    for diagnostic in diagnostics:
+        print(f"ERROR: {diagnostic.format()}", file=sys.stderr)
+    raise SystemExit(1)
 
 
 def strings_with_inline_comments(value: object, path: str = "$", limit: int = 5) -> list[str]:
@@ -262,10 +329,13 @@ def verify_scenario_entry(scenario: str, entry: dict[str, object]) -> None:
 
 
 def main() -> int:
-    require((ROOT / "docs/index.html").exists(), "docs/index.html missing")
+    require_no_diagnostics(
+        [
+            *collect_deployment_diagnostics(ROOT),
+            *collect_javascript_syntax_diagnostics(ROOT),
+        ]
+    )
     require((ROOT / "docs/assets/data.generated.js").exists(), "generated JS data missing")
-    for module_asset in EXPECTED_MODULE_ASSETS:
-        require((ROOT / module_asset).exists(), f"{module_asset} missing")
     verify_relative_js_imports(ROOT / "docs/assets/app.js", ROOT / "docs/assets")
     require((ROOT / "docs/data/generated/nations.catalog.json").exists(), "docs nation catalog missing")
     require((ROOT / "docs/data/generated/research.catalog.json").exists(), "docs research catalog missing")
@@ -288,6 +358,11 @@ def main() -> int:
     require_json_equal(scenario_bundle, docs_scenario_bundle, "docs scenario bundle differs from source generated bundle")
     require_json_equal(object_value(generated_js_data.get("scenarios")), scenarios, "generated JS scenario payload differs from source bundle")
     require(generated_js_data.get("defaultScenario") == DEFAULT_SCENARIO, "generated JS default scenario must be 2026")
+    require_json_equal(region, object_value(generated_js_data.get("regionMap")), "generated JS region map differs from source")
+    require_json_equal(claim, object_value(generated_js_data.get("claimMap")), "generated JS claim map differs from source")
+    generated_js_catalogs = object_value(generated_js_data.get("catalogs"))
+    require_json_equal(nation_catalog, object_value(generated_js_catalogs.get("nations")), "generated JS nation catalog differs from source")
+    require_json_equal(research_catalog, object_value(generated_js_catalogs.get("research")), "generated JS research catalog differs from source")
     default_entry = object_value(scenarios.get(DEFAULT_SCENARIO))
     default_catalogs = object_value(default_entry.get("catalogs"))
     require_json_equal(region, object_value(default_entry.get("regionMap")), "top-level region map must match default 2026 scenario")
@@ -301,17 +376,27 @@ def main() -> int:
     for scenario, entry in sorted(scenarios.items()):
         scenario_id = str(scenario)
         scenario_entry_data = object_value(entry)
-        standalone_region = object_value(
-            load_json(
-                ROOT / f"data/generated/scenarios/{scenario_id}/region_map.generated.json",
-                f"{scenario_id} standalone region map JSON",
+        standalone_keys = {
+            "region_map.generated.json": "regionMap",
+            "claim_map.generated.json": "claimMap",
+            "nations.catalog.json": "nations",
+            "research.catalog.json": "research",
+        }
+        catalogs = object_value(scenario_entry_data.get("catalogs"))
+        for filename in SCENARIO_OUTPUT_FILENAMES:
+            bundle_key = standalone_keys[filename]
+            standalone = object_value(
+                load_json(
+                    ROOT / f"data/generated/scenarios/{scenario_id}/{filename}",
+                    f"{scenario_id} standalone {filename}",
+                )
             )
-        )
-        require_json_equal(
-            standalone_region,
-            object_value(scenario_entry_data.get("regionMap")),
-            f"{scenario_id} standalone region map differs from scenario bundle",
-        )
+            bundled = object_value(catalogs.get(bundle_key)) if filename.endswith(".catalog.json") else object_value(scenario_entry_data.get(bundle_key))
+            require_json_equal(
+                standalone,
+                bundled,
+                f"{scenario_id} standalone {filename} differs from scenario bundle",
+            )
         verify_scenario_entry(scenario_id, scenario_entry_data)
     region_summary = object_value(region.get("summary"))
     claim_stats = object_value(claim.get("claimStats"))

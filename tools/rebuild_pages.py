@@ -16,30 +16,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+from build_manifest import GENERATED_STAGING_PATHS
+
 ROOT = Path(__file__).resolve().parents[1]
 SCENARIO_YEARS = ("2022", "2026", "2070")
 DEFAULT_SCENARIO_YEAR = "2026"
 SCENARIO_OUTPUT_ROOT = Path("data/generated/scenarios")
-GENERATED_PATHS = (
-    "data/generated/nations.catalog.json",
-    "data/generated/research.catalog.json",
-    "data/generated/region_map.generated.json",
-    "data/generated/claim_map.generated.json",
-    "data/generated/scenario_bundle.generated.json",
-    "data/generated/scenarios",
-    "docs/data/generated/nations.catalog.json",
-    "docs/data/generated/research.catalog.json",
-    "docs/data/region_map.generated.json",
-    "docs/data/claim_map.generated.json",
-    "docs/data/scenario_bundle.generated.json",
-    "docs/assets/data.generated.js",
-    "docs/assets/app.js",
-    "docs/assets/state",
-    "docs/assets/data",
-    "docs/assets/render",
-    "docs/assets/styles.css",
-    "docs/index.html",
-)
+GENERATED_PATHS = GENERATED_STAGING_PATHS
 
 
 def run(command: list[str], *, capture: bool = False) -> subprocess.CompletedProcess[str]:
