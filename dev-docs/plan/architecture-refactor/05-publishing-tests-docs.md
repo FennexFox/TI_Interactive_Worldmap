@@ -106,10 +106,11 @@
     shards 37/37 and 36/36 and as a three-repeat run 219/219;
   - `npm run lint`, `npm run build`, `npm run check:generated`, and
     `npm run verify` pass; `bash -n` passes and ShellCheck was unavailable locally;
-  - Graphify's final structural and semantic refresh completed with 1,039 nodes,
-    2,678 edges, and 46 labeled communities. Four host-agent chunks added 254 fresh
-    semantic nodes, 293 semantic edges, and 11 hyperedges; graph leads were checked
-    against real imports and symbols.
+  - Graphify's final structural and semantic refresh completed with 1,060 nodes,
+    2,706 edges, and 44 labeled communities. Four initial host-agent chunks added
+    254 fresh semantic nodes, 293 semantic edges, and 11 hyperedges; a selective
+    workflow follow-up added 21 nodes, 28 edges, and 3 hyperedges while preserving
+    all 14 hyperedges. Graph leads were checked against real imports and symbols.
 - Delta: publication changed from implicit Git writes to explicit opt-in; browser-free
   tests no longer start the Pages server; E2E organization now exposes language,
   search, debug, pins, overlays, rendering, pan, scenario, and world-wrap ownership.
@@ -134,6 +135,9 @@
   subagents are available. After the user explicitly permits subagents, complete
   semantic extraction through four Graphify-spec host-agent chunks and regenerate
   the graph, report, labels, and HTML.
+- Keep GitHub process metadata ignored, but selectively include the reusable checks,
+  PR/develop CI, and Pages deployment workflows because they define repository
+  quality and deployment architecture.
 - Defer from-game/Unity geometry smoke because `TI_TEMPLATES_DIR`, region outlines,
   and ShellCheck are unavailable in this environment.
 
@@ -144,5 +148,5 @@
 - Test ownership is clearer and faster: pure tests run under Node, browser tests are
   confined to `tests/e2e`, and CI/local shard behavior matches.
 - Graphify's structural and semantic graph is current. The final extraction cache
-  covers all 82 detected corpus files; host-agent extraction reports no billable API
+  covers all 85 detected corpus files; host-agent extraction reports no billable API
   token counters.
