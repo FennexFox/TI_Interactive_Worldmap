@@ -43,7 +43,6 @@ import {createMapInteractionController} from './interaction/map-interaction-cont
 import {createAppData, getActiveData, getScenarioIds} from './data/active-data.js';
 import {createClaimModel} from './data/claim-model.js';
 import {buildClaimLabelDescriptors, buildClaimOverlayDescriptors} from './data/overlay-descriptors.js';
-import {buildSearchCatalog, filterSearchCatalog, parseNationSearchValue as parseNationSearchCatalogValue} from './data/search-catalog.js';
 import {
   createGroupedVisualFillFragment,
   defaultWorldCopyContext,
@@ -62,7 +61,8 @@ import {createLanguageRefreshActions, createScenarioRefreshActions} from './runt
 import {createScenarioRuntime} from './runtime/scenario-runtime.js';
 import {createAsideCardController} from './ui/aside-cards.js';
 import {createI18n, readSavedLanguage, saveLanguage} from './ui/i18n.js';
-import {createNationInfoPanelController} from './ui/nation-info-panel.js';
+import {createNationOverlayController} from './ui/nation-overlay-controller.js';
+import {createSearchController} from './ui/search-controller.js';
 import {
   renderPinnedRegionsPanel as renderPinnedRegionsPanelUi,
   renderReachableCapitalCandidatesPanel as renderReachableCapitalCandidatesPanelUi,
@@ -79,10 +79,7 @@ import {
 import {
   applyStaticTranslations as applyStaticTranslationsUi,
   bindAppControls,
-  bindNationSearchControl,
-  renderNationDropdown as renderNationDropdownUi,
   renderScenarioOptions as renderScenarioOptionsUi,
-  renderSearchResults,
   updateReachableCapitalsButton,
 } from './ui/controls.js';
 
@@ -287,8 +284,7 @@ function setHoverPill(region=null) {
     : t('pill.hoverEmpty');
 }
 function setClaimsPillEmpty() {
-  const el = document.getElementById('claimPill');
-  if (el) el.textContent = t('pill.claimsEmpty');
+  nationOverlayController.clearClaimPill(t('pill.claimsEmpty'));
 }
 function updateReachableCapitalsButtonState() {
   updateReachableCapitalsButton({
@@ -320,11 +316,6 @@ const hitPathInstancesByRegion = new Map();
 let nationRegions = derivedIndices.nationRegions;
 let labelsVisible = false;
 const selectedRegionIds = appState.selectedRegionIds;
-let nationChoices = derivedIndices.nationChoices;
-let nationDropdownOpen = false;
-let highlightedNationChoiceIndex = -1;
-let currentDropdownChoices = [];
-let regionChoices = derivedIndices.regionChoices;
 let hoverClaimPreviewNation = '';
 let visibleNationRegionNames = new Set();
 let currentOverlayModel = null;
@@ -332,11 +323,6 @@ let activeClaimPreviewRegionScopeKey = '';
 let activeClaimPreviewRegionScope = null;
 let hoverClaimPreviewVisualKey = '';
 let cachedRegionGeometryStats = {};
-let searchCatalog = {
-  nationChoices: [],
-  nationChoiceByValue: new Map(),
-  regionChoices: [],
-};
 let incomingClaimsByRegion = derivedIndices.incomingClaimsByRegion;
 const regionCenterCache = new Map();
 const OVERLAY_MODEL_CACHE_LIMIT = 256;
@@ -732,9 +718,6 @@ function statusLabel(status) {
   if (status === 'formable') return t('status.formable');
   return t('status.existing');
 }
-function statusBadge(status) {
-  return `<span class="status ${escapeHtml(status || 'existing')}">${escapeHtml(statusLabel(status))}</span>`;
-}
 const claimModel = createClaimModel({
   claimsByNation: () => CLAIMS_BY_NATION,
   nationRegions: () => nationRegions,
@@ -930,26 +913,8 @@ function claimCardTitleParts(entry, kind) {
 function claimIsEffectivelyHostile(claim) {
   return !!(claim?.effectiveHostile ?? claim?.hostileClaim);
 }
-function claimCardTitle(entry, kind) {
-  return t('claimCard.title', claimCardTitleParts(entry, kind));
-}
-function renderClaimCardTitle(entry, kind) {
-  const parts = claimCardTitleParts(entry, kind);
-  const flavorText = projectSummary(entry?.project);
-  const fields = [
-    ['nation', t('claimCard.fieldNation'), parts.nation],
-    ['research', t('claimCard.fieldResearch'), parts.research],
-    ['project', t('claimCard.fieldProject'), parts.project],
-  ];
-  return `<div class="claimCardTitle">${fields.map(([key, label, value]) => {
-    const quoteHtml = key === 'project' && flavorText
-      ? `<q class="claimCardQuote">${escapeHtml(flavorText)}</q>`
-      : '';
-    return `<span class="claimCardTitleField claimCardTitleField--${key}"><span class="claimCardTitleLabel">${escapeHtml(label)}</span><b class="claimCardTitleValue">${escapeHtml(value)}</b>${quoteHtml}</span>`;
-  }).join('')}</div>`;
-}
 function rebuildSearchCatalog() {
-  searchCatalog = buildSearchCatalog({
+  searchController.setContext({
     regions: REGIONS,
     claimsByNation: CLAIMS_BY_NATION,
     nationMeta: NATION_META,
@@ -958,68 +923,16 @@ function rebuildSearchCatalog() {
     localizedRegionName,
     prettyRegionName: prettyRegion,
   });
-  derivedIndices.nationChoices = searchCatalog.nationChoices;
-  derivedIndices.regionChoices = searchCatalog.regionChoices;
-  nationChoices = searchCatalog.nationChoices;
-  regionChoices = searchCatalog.regionChoices;
-  recordRenderStat('searchCatalogBuilds');
+  searchController.rebuildCatalog();
 }
 function parseNationSearchValue(value) {
-  return parseNationSearchCatalogValue(searchCatalog, value);
-}
-function isSelectedNationSearch() {
-  const tag = search.dataset.selectedNation || '';
-  return !!tag && parseNationSearchValue(search.value) === tag;
-}
-function searchFilterText() {
-  return isSelectedNationSearch() ? '' : search.value.trim().toLowerCase();
-}
-
-function matchingNationChoices(q, limit) {
-  return filterSearchCatalog(searchCatalog, q, {nationLimit: limit, regionLimit: 0}).nationMatches;
-}
-
-function visibleNationChoices() {
-  const q = search.value.trim().toLowerCase();
-  if (!q) return nationChoices.slice(0, 28).map(c => ({...c, type:'nation'}));
-  const {nationMatches, regionMatches} = filterSearchCatalog(searchCatalog, q, {
-    nationLimit: 12,
-    regionLimit: 16,
-  });
-  return [...nationMatches.map(choice => ({...choice, type: 'nation'})), ...regionMatches].slice(0, 28);
+  return searchController.parseNationSearchValue(value);
 }
 function renderNationDropdown() {
-  currentDropdownChoices = visibleNationChoices();
-  highlightedNationChoiceIndex = renderNationDropdownUi({
-    dropdown: nationDropdown,
-    search,
-    open: nationDropdownOpen,
-    choices: currentDropdownChoices,
-    highlightedIndex: highlightedNationChoiceIndex,
-    selectedRegionIds,
-    t,
-  });
-}
-function openNationDropdown() {
-  nationDropdownOpen = true;
-  renderNationDropdown();
+  searchController.renderDropdown();
 }
 function closeNationDropdown() {
-  nationDropdownOpen = false;
-  highlightedNationChoiceIndex = -1;
-  renderNationDropdown();
-}
-function chooseNationFromDropdown(index=highlightedNationChoiceIndex) {
-  const choice = currentDropdownChoices[index];
-  if (!choice) return false;
-  if (choice.type === 'region') {
-    selectRegion(REGIONS[choice.id]);
-  } else {
-    focusNation(choice.tag);
-  }
-  closeNationDropdown();
-  search.focus();
-  return true;
+  searchController.close();
 }
 function resetTransientClaimState() {
   clearTransientClaimAppState(appState);
@@ -1375,24 +1288,6 @@ function claimRegionSummary(claim) {
   if (claim?.gatedClaim) parts.push(t('claim.gated'));
   return parts.join(' · ');
 }
-function renderRegionList(regionNames, claims={}, prefix='targets', regionSourceLabels={}) {
-  const rows = (regionNames || []).map((rn) => {
-    const claim = claims?.[rn] || {};
-    const meta = claimRegionSummary(claim);
-    const source = regionSourceLabels?.[rn] ? regionSourceLabels[rn] : '';
-    const region = regionByName[rn];
-    const owner = region?.nationTag ? ` · ${region.nationTag}` : '';
-    const active = selectedRegionIds.has(rn);
-    const detail = t('regionList.detail', {
-      prefix: t(`regionPrefix.${prefix}`) || prefix,
-      owner,
-      meta: meta ? ` · ${meta}` : '',
-      source: source ? ` · ${source}` : '',
-    });
-    return `<div class="legendRegionRow"><button type="button" class="legendRegionItem${active ? ' active' : ''}" data-region-name="${escapeHtml(rn)}"><b>${escapeHtml(localizedRegionName(region || rn))}</b><span>${escapeHtml(detail)}</span></button></div>`;
-  }).join('');
-  return `<div class="legendRegionList">${rows}</div>`;
-}
 function focusRegions(regionNames, {selectSingle=false, preserveNation=false, refreshOverlay=false} = {}) {
   const names = (regionNames || []).filter(Boolean);
   if (selectSingle && names.length === 1) {
@@ -1475,39 +1370,6 @@ function focusNation(nation, {fillSearch=true} = {}) {
   applyFilters(true);
   updateSelectedRegions();
 }
-function renderClaimSection(title, items, emptyText, kind) {
-  const sectionKey = kind === 'incoming' ? 'incoming' : 'outgoing';
-  if (!items.length) return `<details class="infoSubsection claimSection" data-info-section="${sectionKey}"${infoSectionOpenAttribute(sectionKey)}><summary><span>${escapeHtml(title)}</span></summary><div class="infoSubsectionBody small">${escapeHtml(emptyText)}</div></details>`;
-  const activeOutgoing = claimModeSel.value === 'project' ? getProjectFilter() : '';
-  const rows = items.map((item, i) => {
-    const regions = item.regions || [];
-    const targetRegions = kind === 'incoming' ? (item.targetRegions || regions) : regions;
-    const detailRegions = kind === 'incoming' ? (item.resultRegions || regions) : regions;
-    const detailClaims = item.claims || {};
-    const hostile = item.hostile ?? targetRegions.filter(rn => claimIsEffectivelyHostile(item.targetClaims?.[rn]) || claimIsEffectivelyHostile(item.claims?.[rn])).length;
-    const gated = item.gated ?? targetRegions.filter(rn => item.targetClaims?.[rn]?.gatedClaim || item.claims?.[rn]?.gatedClaim).length;
-    const capital = item.capital ?? targetRegions.filter(rn => item.targetClaims?.[rn]?.capitalClaim || item.claims?.[rn]?.capitalClaim).length;
-    const claimTitle = claimCardTitle(item, kind);
-    const claimTitleHtml = renderClaimCardTitle(item, kind);
-    const key = kind === 'incoming' ? incomingClaimKey(item) : outgoingClaimKey(item);
-    const active = kind === 'incoming' ? getActiveIncomingClaimKey() === key : activeOutgoing === key;
-    const targetNames = targetRegions.map(prettyRegion);
-    const targetPreview = targetNames.slice(0, 4).join(', ') + (targetNames.length > 4 ? `, +${targetNames.length - 4}` : '');
-    const direction = kind === 'incoming'
-      ? t('claimDirection.incoming', {targets: targetPreview || t('claimDirection.selectedRegion'), regions: regionCountText(detailRegions.length)})
-      : t('claimDirection.outgoing', {targets: targetPreview || t('claimDirection.noTargets')});
-    const inherited = item.inheritedClaimCount || item.inheritedRegions?.length || 0;
-    const direct = item.directClaimCount || item.directRegions?.length || regions.length;
-    const cumulativeText = kind === 'outgoing' && inherited ? t('claimDirection.cumulative', {direct, inherited}) : '';
-    const statsText = `${hostile ? t('claimStat.hostile', {count: hostile}) : ''}${capital ? t('claimStat.capital', {count: capital}) : ''}${gated ? t('claimStat.gated', {count: gated}) : ''}`;
-    const regionDetails = active ? renderRegionList(detailRegions, detailClaims, kind === 'incoming' ? 'result' : 'claimed', item.regionSourceLabels || {}) : '';
-    return `<div class="claimListGroup${active ? ' active' : ''}"><button type="button" class="claimListItem${active ? ' active' : ''}" data-claim-kind="${kind}" data-claim-index="${i}" data-claim-key="${escapeHtml(key)}" title="${escapeHtml(claimTitle + ' · ' + detailRegions.map(prettyRegion).join(', '))}">${claimTitleHtml}<span class="claimListMeta">${escapeHtml(direction + cumulativeText + statsText)}</span></button>${regionDetails}</div>`;
-  }).join('');
-  return `<details class="infoSubsection claimSection" data-info-section="${sectionKey}"${infoSectionOpenAttribute(sectionKey)}><summary><span>${escapeHtml(title)}</span></summary><div class="infoSubsectionBody claimList">${rows}</div></details>`;
-}
-
-
-
 function renderGrid(renderContext = {}) {
   const start = debugRenderStats ? performance.now() : 0;
   renderGridLayer({
@@ -2344,24 +2206,7 @@ function renderMapOverlay(model, renderContext = {}) {
   renderCapitalMarkers({copyContexts});
 }
 function renderClaimSummaryPill(model) {
-  document.getElementById('claimPill').textContent = t('pill.claimSummary', {
-    nation: nationDisplayName(model.nation),
-    owned: model.ownedCount,
-    claims: model.claimCount,
-    projects: model.projectCount,
-  });
-}
-function nationInfoPanelHtml(model) {
-  const activeNationName = nationDisplayName(model.nation);
-  const activeNationTierText = claimTierCountShortText(nationClaimTierCount(model.nation));
-  const kvRows = [
-    [t('nationInfo.kv.capitalRegion'), capitalRegionsText(model.data)],
-    [t('nationInfo.kv.directClaims'), uniqueRegionCountText(model.data.totalClaimRegions || 0)],
-    [t('nationInfo.kv.targetedRegions'), `${regionCountText(incomingTargetRegions(model.data, model.baseSet).size)} · ${claimGroupCountText(model.incomingEntries.length)}`],
-    [t('nationInfo.kv.conditional'), regionCountText(model.gatedCount)],
-  ].map(([label, value]) => `<div>${escapeHtml(label)}</div><div>${escapeHtml(value)}</div>`).join('');
-  const basicInfo = `<details class="infoSubsection nationBasicSection" data-info-section="basic"${infoSectionOpenAttribute('basic')}><summary><span>${escapeHtml(t('nationInfo.basic.title'))}</span></summary><div class="infoSubsectionBody"><div class="nationTitle"><b>${escapeHtml(activeNationName)}</b> <span class="status tierBadge">${escapeHtml(activeNationTierText)}</span> ${statusBadge(model.data.status)}</div><div class="kv">${kvRows}</div></div></details>`;
-  return `${basicInfo}<div class="claimSections">${renderClaimSection(t('claimSection.outgoing.title'), model.outgoingEntries, t('claimSection.outgoing.empty'), 'outgoing')}${renderClaimSection(t('claimSection.incoming.title'), model.incomingEntries, t('claimSection.incoming.empty'), 'incoming')}</div>`;
+  nationOverlayController.renderClaimPill(model);
 }
 function handleNationInfoClaimSelected({kind, source, model}) {
   if (kind === 'incoming') {
@@ -2387,10 +2232,61 @@ function handleNationInfoClaimSelected({kind, source, model}) {
   updateNationOverlay(model.nation);
   updateSelectedRegions();
 }
-const nationInfoPanelController = createNationInfoPanelController({
+const nationOverlayController = createNationOverlayController({
   root: nationInfo,
-  renderHtml: nationInfoPanelHtml,
+  projectSelect: projectSel,
+  claimPill: document.getElementById('claimPill'),
+});
+nationOverlayController.setContext({
+  t,
+  getModel: () => currentOverlayModel,
   bindSections: bindNationInfoSectionToggles,
+  infoSectionOpenAttribute,
+  nationDisplayName,
+  nationTierText: nation => claimTierCountShortText(nationClaimTierCount(nation)),
+  statusLabel,
+  basicRows: model => [
+    [t('nationInfo.kv.capitalRegion'), capitalRegionsText(model.data)],
+    [t('nationInfo.kv.directClaims'), uniqueRegionCountText(model.data.totalClaimRegions || 0)],
+    [t('nationInfo.kv.targetedRegions'), `${regionCountText(incomingTargetRegions(model.data, model.baseSet).size)} · ${claimGroupCountText(model.incomingEntries.length)}`],
+    [t('nationInfo.kv.conditional'), regionCountText(model.gatedCount)],
+  ],
+  claimMode: () => claimModeSel.value,
+  projectFilter: getProjectFilter,
+  projectOptionValue: () => {
+    const project = getProjectFilter();
+    return project && project !== '__base__' ? project : '';
+  },
+  activeIncomingClaimKey: getActiveIncomingClaimKey,
+  claimIsEffectivelyHostile,
+  claimCardTitleParts,
+  projectSummary,
+  claimKey: (entry, kind) => kind === 'incoming' ? incomingClaimKey(entry) : outgoingClaimKey(entry),
+  prettyRegionName: prettyRegion,
+  regionCountText,
+  regionPresentation: ({regionName, claim, prefix, source}) => {
+    const meta = claimRegionSummary(claim);
+    const region = regionByName[regionName];
+    const owner = region?.nationTag ? ` · ${region.nationTag}` : '';
+    return {
+      active: selectedRegionIds.has(regionName),
+      name: localizedRegionName(region || regionName),
+      detail: t('regionList.detail', {
+        prefix: t(`regionPrefix.${prefix}`) || prefix,
+        owner,
+        meta: meta ? ` · ${meta}` : '',
+        source: source ? ` · ${source}` : '',
+      }),
+    };
+  },
+  projectEntries: nation => {
+    const data = CLAIMS_BY_NATION[nation];
+    const directEntries = data
+      ? sortedProjectEntries((data.projects || []).filter(entry => entry.project))
+      : [];
+    return cumulativeClaimEntries(directEntries);
+  },
+  projectDisplay,
   onClaimSelected: handleNationInfoClaimSelected,
   onRegionSelected: ({regionName}) => {
     if (!regionName) return;
@@ -2409,7 +2305,9 @@ function updateNationOverlay(
   } = {}
 ) {
   setActiveNationState(nation);
-  if (renderDetails) updateProjectOptions(getActiveNation());
+  if (renderDetails && getActiveNation()) {
+    nationOverlayController.renderProjectOptions(getActiveNation());
+  }
   if (!getActiveNation()) {
     clearHoverClaimPreviewOverlay({force: true});
     currentOverlayModel = null;
@@ -2421,7 +2319,7 @@ function updateNationOverlay(
     clearManualEnvelopeOverlay();
     refreshReachableCapitalCandidateOutputs(null);
     renderHoverOutlines();
-    if (renderDetails) nationInfoPanelController.clear(t('nationInfo.empty'));
+    if (renderDetails) nationOverlayController.clear(t('nationInfo.empty'));
     setClaimsPillEmpty();
     if (updateFilters) applyFilters(false);
     if (updateSelected) updateSelectedRegions();
@@ -2442,19 +2340,9 @@ function updateNationOverlay(
     renderHoverOutlines();
   }
   renderClaimSummaryPill(overlayModel);
-  if (renderDetails) nationInfoPanelController.render(overlayModel);
+  if (renderDetails) nationOverlayController.render(overlayModel, {renderPill: false});
   if (updateFilters) applyFilters(false);
   if (updateSelected) updateSelectedRegions();
-}
-function updateProjectOptions(nation) {
-  const current = getProjectFilter() && getProjectFilter() !== '__base__' ? getProjectFilter() : '';
-  const d = CLAIMS_BY_NATION[nation];
-  const directEntries = d ? sortedProjectEntries((d.projects || []).filter(e => e.project)) : [];
-  const entries = cumulativeClaimEntries(directEntries);
-  const opts = [`<option value="">${escapeHtml(t('project.all'))}</option>`].concat(entries.map(e => `<option value="${escapeHtml(e.project)}">${escapeHtml(projectDisplay(e.project))} (${e.regions.length})</option>`));
-  projectSel.innerHTML = opts.join('');
-  if ([...projectSel.options].some(o => o.value === current)) projectSel.value = current;
-  else projectSel.value = '';
 }
 function selectRegion(r) {
   if (commitReachableCapitalSelection(r)) return;
@@ -2465,37 +2353,49 @@ function selectRegion(r) {
   focusNation(r.nationTag);
   pinRegionState(r.regionName);
 }
-function applyFilters(rerenderResults = true, {renderBaseColors = true} = {}) {
-  const q = searchFilterText();
-  let visible=0; const matches=[]; const hiddenRegionIds = new Set();
-  regionPathElements.filter(p => p.dataset.wrapCanonical !== '0').forEach(p => {
-    const r = REGIONS[Number(p.dataset.id)];
-      const text = (r.name+' '+r.regionName+' '+localizedRegionName(r)+' '+(r.primaryCity || '')+' '+Object.values(r.displayName || {}).join(' ')+' '+r.nationTag).toLowerCase();
-    const okQ = !q || text.includes(q);
-    const ok = okQ;
-    if (!ok) hiddenRegionIds.add(r.regionName);
-    if (ok) { visible++; if (matches.length<90) matches.push(r); }
-  });
-  setHiddenVisualState(hiddenRegionIds);
-  applyMapVisualState();
-  if (renderBaseColors) syncNormalRegionColorVisibility();
-  labelTextElements.forEach(t => {
-    const r = REGIONS[Number(t.dataset.id)];
-    const okQ = !q || (r.name+' '+r.regionName+' '+localizedRegionName(r)+' '+(r.primaryCity || '')+' '+Object.values(r.displayName || {}).join(' ')+' '+r.nationTag).toLowerCase().includes(q);
-    t.style.display = okQ ? '' : 'none';
-  });
-  if (rerenderResults && results) {
-    const nationMatches = q ? matchingNationChoices(q, 25) : [];
-    renderSearchResults({
-      root: results,
-      nationMatches,
-      regionMatches: matches,
-      t,
-      localizedRegionName,
-      onNation: focusNation,
-      onRegion: index => selectRegion(REGIONS[index]),
+const searchController = createSearchController({
+  search,
+  dropdown: nationDropdown,
+  combo: nationSearchCombo,
+  results,
+  document,
+});
+searchController.setContext({
+  t,
+  nationLabel: humanizeNationLabel,
+  localizedRegionName,
+  prettyRegionName: prettyRegion,
+  getSelectedRegionIds: () => selectedRegionIds,
+  getSearchRegions: () => regionPathElements
+    .filter(path => path.dataset.wrapCanonical !== '0')
+    .map(path => REGIONS[Number(path.dataset.id)]),
+  onCatalogBuilt: catalog => {
+    derivedIndices.nationChoices = catalog.nationChoices;
+    derivedIndices.regionChoices = catalog.regionChoices;
+    recordRenderStat('searchCatalogBuilds');
+  },
+  onSelectedNationCleared: () => {
+    search.dataset.selectedNation = '';
+    setLockedNationState();
+    setSelectedRegionIds();
+    setFocusedRegionState();
+    resetTransientClaimState();
+    updateNationOverlay(getHoverNation() || '');
+  },
+  onNationSelected: focusNation,
+  onRegionSelected: index => selectRegion(REGIONS[index]),
+  onRegionVisibilityChange: ({hiddenRegionIds, visibleRegionIds, renderBaseColors}) => {
+    setHiddenVisualState(hiddenRegionIds);
+    applyMapVisualState();
+    if (renderBaseColors) syncNormalRegionColorVisibility();
+    labelTextElements.forEach(label => {
+      const region = REGIONS[Number(label.dataset.id)];
+      label.style.display = visibleRegionIds.has(region.regionName) ? '' : 'none';
     });
-  }
+  },
+});
+function applyFilters(rerenderResults = true, {renderBaseColors = true} = {}) {
+  searchController.applyFilters(rerenderResults, {renderBaseColors});
 }
 function updateWarning() {
   const warn = document.getElementById('warnPill');
@@ -2508,10 +2408,7 @@ function refreshLanguage() {
     applyStaticTranslations,
     rebuildSearchCatalog,
     updateWarning,
-    syncSearchSelectedNationLabel: () => {
-      const selectedNation = search.dataset.selectedNation || '';
-      if (selectedNation) search.value = humanizeNationLabel(selectedNation);
-    },
+    syncSearchSelectedNationLabel: () => searchController.syncSelectedNationLabel(),
     renderNationDropdown,
     refreshNationOverlayForLanguage: () => {
       const committedNation = getLockedNation();
@@ -2541,32 +2438,6 @@ function refreshLanguage() {
 applyStaticTranslations();
 initAsideCards();
 
-bindNationSearchControl({
-  search,
-  dropdown: nationDropdown,
-  combo: nationSearchCombo,
-  document,
-  getSelectedNation: () => search.dataset.selectedNation || '',
-  parseNationSearchValue,
-  onSelectedNationCleared: () => {
-    search.dataset.selectedNation = '';
-    setLockedNationState();
-    setSelectedRegionIds();
-    setFocusedRegionState();
-    resetTransientClaimState();
-    updateNationOverlay(getHoverNation() || '');
-  },
-  openDropdown: openNationDropdown,
-  closeDropdown: closeNationDropdown,
-  renderDropdown: renderNationDropdown,
-  applyFilters,
-  getChoiceCount: () => currentDropdownChoices.length,
-  getDropdownOpen: () => nationDropdownOpen,
-  getHighlightedIndex: () => highlightedNationChoiceIndex,
-  setHighlightedIndex: index => { highlightedNationChoiceIndex = index; },
-  chooseDropdown: chooseNationFromDropdown,
-  focusNationFromSearch: focusNation,
-});
 bindAppControls({
   languageSelect: languageSel,
   scenarioSelect: scenarioSel,

@@ -141,10 +141,10 @@ export function bindNationSearchControl({
   chooseDropdown,
   focusNationFromSearch,
 } = {}) {
-  if (!search) return;
-  search.addEventListener('focus', () => openDropdown?.());
-  search.addEventListener('click', () => openDropdown?.());
-  search.addEventListener('input', () => {
+  if (!search) return () => {};
+  const onFocus = () => openDropdown?.();
+  const onClick = () => openDropdown?.();
+  const onInput = () => {
     const selectedNation = getSelectedNation?.() || '';
     if (selectedNation && parseNationSearchValue(search.value) !== selectedNation) {
       onSelectedNationCleared?.();
@@ -153,8 +153,8 @@ export function bindNationSearchControl({
     setHighlightedIndex?.(getChoiceCount?.() ? 0 : -1);
     renderDropdown?.();
     applyFilters?.(true);
-  });
-  search.addEventListener('keydown', event => {
+  };
+  const onKeyDown = event => {
     if (event.key === 'ArrowDown') {
       event.preventDefault();
       if (!getDropdownOpen?.()) openDropdown?.();
@@ -182,18 +182,34 @@ export function bindNationSearchControl({
     } else if (event.key === 'Escape') {
       closeDropdown?.();
     }
-  });
-  if (dropdown) {
-    dropdown.addEventListener('mousedown', event => event.preventDefault());
-    dropdown.addEventListener('click', event => {
-      const option = event.target.closest('.searchOption[data-index]');
-      if (!option) return;
-      chooseDropdown?.(Number(option.dataset.index));
-    });
-  }
-  document?.addEventListener('click', event => {
+  };
+  const onDropdownMouseDown = event => event.preventDefault();
+  const onDropdownClick = event => {
+    const option = event.target.closest('.searchOption[data-index]');
+    if (!option) return;
+    chooseDropdown?.(Number(option.dataset.index));
+  };
+  const onDocumentClick = event => {
     if (!combo?.contains(event.target)) closeDropdown?.();
-  });
+  };
+  search.addEventListener('focus', onFocus);
+  search.addEventListener('click', onClick);
+  search.addEventListener('input', onInput);
+  search.addEventListener('keydown', onKeyDown);
+  if (dropdown) {
+    dropdown.addEventListener('mousedown', onDropdownMouseDown);
+    dropdown.addEventListener('click', onDropdownClick);
+  }
+  document?.addEventListener('click', onDocumentClick);
+  return () => {
+    search.removeEventListener('focus', onFocus);
+    search.removeEventListener('click', onClick);
+    search.removeEventListener('input', onInput);
+    search.removeEventListener('keydown', onKeyDown);
+    dropdown?.removeEventListener('mousedown', onDropdownMouseDown);
+    dropdown?.removeEventListener('click', onDropdownClick);
+    document?.removeEventListener('click', onDocumentClick);
+  };
 }
 
 export function bindAppControls({
