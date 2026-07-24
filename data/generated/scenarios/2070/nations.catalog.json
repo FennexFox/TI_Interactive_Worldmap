@@ -5,8 +5,8 @@
     "scenarioYear": "2070",
     "nationTemplate": {
       "file": "TINationTemplate.json",
-      "size": 745675,
-      "sha256": "0b18f27203b0b240ddabcd07dbc12ad47051e3acae8e5fc8a8eec35a9dc7bbf5"
+      "size": 799599,
+      "sha256": "1633bf56d634eb52a90807c04e98ef289902a3130b44bafe9617b9760907bd75"
     },
     "localizationLanguages": [
       "kor",
@@ -14,10 +14,10 @@
     ]
   },
   "counts": {
-    "total": 305,
+    "total": 301,
     "withTemplate": 295,
     "withLocalizedName": 301,
-    "existsAtStart": 172,
+    "existsAtStart": 67,
     "claimIssuers": 295,
     "breakaways": 4
   },
@@ -235,32 +235,6 @@
         ]
       }
     },
-    "ALB": {
-      "tag": "ALB",
-      "displayName": {},
-      "baseDisplayName": {},
-      "displayNameWithArticle": {},
-      "nationAdjective": {},
-      "unionDisplayName": {},
-      "unionDisplayNameWithArticle": {},
-      "unionAdjective": {},
-      "aliases": [
-        "ALB"
-      ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
-      "isClaimIssuer": false,
-      "claimRegionCount": 0,
-      "isBreakaway": false,
-      "breakawayFrom": "",
-      "source": {
-        "template": "",
-        "localizationKeys": [],
-        "includedBecause": [
-          "initialRegion"
-        ]
-      }
-    },
     "ALN": {
       "tag": "ALN",
       "displayName": {
@@ -356,8 +330,8 @@
         "오스트리아",
         "Austrian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -371,7 +345,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -504,8 +477,8 @@
         "아르헨티나",
         "Argentine"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 3,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 9,
       "isBreakaway": false,
@@ -519,7 +492,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -942,15 +914,15 @@
     "BAH": {
       "tag": "BAH",
       "displayName": {
-        "en": "Bahamas",
+        "en": "The Bahamas",
         "kor": "바하마"
       },
       "baseDisplayName": {
-        "en": "Bahamas",
+        "en": "The Bahamas",
         "kor": "바하마"
       },
       "displayNameWithArticle": {
-        "en": "the Bahamas",
+        "en": "The Bahamas",
         "kor": "바하마"
       },
       "nationAdjective": {
@@ -965,13 +937,13 @@
       "friendlyName": "Bahamas",
       "aliases": [
         "BAH",
-        "Bahamas",
+        "The Bahamas",
         "바하마",
-        "the Bahamas",
-        "Bahaman"
+        "Bahaman",
+        "Bahamas"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -985,7 +957,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -1219,8 +1190,8 @@
         "벨리즈",
         "Belizean"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -1234,7 +1205,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -1269,8 +1239,8 @@
         "베냉",
         "Beninese"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -1284,7 +1254,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -1420,8 +1389,8 @@
         "벨기에",
         "Belgium"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -1435,7 +1404,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -1570,8 +1538,8 @@
         "Burkinabè",
         "BurkinaFaso"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -1585,7 +1553,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -1620,8 +1587,8 @@
         "벨라루스",
         "Belarusian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -1635,7 +1602,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -1682,7 +1648,7 @@
         "South American"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 1,
+      "initialRegionCount": 14,
       "isClaimIssuer": true,
       "claimRegionCount": 26,
       "isBreakaway": false,
@@ -1935,8 +1901,8 @@
         "보스니아",
         "BosniaandHerzegovina"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -1950,7 +1916,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -1985,8 +1950,8 @@
         "불가리아",
         "Bulgarian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -2000,7 +1965,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -2084,8 +2048,8 @@
         "보츠와나",
         "Batswana"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -2099,7 +2063,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -2136,8 +2099,8 @@
         "Caribbean",
         "카리브인"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -2151,7 +2114,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -2189,8 +2151,8 @@
         "중앙 아프리카",
         "CentralAfricanRepublic"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 2,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -2204,7 +2166,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -2532,8 +2493,8 @@
         "칠레",
         "Chilean"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 2,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -2547,7 +2508,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -2595,7 +2555,7 @@
         "범아시아"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 26,
+      "initialRegionCount": 27,
       "isClaimIssuer": true,
       "claimRegionCount": 56,
       "isBreakaway": false,
@@ -2661,7 +2621,7 @@
         "중앙 아프리카"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 2,
+      "initialRegionCount": 8,
       "isClaimIssuer": true,
       "claimRegionCount": 13,
       "isBreakaway": false,
@@ -2680,32 +2640,6 @@
           "template",
           "initialRegion",
           "claimIssuer"
-        ]
-      }
-    },
-    "COB": {
-      "tag": "COB",
-      "displayName": {},
-      "baseDisplayName": {},
-      "displayNameWithArticle": {},
-      "nationAdjective": {},
-      "unionDisplayName": {},
-      "unionDisplayNameWithArticle": {},
-      "unionAdjective": {},
-      "aliases": [
-        "COB"
-      ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
-      "isClaimIssuer": false,
-      "claimRegionCount": 0,
-      "isBreakaway": false,
-      "breakawayFrom": "",
-      "source": {
-        "template": "",
-        "localizationKeys": [],
-        "includedBecause": [
-          "initialRegion"
         ]
       }
     },
@@ -2798,8 +2732,8 @@
         "Gran Colombia",
         "대 콜롬비아"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 2,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 28,
       "isBreakaway": false,
@@ -2816,7 +2750,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -2904,8 +2837,8 @@
         "Costa Rican",
         "CostaRica"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -2919,7 +2852,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -3004,8 +2936,8 @@
         "카보베르데",
         "Cabo Verdean"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -3019,7 +2951,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -3103,8 +3034,8 @@
         "크로아티아",
         "Croatian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -3118,7 +3049,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -3307,8 +3237,8 @@
         "쿠바",
         "Cuban"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -3322,7 +3252,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -3417,8 +3346,8 @@
         "체코슬로바키아",
         "Czechoslovak"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -3435,7 +3364,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -3518,8 +3446,8 @@
         "덴마크",
         "Danish"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 2,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -3533,7 +3461,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -3579,8 +3506,8 @@
         "German",
         "독일어"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 3,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 9,
       "isBreakaway": false,
@@ -3597,7 +3524,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -3682,8 +3608,8 @@
         "도미니카 공화국",
         "the Dominican Republic"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -3697,7 +3623,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -3844,7 +3769,7 @@
         "Maghreb"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 2,
+      "initialRegionCount": 8,
       "isClaimIssuer": true,
       "claimRegionCount": 10,
       "isBreakaway": false,
@@ -3941,8 +3866,8 @@
         "에콰도르",
         "Ecuadorian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -3956,7 +3881,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -4057,8 +3981,8 @@
         "Salvadorean",
         "살바도르"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -4072,7 +3996,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -4107,8 +4030,8 @@
         "적도 기니",
         "Equatoguinean"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -4122,7 +4045,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -4157,8 +4079,8 @@
         "에리트레아",
         "Eritrean"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -4172,7 +4094,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -4208,8 +4129,8 @@
         "Spanish",
         "스페인어"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 5,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 5,
       "isBreakaway": false,
@@ -4223,7 +4144,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -4258,8 +4178,8 @@
         "에스토니아",
         "Estonian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -4273,7 +4193,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -4309,8 +4228,8 @@
         "Swazi",
         "스와지"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -4324,7 +4243,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -4372,7 +4290,7 @@
         "아프리카인"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 3,
+      "initialRegionCount": 4,
       "isClaimIssuer": true,
       "claimRegionCount": 79,
       "isBreakaway": false,
@@ -4488,7 +4406,7 @@
         "유럽인"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 8,
+      "initialRegionCount": 48,
       "isClaimIssuer": true,
       "claimRegionCount": 85,
       "isBreakaway": false,
@@ -4592,8 +4510,8 @@
         "핀란드",
         "Finnish"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -4607,7 +4525,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -4742,8 +4659,8 @@
         "Gambian",
         "Gambia"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -4757,7 +4674,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -4855,7 +4771,7 @@
         "British"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 6,
+      "initialRegionCount": 3,
       "isClaimIssuer": true,
       "claimRegionCount": 25,
       "isBreakaway": false,
@@ -4957,8 +4873,8 @@
         "가나",
         "Ghanan"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -4972,7 +4888,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -5007,8 +4922,8 @@
         "기니",
         "Guinean"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -5022,7 +4937,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -5057,8 +4971,8 @@
         "기니비사우",
         "Bissau-Guinean"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -5072,7 +4986,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -5107,8 +5020,8 @@
         "그리스",
         "Greek"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -5122,7 +5035,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -5219,7 +5131,7 @@
         "중앙 아메리카"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 1,
+      "initialRegionCount": 6,
       "isClaimIssuer": true,
       "claimRegionCount": 8,
       "isBreakaway": false,
@@ -5369,8 +5281,8 @@
         "Qatari",
         "GulfStates"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -5384,7 +5296,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -5419,8 +5330,8 @@
         "가이아나",
         "Guyanan"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -5434,7 +5345,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -5665,8 +5575,8 @@
         "온두라스",
         "Honduran"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -5680,7 +5590,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -5715,8 +5624,8 @@
         "아이티",
         "Haitian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -5730,7 +5639,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -6105,8 +6013,8 @@
         "Celtic",
         "켈트"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 5,
       "isBreakaway": false,
@@ -6123,7 +6031,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -6258,8 +6165,8 @@
         "아이슬란드",
         "Icelandic"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -6273,7 +6180,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -6360,8 +6266,8 @@
         "Italian",
         "이탈리아어"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 3,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 3,
       "isBreakaway": false,
@@ -6375,7 +6281,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -6411,8 +6316,8 @@
         "Ivorian",
         "IvoryCoast"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -6426,7 +6331,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -6522,7 +6426,7 @@
         "카리브인"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 1,
+      "initialRegionCount": 14,
       "isClaimIssuer": true,
       "claimRegionCount": 14,
       "isBreakaway": false,
@@ -6954,7 +6858,7 @@
         "중앙 아시아"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 2,
+      "initialRegionCount": 7,
       "isClaimIssuer": true,
       "claimRegionCount": 7,
       "isBreakaway": false,
@@ -7006,8 +6910,8 @@
         "케냐",
         "Kenyan"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 2,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -7021,7 +6925,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -7106,8 +7009,8 @@
         "키르기스스탄",
         "Kyrgyz"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -7121,7 +7024,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -7205,8 +7107,8 @@
         "캄보디아",
         "Cambodian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -7220,7 +7122,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -7370,7 +7271,7 @@
         "SouthKorea"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 1,
+      "initialRegionCount": 2,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -7422,8 +7323,8 @@
         "코소보",
         "Kosovar"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -7437,7 +7338,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -7621,8 +7521,8 @@
         "쿠웨이트",
         "Kuwaiti"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -7636,7 +7536,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -7671,8 +7570,8 @@
         "라오스",
         "Laotian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -7686,7 +7585,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -7721,8 +7619,8 @@
         "라이베리아",
         "Liberian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -7736,7 +7634,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -7771,8 +7668,8 @@
         "리비아",
         "Libyan"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 2,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -7786,7 +7683,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -7871,8 +7767,8 @@
         "레소토",
         "Basotho"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -7886,34 +7782,7 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
-        ]
-      }
-    },
-    "LGN": {
-      "tag": "LGN",
-      "displayName": {},
-      "baseDisplayName": {},
-      "displayNameWithArticle": {},
-      "nationAdjective": {},
-      "unionDisplayName": {},
-      "unionDisplayNameWithArticle": {},
-      "unionAdjective": {},
-      "aliases": [
-        "LGN"
-      ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
-      "isClaimIssuer": false,
-      "claimRegionCount": 0,
-      "isBreakaway": false,
-      "breakawayFrom": "",
-      "source": {
-        "template": "",
-        "localizationKeys": [],
-        "includedBecause": [
-          "initialRegion"
         ]
       }
     },
@@ -8096,8 +7965,8 @@
         "리투아니아",
         "Lithuanian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -8111,7 +7980,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -8146,8 +8014,8 @@
         "라트비아",
         "Latvian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -8161,7 +8029,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -8293,8 +8160,8 @@
         "Malawi",
         "말라위"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -8308,7 +8175,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -8353,8 +8219,8 @@
         "타마즈가",
         "Tamazight"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 2,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 7,
       "isBreakaway": false,
@@ -8371,7 +8237,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -8657,8 +8522,8 @@
         "북마케도니아",
         "North Macedonian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -8672,7 +8537,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -8813,7 +8677,7 @@
         "Sahel"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 2,
+      "initialRegionCount": 6,
       "isClaimIssuer": true,
       "claimRegionCount": 10,
       "isBreakaway": false,
@@ -8866,8 +8730,8 @@
         "Burmese",
         "버마"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 2,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -8881,7 +8745,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -8964,8 +8827,8 @@
         "몬테네그로",
         "Montenegrin"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -8979,7 +8842,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -9064,8 +8926,8 @@
         "몰도바",
         "Moldovan"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -9079,7 +8941,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -9165,8 +9026,8 @@
         "모잠비크",
         "Mozambican"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 2,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -9180,7 +9041,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -9265,8 +9125,8 @@
         "모리타니",
         "Mauritanian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -9280,7 +9140,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -9626,8 +9485,8 @@
         "니제르",
         "Nigerien"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -9641,7 +9500,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -9678,8 +9536,8 @@
         "Dutch",
         "네덜란드어"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 2,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -9693,7 +9551,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -9741,7 +9598,7 @@
         "서아프리카"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 3,
+      "initialRegionCount": 14,
       "isClaimIssuer": true,
       "claimRegionCount": 27,
       "isBreakaway": false,
@@ -9793,8 +9650,8 @@
         "니카라과",
         "Nicaraguan"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -9808,7 +9665,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -9843,8 +9699,8 @@
         "노르웨이",
         "Norwegian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -9858,7 +9714,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -10139,8 +9994,8 @@
         "오만",
         "Omani"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -10154,7 +10009,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -10353,8 +10207,8 @@
         "파나마",
         "Panamanian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -10368,7 +10222,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -10506,7 +10359,7 @@
         "MelanesianStates"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 2,
+      "initialRegionCount": 1,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -10565,8 +10418,8 @@
         "페루 연합국",
         "the Peruvian Confederation"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 2,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 7,
       "isBreakaway": false,
@@ -10583,7 +10436,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -10668,8 +10520,8 @@
         "필리핀",
         "Philippine"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 3,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 3,
       "isBreakaway": false,
@@ -10683,7 +10535,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -10721,8 +10572,8 @@
         "폴리네시아",
         "PolynesianStates"
       ],
-      "existsAtStart": false,
-      "initialRegionCount": 0,
+      "existsAtStart": true,
+      "initialRegionCount": 1,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -10736,6 +10587,7 @@
         ],
         "includedBecause": [
           "template",
+          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -10832,8 +10684,8 @@
         "인테르마리움",
         "the Intermarium"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 3,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 34,
       "isBreakaway": false,
@@ -10850,7 +10702,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -10948,8 +10799,8 @@
         "the People's Republic of Korea",
         "NorthKorea"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -10966,7 +10817,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -11052,8 +10902,8 @@
         "Portuguese",
         "포르투갈어"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 2,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -11067,7 +10917,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -11102,8 +10951,8 @@
         "파라과이",
         "Paraguayan"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -11117,7 +10966,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -11508,8 +11356,8 @@
         "루마니아",
         "Romanian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 2,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 3,
       "isBreakaway": false,
@@ -11523,7 +11371,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -11609,8 +11456,8 @@
         "코모로",
         "Comorian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -11624,7 +11471,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -11726,8 +11572,8 @@
         "Rwanadan",
         "르완다"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -11741,7 +11587,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -12039,7 +11884,7 @@
         "the Gulf Union"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 3,
+      "initialRegionCount": 9,
       "isClaimIssuer": true,
       "claimRegionCount": 9,
       "isBreakaway": false,
@@ -12153,7 +11998,7 @@
         "북유럽"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 1,
+      "initialRegionCount": 7,
       "isClaimIssuer": true,
       "claimRegionCount": 9,
       "isBreakaway": false,
@@ -12363,8 +12208,8 @@
         "세네감비아",
         "Senegambian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -12381,7 +12226,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -12773,8 +12617,8 @@
         "Sierra Leone",
         "시에라리온"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -12788,7 +12632,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -12873,8 +12716,8 @@
         "슬로베니아",
         "Slovenian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -12888,7 +12731,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -12922,8 +12764,8 @@
         "Somaliland",
         "소말릴란드"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": true,
@@ -12937,7 +12779,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer",
           "breakaway"
         ]
@@ -12973,8 +12814,8 @@
         "소말리아",
         "Somali"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 3,
       "isBreakaway": false,
@@ -12988,7 +12829,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer",
           "breakawayParent"
         ]
@@ -13076,8 +12916,8 @@
         "South Sudanese",
         "SouthSudan"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -13091,7 +12931,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -13127,8 +12966,8 @@
         "São Toméan",
         "SaoTomeandPrincipe"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -13142,7 +12981,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -13276,8 +13114,8 @@
         "수리남",
         "Surinamese"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -13291,7 +13129,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -13378,8 +13215,8 @@
         "나미비아",
         "Namibian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -13393,7 +13230,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -13676,8 +13512,8 @@
         "차드",
         "Chadian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 2,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -13691,7 +13527,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -13827,8 +13662,8 @@
         "토고",
         "Togolese"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -13842,7 +13677,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -13890,7 +13724,7 @@
         "동남 아시아"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 2,
+      "initialRegionCount": 11,
       "isClaimIssuer": true,
       "claimRegionCount": 25,
       "isBreakaway": false,
@@ -13991,8 +13825,8 @@
         "타지키스탄",
         "Tajik"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -14006,7 +13840,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -14041,8 +13874,8 @@
         "투르크메니스탄",
         "Turkmen"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -14056,7 +13889,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -14091,8 +13923,8 @@
         "동티모르",
         "Timorese"
       ],
-      "existsAtStart": false,
-      "initialRegionCount": 0,
+      "existsAtStart": true,
+      "initialRegionCount": 1,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -14106,33 +13938,8 @@
         ],
         "includedBecause": [
           "template",
+          "initialRegion",
           "claimIssuer"
-        ]
-      }
-    },
-    "TMR": {
-      "tag": "TMR",
-      "displayName": {},
-      "baseDisplayName": {},
-      "displayNameWithArticle": {},
-      "nationAdjective": {},
-      "unionDisplayName": {},
-      "unionDisplayNameWithArticle": {},
-      "unionAdjective": {},
-      "aliases": [
-        "TMR"
-      ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
-      "isClaimIssuer": false,
-      "claimRegionCount": 0,
-      "isBreakaway": false,
-      "breakawayFrom": "",
-      "source": {
-        "template": "",
-        "localizationKeys": [],
-        "includedBecause": [
-          "initialRegion"
         ]
       }
     },
@@ -14215,8 +14022,8 @@
         "튀니지",
         "Tunisian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -14230,7 +14037,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -14340,8 +14146,8 @@
         "the Republic of China",
         "Republican Chinese"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 27,
       "isBreakaway": true,
@@ -14358,7 +14164,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer",
           "breakaway"
         ]
@@ -14407,7 +14212,7 @@
         "동아프리카"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 3,
+      "initialRegionCount": 11,
       "isClaimIssuer": true,
       "claimRegionCount": 16,
       "isBreakaway": false,
@@ -14461,8 +14266,8 @@
         "Emirati",
         "에미리트"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -14476,7 +14281,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -14511,8 +14315,8 @@
         "우간다",
         "Ugandan"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -14526,7 +14330,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -14562,8 +14365,8 @@
         "Ukrainian",
         "우크라이나어"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 4,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 6,
       "isBreakaway": false,
@@ -14577,7 +14380,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -14758,8 +14560,8 @@
         "우루과이",
         "Uruguayan"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -14773,7 +14575,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -14825,7 +14626,7 @@
         "the United States"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 17,
+      "initialRegionCount": 16,
       "isClaimIssuer": true,
       "claimRegionCount": 48,
       "isBreakaway": false,
@@ -14877,8 +14678,8 @@
         "우즈베키스탄",
         "Uzbekistani"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 2,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -14892,7 +14693,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -14927,8 +14727,8 @@
         "베네수엘라",
         "Venezuelan"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -14942,7 +14742,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -14977,8 +14776,8 @@
         "베트남",
         "Vietnamese"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 2,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 4,
       "isBreakaway": false,
@@ -14992,7 +14791,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -15367,8 +15165,8 @@
         "예멘",
         "Yemeni"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 2,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -15382,7 +15180,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer",
           "breakawayParent"
         ]
@@ -15579,7 +15376,7 @@
         "Southern African"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 2,
+      "initialRegionCount": 11,
       "isClaimIssuer": true,
       "claimRegionCount": 16,
       "isBreakaway": false,
@@ -15680,8 +15477,8 @@
         "잠비아",
         "Zambian"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -15695,7 +15492,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -15730,8 +15526,8 @@
         "짐바브웨",
         "Zimbabwean"
       ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
+      "existsAtStart": false,
+      "initialRegionCount": 0,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -15745,7 +15541,6 @@
         ],
         "includedBecause": [
           "template",
-          "initialRegion",
           "claimIssuer"
         ]
       }
