@@ -17,10 +17,11 @@ import sys
 from pathlib import Path
 
 from build_manifest import GENERATED_STAGING_PATHS
+from scenario_config import DEFAULT_SCENARIO, SUPPORTED_SCENARIOS
 
 ROOT = Path(__file__).resolve().parents[1]
-SCENARIO_YEARS = ("2022", "2026", "2070")
-DEFAULT_SCENARIO_YEAR = "2026"
+SCENARIO_YEARS = SUPPORTED_SCENARIOS
+DEFAULT_SCENARIO_YEAR = DEFAULT_SCENARIO
 SCENARIO_OUTPUT_ROOT = Path("data/generated/scenarios")
 GENERATED_PATHS = GENERATED_STAGING_PATHS
 

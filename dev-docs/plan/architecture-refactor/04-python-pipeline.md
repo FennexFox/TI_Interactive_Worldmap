@@ -85,15 +85,15 @@
 ## Evidence
 
 - Baseline: scenario/localization/loading helpers are duplicated across builders; `build_pages.py`, `rebuild_pages.py`, and verifier own related path contracts independently.
-- After: pending.
-- Delta: pending.
-- Interpretation: pending.
+- After: all builders, the verifier, manifest, and rebuild helper import `scenario_config.py`; strict loaders and shared localization/override projections live in `input_contracts.py` and `localization.py`. Claim normalization, breakaway indexing, grouping, project metadata, nation profiles, stats, and serialization are typed/testable stages. Pages loading, bundle assembly, deterministic encoding, static synchronization, and output writing are separate functions, and the builder writes only `docs/**`.
+- Delta: Python tests increased from 28 to 35 and cover malformed JSON location, duplicate template IDs with row numbers, invalid aliases/overrides, distinct localization projections, structured verifier failures, deterministic gzip, and the no-source-write Pages invariant. `npm run build` left `data/generated/**` byte-clean, verifier passed, and all 94 E2E tests passed.
+- Interpretation: generated schemas and checked-in generated data were unchanged. Ordinary build/verify now use only the standard library; `UnityPy>=1.10,<2` is isolated in `requirements-geometry.txt` and installed only for an explicit geometry refresh.
 - Commit: pending.
-- Commit blocker: none.
+- Commit blocker: the from-game smoke test is deferred because `TI_TEMPLATES_DIR` is not set in this environment.
 
 ## Progress
 
-- Not started.
+- Complete; phase gate passed with the documented external-asset smoke deferral.
 
 ## Decision log
 
@@ -102,4 +102,4 @@
 
 ## Outcomes / Retrospective
 
-- Awaiting phase implementation and evidence.
+- Shared contracts now fail fast instead of silently skipping malformed template/manual rows. The catalog and region localization projections intentionally remain distinct. Geometry extraction remains an opt-in, separately provisioned workflow.

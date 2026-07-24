@@ -6,19 +6,29 @@
 from __future__ import annotations
 
 import argparse
-import re
 from pathlib import Path
 from typing import Any
 
 from catalog_utils import (
-    load_json,
     load_named_templates,
     parse_languages,
-    read_localization_file,
     resolve_templates_dir,
     source_fingerprint,
     unique_strings,
     write_json_output,
+)
+from input_contracts import load_optional_json, load_override_map, load_template_rows
+from localization import (
+    NATION_LOCALIZATION_FAMILIES,
+    load_nation_localization_layers as load_shared_nation_localization_layers,
+    nation_localization_priority as shared_nation_localization_priority,
+    project_nation_catalog_localizations,
+)
+from scenario_config import (
+    DEFAULT_SCENARIO,
+    SUPPORTED_SCENARIOS,
+    scenario_template_name as shared_scenario_template_name,
+    strip_scenario_prefix,
 )
 from scenario_rows import filter_bilateral_rows_for_scenario
 
@@ -26,47 +36,24 @@ from scenario_rows import filter_bilateral_rows_for_scenario
 SCHEMA_VERSION = 1
 DEFAULT_OUTPUT = Path("data/generated/nations.catalog.json")
 DEFAULT_NATION_DISPLAY_OVERRIDES = Path("data/manual/nation_display_overrides.json")
-SCENARIO_YEARS = ("2022", "2026", "2070")
-DEFAULT_SCENARIO_YEAR = "2026"
-NATION_LOCALIZATION_FAMILIES = (
-    "displayName",
-    "displayNameWithArticle",
-    "nationAdjective",
-    "unionDisplayName",
-    "unionDisplayNameWithArticle",
-    "unionAdjective",
-)
+SCENARIO_YEARS = SUPPORTED_SCENARIOS
+DEFAULT_SCENARIO_YEAR = DEFAULT_SCENARIO
 
 
 def norm_id(value: Any) -> str:
-    if value is None:
-        return ""
-    return re.sub(r"^(?:2022|2026|2070)_", "", str(value))
+    return strip_scenario_prefix(value)
 
 
 def scenario_template_name(name: str, scenario_year: str) -> str:
-    return f"{scenario_year}_{norm_id(name)}"
+    return shared_scenario_template_name(name, scenario_year)
 
 
 def load_nation_display_overrides(path: Path = DEFAULT_NATION_DISPLAY_OVERRIDES) -> dict[str, dict[str, Any]]:
-    if not path.is_file():
-        return {}
-    raw = load_json(path)
-    if not isinstance(raw, dict):
-        return {}
-    return {
-        norm_id(tag): value
-        for tag, value in raw.items()
-        if norm_id(tag) and isinstance(value, dict)
-    }
+    return load_override_map(path)
 
 
 def nation_localization_priority(data_name: str, tag: str, scenario_year: str) -> int:
-    if data_name == scenario_template_name(tag, scenario_year):
-        return 2
-    if data_name == tag:
-        return 1
-    return 0
+    return shared_nation_localization_priority(data_name, tag, scenario_year)
 
 
 def load_nation_localizations(
@@ -75,17 +62,7 @@ def load_nation_localizations(
     scenario_year: str = DEFAULT_SCENARIO_YEAR,
 ) -> dict[str, dict[str, str]]:
     layers = load_nation_localization_layers(templates_dir, languages, scenario_year)
-    return {
-        tag: dict(
-            sorted(
-                {
-                    **((values.get("base") or {}).get("displayName") or {}),
-                    **((values.get("scenario") or {}).get("displayName") or {}),
-                }.items()
-            )
-        )
-        for tag, values in sorted(layers.items())
-    }
+    return project_nation_catalog_localizations(layers)
 
 
 def load_nation_localization_layers(
@@ -93,33 +70,12 @@ def load_nation_localization_layers(
     languages: list[str],
     scenario_year: str = DEFAULT_SCENARIO_YEAR,
 ) -> dict[str, dict[str, dict[str, dict[str, str]]]]:
-    root = templates_dir.parent / "Localization"
-    localizations: dict[str, dict[str, dict[str, dict[str, str]]]] = {}
-    for language in languages:
-        values = read_localization_file(root / language / f"TINationTemplate.{language}")
-        for key, value in values.items():
-            parts = key.split(".")
-            if len(parts) != 3 or parts[0] != "TINationTemplate" or parts[1] not in NATION_LOCALIZATION_FAMILIES:
-                continue
-            _, family, data_name = parts
-            tag = norm_id(data_name)
-            if not tag:
-                continue
-            priority = nation_localization_priority(data_name, tag, scenario_year)
-            if priority == 2:
-                localizations.setdefault(tag, {}).setdefault("scenario", {}).setdefault(family, {})[language] = value
-            elif priority == 1:
-                localizations.setdefault(tag, {}).setdefault("base", {}).setdefault(family, {})[language] = value
-    return {
-        tag: {
-            layer: {
-                family: dict(sorted(names.items()))
-                for family, names in sorted(families.items())
-            }
-            for layer, families in sorted(values.items())
-        }
-        for tag, values in sorted(localizations.items())
-    }
+    return load_shared_nation_localization_layers(
+        templates_dir,
+        languages,
+        scenario_year,
+        families=NATION_LOCALIZATION_FAMILIES,
+    )
 
 
 def localized_family(
@@ -449,9 +405,13 @@ def main() -> int:
     if templates_dir is None:
         raise SystemExit("Templates directory not found. Pass --templates-dir.")
     languages = parse_languages(args.languages)
-    region_map = load_json(Path(args.region_map)) if args.region_map and Path(args.region_map).is_file() else None
+    region_map = (
+        load_optional_json(Path(args.region_map), default=None, expected_type=dict)
+        if args.region_map
+        else None
+    )
     bilateral_path = Path(args.bilateral_template) if args.bilateral_template else templates_dir / "TIBilateralTemplate.json"
-    bilateral_rows = load_json(bilateral_path) if bilateral_path.is_file() else None
+    bilateral_rows = load_template_rows(bilateral_path, required=False) or None
     catalog = build_catalog(
         templates_dir,
         languages,

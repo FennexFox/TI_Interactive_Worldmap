@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 import gzip
+import json
 import tempfile
 import sys
 import unittest
@@ -52,6 +53,53 @@ class BuildPagesTests(unittest.TestCase):
             )
             self.assertFalse(stale.exists())
             self.assertEqual(generated.read_text(encoding="utf-8"), "generated\n")
+
+    def test_build_pages_never_rewrites_generated_inputs(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source_files = {
+                "src/index.html": "<!doctype html>\n",
+                "src/styles.css": "body {}\n",
+                "src/app.js": "export {};\n",
+            }
+            for relative, text in source_files.items():
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(text, encoding="utf-8")
+            generated = root / "data/generated"
+            generated.mkdir(parents=True)
+            values = {
+                "region_map.generated.json": {"summary": {"scenarioYear": "2026"}, "regions": []},
+                "claim_map.generated.json": {"summary": {"scenarioYear": "2026"}},
+                "nations.catalog.json": {"nations": {}},
+                "research.catalog.json": {"nodes": []},
+            }
+            scenario_entry = {
+                "summary": {"scenarioYear": "2026"},
+                "regionMap": values["region_map.generated.json"],
+                "claimMap": values["claim_map.generated.json"],
+                "catalogs": {
+                    "nations": values["nations.catalog.json"],
+                    "research": values["research.catalog.json"],
+                },
+            }
+            values["scenario_bundle.generated.json"] = {
+                "schemaVersion": 2,
+                "defaultScenario": "2026",
+                "scenarios": {"2026": scenario_entry},
+            }
+            for filename, value in values.items():
+                (generated / filename).write_text(
+                    json.dumps(value, indent=2) + "\n",
+                    encoding="utf-8",
+                )
+            before = {path.name: path.read_bytes() for path in generated.iterdir()}
+
+            build_pages.build_pages(root)
+
+            after = {path.name: path.read_bytes() for path in generated.iterdir()}
+            self.assertEqual(after, before)
+            self.assertTrue((root / "docs/assets/data.generated.js").is_file())
 
 
 if __name__ == "__main__":

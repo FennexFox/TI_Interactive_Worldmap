@@ -20,10 +20,10 @@ from build_manifest import (
     deployment_source_mappings,
     expected_browser_deployment_files,
 )
+from scenario_config import DEFAULT_SCENARIO, SUPPORTED_SCENARIOS, strip_scenario_prefix
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_SCENARIOS = ("2022", "2026", "2070")
-DEFAULT_SCENARIO = "2026"
+EXPECTED_SCENARIOS = SUPPORTED_SCENARIOS
 INLINE_DATA_COMMENT_RE = re.compile(r"(^|\s)//")
 JS_IMPORT_RE = re.compile(r"import\s+(?:[^;]*?\s+from\s+)?[\"'](\.[^\"']+)[\"']\s*;", re.DOTALL)
 GENERATED_DATA_CHUNKS_RE = re.compile(r"const compressed = \[\s*(.*?)\s*\]\.join", re.DOTALL)
@@ -38,6 +38,10 @@ class Diagnostic:
     def format(self) -> str:
         location = f" [{self.path}]" if self.path else ""
         return f"{self.code}{location}: {self.message}"
+
+
+class VerificationFailure(RuntimeError):
+    pass
 
 
 def collect_deployment_diagnostics(root: Path = ROOT) -> list[Diagnostic]:
@@ -96,14 +100,6 @@ def collect_javascript_syntax_diagnostics(root: Path = ROOT) -> list[Diagnostic]
     return diagnostics
 
 
-def require_no_diagnostics(diagnostics: list[Diagnostic]) -> None:
-    if not diagnostics:
-        return
-    for diagnostic in diagnostics:
-        print(f"ERROR: {diagnostic.format()}", file=sys.stderr)
-    raise SystemExit(1)
-
-
 def strings_with_inline_comments(value: object, path: str = "$", limit: int = 5) -> list[str]:
     hits: list[str] = []
     if isinstance(value, dict):
@@ -123,8 +119,7 @@ def strings_with_inline_comments(value: object, path: str = "$", limit: int = 5)
 
 def require(condition: bool, message: str) -> None:
     if not condition:
-        print(f"ERROR: {message}", file=sys.stderr)
-        raise SystemExit(1)
+        raise VerificationFailure(message)
 
 
 def load_json(path: Path, label: str) -> object:
@@ -276,9 +271,9 @@ def verify_scenario_entry(scenario: str, entry: dict[str, object]) -> None:
     require(number_value(summary, "claimRowsNormalized") == number_value(claim_stats, "claimRowsNormalized"), f"{scenario} scenario summary claim count mismatch")
     require(number_value(summary, "regionsUnmatched") == 0, f"{scenario} scenario summary records unmatched rows")
 
-    prefixed_nations = [tag for tag in nations if re.match(r"^(?:2022|2026|2070)_", str(tag))]
+    prefixed_nations = [tag for tag in nations if strip_scenario_prefix(tag) != str(tag)]
     require(not prefixed_nations, f"{scenario} prefixed nation ids leaked: {prefixed_nations[:5]}")
-    prefixed_regions = [name for name in region_names if re.match(r"^(?:2022|2026|2070)_", str(name))]
+    prefixed_regions = [name for name in region_names if strip_scenario_prefix(name) != str(name)]
     require(not prefixed_regions, f"{scenario} prefixed region ids leaked: {prefixed_regions[:5]}")
 
     for project_id in claim_projects:
@@ -328,13 +323,7 @@ def verify_scenario_entry(scenario: str, entry: dict[str, object]) -> None:
     )
 
 
-def main() -> int:
-    require_no_diagnostics(
-        [
-            *collect_deployment_diagnostics(ROOT),
-            *collect_javascript_syntax_diagnostics(ROOT),
-        ]
-    )
+def verify_structure_and_replication() -> None:
     require((ROOT / "docs/assets/data.generated.js").exists(), "generated JS data missing")
     verify_relative_js_imports(ROOT / "docs/assets/app.js", ROOT / "docs/assets")
     require((ROOT / "docs/data/generated/nations.catalog.json").exists(), "docs nation catalog missing")
@@ -398,6 +387,13 @@ def main() -> int:
                 f"{scenario_id} standalone {filename} differs from scenario bundle",
             )
         verify_scenario_entry(scenario_id, scenario_entry_data)
+
+
+def verify_dataset_sentinels() -> None:
+    region = object_value(load_json(ROOT / "data/generated/region_map.generated.json", "region map JSON"))
+    claim = object_value(load_json(ROOT / "data/generated/claim_map.generated.json", "claim map JSON"))
+    nation_catalog = object_value(load_json(ROOT / "data/generated/nations.catalog.json", "nation catalog JSON"))
+    research_catalog = object_value(load_json(ROOT / "data/generated/research.catalog.json", "research catalog JSON"))
     region_summary = object_value(region.get("summary"))
     claim_stats = object_value(claim.get("claimStats"))
     nations = object_value(nation_catalog.get("nations"))
@@ -406,7 +402,7 @@ def main() -> int:
     comment_hits = strings_with_inline_comments(region)
     require(not comment_hits, "inline data comments leaked into region map: " + "; ".join(comment_hits))
     require(number_value(region_summary, "regions") >= 300, "region map unexpectedly small")
-    require(str(region_summary.get("scenarioYear")) in ("2022", "2026", "2070"), "region map scenarioYear must be one of 2022, 2026, or 2070")
+    require(str(region_summary.get("scenarioYear")) in SUPPORTED_SCENARIOS, "region map scenarioYear must be supported")
     require(number_value(claim_stats, "claimRowsNormalized") >= 2000, "claim row count unexpectedly small")
     require(claim_stats.get("regionsUnmatched") == 0, "unmatched claim regions remain")
     require(display_name(region_by_name(region, "RockyMountains"), "en") == "Denver", "Rocky Mountains should display as Denver")
@@ -443,6 +439,41 @@ def main() -> int:
     require(display_name(object_value(claim_nation_meta.get("SAU")), "en") == "Saudi Arabia", "Saudi Arabia nation metadata missing")
     require(object_value(object_value(claim.get("claimsByNation")).get("SAU")).get("status") == "existing", "Saudi Arabia should be an existing 2026 nation")
     require("Guatemala" not in list_value(object_value(object_value(claim.get("claimsByNation")).get("GUA")).get("baseRegions")), "Liangguang/GUA must not inherit Guatemala as base territory")
+
+
+def collect_structure_diagnostics() -> list[Diagnostic]:
+    try:
+        verify_structure_and_replication()
+    except (VerificationFailure, OSError, ValueError, gzip.BadGzipFile, json.JSONDecodeError) as exc:
+        return [Diagnostic("generated-structure", "", str(exc))]
+    return []
+
+
+def collect_dataset_sentinel_diagnostics() -> list[Diagnostic]:
+    try:
+        verify_dataset_sentinels()
+    except (VerificationFailure, OSError, ValueError, json.JSONDecodeError) as exc:
+        return [Diagnostic("dataset-sentinel", "", str(exc))]
+    return []
+
+
+def collect_all_diagnostics(root: Path = ROOT) -> list[Diagnostic]:
+    diagnostics = [
+        *collect_deployment_diagnostics(root),
+        *collect_javascript_syntax_diagnostics(root),
+    ]
+    if root == ROOT:
+        diagnostics.extend(collect_structure_diagnostics())
+        diagnostics.extend(collect_dataset_sentinel_diagnostics())
+    return diagnostics
+
+
+def main() -> int:
+    diagnostics = collect_all_diagnostics(ROOT)
+    if diagnostics:
+        for diagnostic in diagnostics:
+            print(f"ERROR: {diagnostic.format()}", file=sys.stderr)
+        return 1
     print("Generated worldmap outputs verified.")
     return 0
 

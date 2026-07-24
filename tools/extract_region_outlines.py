@@ -42,7 +42,7 @@ def extract_with_unitypy(asset: Path) -> dict[str, Any]:
     except ImportError as exc:
         raise SystemExit(
             "UnityPy is required to read the original regionoutlines asset. "
-            "Install dependencies with `python -m pip install -r requirements.txt`, "
+            "Install geometry dependencies with `python -m pip install -r requirements-geometry.txt`, "
             "or pass a pre-extracted raw JSON to build_region_outline_data.py."
         ) from exc
 

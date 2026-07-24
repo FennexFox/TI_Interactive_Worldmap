@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from scenario_config import SUPPORTED_SCENARIOS
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -77,7 +79,7 @@ def expected_browser_deployment_files(root: Path = ROOT) -> frozenset[Path]:
 
 
 def expected_scenario_generated_files(
-    scenario_ids: tuple[str, ...] = ("2022", "2026", "2070"),
+    scenario_ids: tuple[str, ...] = SUPPORTED_SCENARIOS,
 ) -> tuple[Path, ...]:
     return tuple(
         Path("data/generated/scenarios") / scenario / filename

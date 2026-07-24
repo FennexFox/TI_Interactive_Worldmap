@@ -8,10 +8,10 @@ from __future__ import annotations
 import re
 from typing import Any, Iterable
 
+from scenario_config import DEFAULT_SCENARIO, SUPPORTED_SCENARIOS, validate_scenario
 
-SUPPORTED_SCENARIOS = ("2022", "2026", "2070")
-DEFAULT_SCENARIO = "2026"
-SCENARIO_TOKEN_RE = re.compile(r"(2022|2026|2070)_")
+
+SCENARIO_TOKEN_RE = re.compile(rf"({'|'.join(SUPPORTED_SCENARIOS)})_")
 
 
 def scenario_refs(row: dict[str, Any]) -> set[str]:
@@ -32,9 +32,7 @@ def filter_bilateral_rows_for_scenario(
 ) -> list[dict[str, Any]]:
     if not scenario_year:
         return list(rows)
-    scenario = str(scenario_year)
-    if scenario not in SUPPORTED_SCENARIOS:
-        raise ValueError(f"Unsupported scenario year: {scenario}")
+    scenario = validate_scenario(scenario_year)
 
     relation_filter = set(relation_types or [])
     relevant_rows = [

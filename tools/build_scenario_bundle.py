@@ -11,17 +11,17 @@ from pathlib import Path
 from typing import Any
 
 from catalog_utils import sanitize_data_value
+from input_contracts import load_required_json
+from scenario_config import DEFAULT_SCENARIO, SUPPORTED_SCENARIOS
 
 
 SCHEMA_VERSION = 2
-SUPPORTED_SCENARIOS = ("2022", "2026", "2070")
-DEFAULT_SCENARIO = "2026"
 DEFAULT_BASE_DIR = Path("data/generated/scenarios")
 DEFAULT_OUTPUT = Path("data/generated/scenario_bundle.generated.json")
 
 
 def load_json(path: Path) -> Any:
-    return sanitize_data_value(json.loads(path.read_text(encoding="utf-8")))
+    return sanitize_data_value(load_required_json(path))
 
 
 def write_json(path: Path, value: Any) -> Path:

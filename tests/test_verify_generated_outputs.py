@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
@@ -68,6 +69,18 @@ class VerifyGeneratedOutputsTests(unittest.TestCase):
         diagnostics = verify_generated_outputs.collect_javascript_syntax_diagnostics(root)
 
         self.assertIn(("javascript-syntax", "src/runtime/broken.js"), {(item.code, item.path) for item in diagnostics})
+
+    def test_sentinel_failures_are_returned_as_diagnostics(self):
+        with mock.patch.object(
+            verify_generated_outputs,
+            "verify_dataset_sentinels",
+            side_effect=verify_generated_outputs.VerificationFailure("bad sentinel"),
+        ):
+            diagnostics = verify_generated_outputs.collect_dataset_sentinel_diagnostics()
+
+        self.assertEqual(len(diagnostics), 1)
+        self.assertEqual(diagnostics[0].code, "dataset-sentinel")
+        self.assertIn("bad sentinel", diagnostics[0].message)
 
 
 if __name__ == "__main__":

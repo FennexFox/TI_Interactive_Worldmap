@@ -235,14 +235,14 @@ parse_args() {
 }
 
 bootstrap_python() {
-  if [[ "$INSTALL" -eq 1 ]]; then
+  if [[ "$INSTALL" -eq 1 && "$REFRESH_REGION_OUTLINES" -eq 1 ]]; then
     have python3 || die "python3 is required. Install it in WSL first: sudo apt install python3 python3-venv python3-pip"
     if [[ ! -x "$VENV_DIR/bin/python" ]]; then
       python3 -m venv "$VENV_DIR" || die "failed to create virtualenv. Try: sudo apt install python3-venv"
     fi
     export PATH="$ROOT/$VENV_DIR/bin:$PATH"
     python -m pip install --upgrade pip
-    python -m pip install -r requirements.txt
+    python -m pip install -r requirements-geometry.txt
   else
     if [[ -x "$VENV_DIR/bin/python" ]]; then
       export PATH="$ROOT/$VENV_DIR/bin:$PATH"
