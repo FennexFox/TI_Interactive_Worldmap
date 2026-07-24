@@ -156,8 +156,9 @@
   applicable performance result because the final phase does not change runtime source;
   the user approved skipping a duplicate final measurement.
 - Deferred environment-only checks: Terra Invicta from-game/Unity geometry smoke
-  (`TI_TEMPLATES_DIR` and region outlines absent), ShellCheck (binary absent), and
-  Graphify document-semantic re-extraction (no API key and no subagents permitted).
+  (`TI_TEMPLATES_DIR` and region outlines absent) and ShellCheck (binary absent).
+  Graphify semantic extraction was completed after the user permitted the host-agent
+  fallback.
 - No product behavior, generated JSON schema, or compatibility global was intentionally
   changed. Remaining risk is limited to deprecated publishing aliases being removed
   after their documented one-cycle transition.

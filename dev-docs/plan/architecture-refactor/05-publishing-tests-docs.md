@@ -106,8 +106,10 @@
     shards 37/37 and 36/36 and as a three-repeat run 219/219;
   - `npm run lint`, `npm run build`, `npm run check:generated`, and
     `npm run verify` pass; `bash -n` passes and ShellCheck was unavailable locally;
-  - Graphify's code-only incremental refresh completed with 999 nodes, 2,526 edges,
-    and 54 communities. Its runtime leads were checked against real imports/symbols.
+  - Graphify's final structural and semantic refresh completed with 1,039 nodes,
+    2,678 edges, and 46 labeled communities. Four host-agent chunks added 254 fresh
+    semantic nodes, 293 semantic edges, and 11 hyperedges; graph leads were checked
+    against real imports and symbols.
 - Delta: publication changed from implicit Git writes to explicit opt-in; browser-free
   tests no longer start the Pages server; E2E organization now exposes language,
   search, debug, pins, overlays, rendering, pan, scenario, and world-wrap ownership.
@@ -128,8 +130,10 @@
   final audit. The user approved skipping a redundant final measurement because this
   phase changes CLI, tests, docs, and Graphify output only; the briefly started run
   was cancelled without using partial results.
-- Use Graphify's code-only `update --force` path because semantic document refresh
-  requires an unavailable API key and the user explicitly prohibited subagents.
+- Initially use Graphify's code-only `update --force` path while no API key or
+  subagents are available. After the user explicitly permits subagents, complete
+  semantic extraction through four Graphify-spec host-agent chunks and regenerate
+  the graph, report, labels, and HTML.
 - Defer from-game/Unity geometry smoke because `TI_TEMPLATES_DIR`, region outlines,
   and ShellCheck are unavailable in this environment.
 
@@ -139,5 +143,6 @@
   tests, and durable documentation.
 - Test ownership is clearer and faster: pure tests run under Node, browser tests are
   confined to `tests/e2e`, and CI/local shard behavior matches.
-- Graphify's structural code graph is current; document semantics remain cached until
-  a future run has an approved LLM backend.
+- Graphify's structural and semantic graph is current. The final extraction cache
+  covers all 82 detected corpus files; host-agent extraction reports no billable API
+  token counters.
