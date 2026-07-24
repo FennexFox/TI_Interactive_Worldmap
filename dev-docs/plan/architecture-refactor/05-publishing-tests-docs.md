@@ -113,7 +113,7 @@
   search, debug, pins, overlays, rendering, pan, scenario, and world-wrap ownership.
 - Interpretation: phase scope is complete with no UI, generated schema, external
   debug/scenario API, or runtime hot-path change.
-- Commit: phase-scoped implementation commit follows this gate.
+- Commit: `dfd1569 Make publishing explicit and reorganize tests`.
 - Commit blocker: none.
 
 ## Progress

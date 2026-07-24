@@ -142,14 +142,14 @@
 - [x] Generated-file policy is followed.
 - [x] External browser and data schemas remain compatible.
 - [x] Five-run before/after evidence is compared honestly.
-- [ ] Each phase has a reviewable commit with unrelated changes excluded.
+- [x] Each phase has a reviewable commit with unrelated changes excluded.
 - [x] Completion classification and remaining risks are explicit.
 
 ## Final Audit Result
 
 - Classification: complete.
-- Reviewable commits exist for plan/baseline, safeguards, browser runtime, and Python
-  pipeline; the publishing/tests/docs phase commit is the final remaining commit step.
+- Reviewable commits exist for plan/baseline, safeguards, browser runtime, Python
+  pipeline, and publishing/tests/docs.
 - All lint, build reproducibility, unit, verifier, two-shard E2E, and 219-test
   three-repeat E2E gates pass.
 - The browser phase's five-repeat baseline/browser-after/recheck evidence remains the
