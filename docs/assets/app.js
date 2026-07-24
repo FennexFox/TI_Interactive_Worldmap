@@ -39,8 +39,7 @@ import {
   panMapView,
   zoomMapView,
 } from './state/map-view-state.js';
-import {createMapPanController} from './interaction/map-pan.js';
-import {createTooltipController} from './interaction/tooltip.js';
+import {createMapInteractionController} from './interaction/map-interaction-controller.js';
 import {createAppData, getActiveData, getScenarioIds} from './data/active-data.js';
 import {createClaimModel} from './data/claim-model.js';
 import {buildClaimLabelDescriptors, buildClaimOverlayDescriptors} from './data/overlay-descriptors.js';
@@ -244,7 +243,6 @@ const nationInfo = document.getElementById('nationInfo');
 const selectedPill = document.getElementById('selectedPill');
 const languageSel = document.getElementById('languageSel');
 const svgWrap = document.querySelector('.svgwrap');
-const tooltipController = createTooltipController({window, svgWrap, tip});
 const regionPathElements = [];
 const hitPathElements = [];
 const labelTextElements = [];
@@ -327,16 +325,12 @@ let nationDropdownOpen = false;
 let highlightedNationChoiceIndex = -1;
 let currentDropdownChoices = [];
 let regionChoices = derivedIndices.regionChoices;
-let pendingHoverNation = '';
-let hoverPreviewFrame = 0;
 let hoverClaimPreviewNation = '';
 let visibleNationRegionNames = new Set();
 let currentOverlayModel = null;
 let activeClaimPreviewRegionScopeKey = '';
 let activeClaimPreviewRegionScope = null;
 let hoverClaimPreviewVisualKey = '';
-let mapViewFrame = 0;
-let pendingMapViewRenderContext = null;
 let cachedRegionGeometryStats = {};
 let searchCatalog = {
   nationChoices: [],
@@ -451,13 +445,7 @@ function reconcileStateForActiveScenario() {
 }
 
 function resetTransientScenarioInteractionState() {
-  cancelPendingHoverPreview();
-  hideRegionTooltip();
-  hoverClaimPreviewNation = '';
-  pendingHoverNation = '';
-  visibleNationRegionNames = new Set();
-  setHoverVisualState();
-  setHoverPill();
+  mapInteractionController.resetContext();
 }
 
 function prepareScenarioRuntime(scenarioId, {rebuildRuntime = true} = {}) {
@@ -1091,11 +1079,7 @@ function updateHoverNationPreview(nation) {
   renderCapitalMarkers();
 }
 function cancelPendingHoverPreview() {
-  if (hoverPreviewFrame) {
-    window.cancelAnimationFrame(hoverPreviewFrame);
-    hoverPreviewFrame = 0;
-  }
-  pendingHoverNation = '';
+  mapInteractionController.cancelHoverPreview();
 }
 function setHoverPreviewNation(nation) {
   if (getLockedNation()) return;
@@ -1109,14 +1093,7 @@ function scheduleHoverPreviewNation(nation) {
   if (getLockedNation()) return;
   const nextNation = nation || '';
   if (hoverClaimPreviewNation === nextNation && !getActiveNation()) return;
-  pendingHoverNation = nextNation;
-  if (hoverPreviewFrame) return;
-  hoverPreviewFrame = window.requestAnimationFrame(() => {
-    hoverPreviewFrame = 0;
-    const next = pendingHoverNation;
-    pendingHoverNation = '';
-    if (!getLockedNation() && next) setHoverPreviewNation(next);
-  });
+  mapInteractionController.scheduleHoverPreview(nextNation);
 }
 function clearHoverPreview() {
   cancelPendingHoverPreview();
@@ -1721,45 +1698,14 @@ function applyMapViewToSvg(renderContext = {}) {
   }
   invalidateTooltipLayout();
 }
-function scheduleMapViewRender(renderContext = {}) {
-  if (renderContext.isPan) {
-    pendingMapViewRenderContext = {
-      isPan: true,
-      scheduledAt: Number.isFinite(Number(renderContext.scheduledAt)) ? Number(renderContext.scheduledAt) : performance.now(),
-    };
-  } else if (!pendingMapViewRenderContext) {
-    pendingMapViewRenderContext = renderContext;
-  }
-  if (mapViewFrame) return;
-  mapViewFrame = window.requestAnimationFrame(() => {
-    const context = pendingMapViewRenderContext || {};
-    pendingMapViewRenderContext = null;
-    mapViewFrame = 0;
-    applyMapViewToSvg(context);
-  });
-}
 function invalidateTooltipLayout() {
-  tooltipController.invalidateLayout();
+  mapInteractionController.invalidateTooltipLayout();
 }
 function hideRegionTooltip() {
-  tooltipController.hide();
+  mapInteractionController.hideTooltip();
 }
 function showRegionTooltip(e, r) {
-  tooltipController.show(e, r.id, `${localizedRegionName(r)} (${nationDisplayName(r.nationTag)})`);
-}
-function resolveHitRegion(event, indices = derivedIndices) {
-  const target = event?.target;
-  const hitTarget = target?.closest?.('[data-region-id], [data-region]');
-  if (!hitTarget || !gHitRegions?.contains(hitTarget)) return null;
-  const regionName = hitTarget.dataset.regionId || hitTarget.dataset.region;
-  return indices.regionByName[regionName] || null;
-}
-function resolveRelatedHitRegion(event, indices = derivedIndices) {
-  const target = event?.relatedTarget;
-  const hitTarget = target?.closest?.('[data-region-id], [data-region]');
-  if (!hitTarget || !gHitRegions?.contains(hitTarget)) return null;
-  const regionName = hitTarget.dataset.regionId || hitTarget.dataset.region;
-  return indices.regionByName[regionName] || null;
+  mapInteractionController.showTooltip(e, r.id, `${localizedRegionName(r)} (${nationDisplayName(r.nationTag)})`);
 }
 function canUseSimpleHoverVisualDelta(previousRegionName, nextRegion, {regionChanged=false} = {}) {
   return !!(regionChanged && nextRegion?.regionName);
@@ -1768,13 +1714,8 @@ function canUseSimpleHoverClearDelta(previousRegionName) {
   return !!previousRegionName;
 }
 
-let hoverFullVisualPassFrame = 0;
 function scheduleHoverFullVisualPass() {
-  if (hoverFullVisualPassFrame) return;
-  hoverFullVisualPassFrame = window.requestAnimationFrame(() => {
-    hoverFullVisualPassFrame = 0;
-    applyMapVisualState();
-  });
+  mapInteractionController.scheduleHoverFullVisualPass();
 }
 
 function updateHoveredRegion(r, {force=false} = {}) {
@@ -1812,59 +1753,10 @@ function onRegionLeave(e) {
   if (next?.closest?.('.region, .region-hit')) return;
   clearHoverPreview();
 }
-function onHitLayerPointerOver(e) {
-  if (shouldSuppressHitLayerPointerEvent(e)) return;
-  const region = resolveHitRegion(e);
-  if (!region) return;
-  const previousRegion = resolveRelatedHitRegion(e);
-  if (previousRegion?.regionName === region.regionName) return;
-  onRegionEnter(e, region, {force: !previousRegion});
-}
-function onHitLayerPointerMove(e) {
-  if (shouldSuppressHitLayerPointerEvent(e)) return;
-  const region = resolveHitRegion(e);
-  if (region) onRegionMove(e, region);
-}
-function onHitLayerPointerOut(e) {
-  if (shouldSuppressHitLayerPointerEvent(e)) return;
-  const region = resolveHitRegion(e);
-  if (!region) return;
-  if (resolveRelatedHitRegion(e)) return;
-  onRegionLeave(e);
-}
-function onHitLayerClick(e) {
-  if (consumeSuppressedMapClick(e)) return;
-  const region = resolveHitRegion(e);
-  if (!region) return;
-  e.stopPropagation();
+function onRegionClick(e, region) {
   if (unpinClickedPinnedRegion(region)) return;
   if (selectReachableCapitalCandidateRegion(region.regionName)) return;
   selectRegion(region);
-}
-function hitRegionElementFromClientPoint(clientX, clientY) {
-  const elements = document.elementsFromPoint?.(clientX, clientY)
-    || [document.elementFromPoint?.(clientX, clientY)].filter(Boolean);
-  for (const element of elements) {
-    const hit = element?.closest?.('.region-hit[data-region-id], .region-hit[data-region]');
-    if (hit && gHitRegions?.contains(hit)) return hit;
-  }
-  return null;
-}
-function refreshPanHoverFromClientPoint(clientX, clientY) {
-  const hit = hitRegionElementFromClientPoint(clientX, clientY);
-  if (!hit) {
-    if (getHoveredRegionName() || getHoverNation() || tooltipController.hasActiveTooltip()) {
-      clearHoverPreview();
-    }
-    return;
-  }
-  const regionName = hit.dataset.regionId || hit.dataset.region;
-  const region = regionByName[regionName];
-  if (!region) return;
-  onRegionMove({clientX, clientY, target: hit}, region);
-}
-function shouldSuppressHitLayerPointerEvent(e) {
-  return mapPanController.shouldSuppressHitLayerPointerEvent(e);
 }
 function collectRegionGeometryStats() {
   const count = selector => svg.querySelectorAll(selector).length;
@@ -1928,47 +1820,52 @@ function sampleDebugSvgLayerCounts({includeGeometry=true} = {}) {
 function samplePanSvgNodeCount() {
   sampleDebugSvgLayerCounts({includeGeometry: false});
 }
-const mapPanController = createMapPanController({
+const mapInteractionController = createMapInteractionController({
+  document,
   svg,
+  svgWrap,
+  tip,
+  hitLayer: gHitRegions,
+  gridLayer: gGrid,
   window,
+  getContext: () => ({regionByName}),
+  onRegionEnter,
+  onRegionMove,
+  onRegionLeave,
+  onRegionClick,
+  onBlankMapMove: () => {
+    if (
+      getHoveredRegionName()
+      || getHoverNation()
+      || mapInteractionController.hasActiveTooltip()
+    ) {
+      clearHoverPreview();
+    }
+  },
+  onBlankMapClick: clearPinsOrSelection,
+  onMapLeave: clearHoverPreview,
+  onMapWheel,
+  onHoverPreview: nation => {
+    if (!getLockedNation()) setHoverPreviewNation(nation);
+  },
+  onHoverFullVisualPass: applyMapVisualState,
+  onMapViewRender: applyMapViewToSvg,
+  onContextReset: () => {
+    hoverClaimPreviewNation = '';
+    visibleNationRegionNames = new Set();
+    setHoveredRegionState();
+    setHoverNationState();
+    setSecondaryHoverNationState();
+    setHoverVisualState();
+    setHoverPill();
+  },
   getMapView: () => mapView,
   getWorldWrapEnabled: () => worldWrapEnabled,
   panMapView,
-  scheduleMapViewRender,
   recordRenderStat,
   samplePanSvgNodeCount,
-  onPanHoverRefresh: refreshPanHoverFromClientPoint,
   debugRenderStats,
 });
-function consumeSuppressedMapClick(e) {
-  return mapPanController.consumeSuppressedMapClick(e);
-}
-function onMapPointerDown(e) {
-  mapPanController.onPointerDown(e);
-}
-function onMapPointerMove(e) {
-  mapPanController.onPointerMove(e);
-}
-function onMapPointerUp(e) {
-  mapPanController.onPointerUp(e);
-}
-function onMapPointerCancel(e) {
-  mapPanController.onPointerCancel(e);
-}
-function onMapLostPointerCapture(e) {
-  mapPanController.onLostPointerCapture(e);
-}
-function onMapMove(e) {
-  if (mapPanController.isDragging()) return;
-  const target = e.target;
-  if (target?.classList?.contains('region') || target?.classList?.contains('region-hit')) return;
-  const isBlankMap = target === svg || target === gGrid || target === gHitRegions || target?.classList?.contains('graticule');
-  if (!isBlankMap) return;
-  if (getHoveredRegionName() || getHoverNation() || tooltipController.hasActiveTooltip()) clearHoverPreview();
-}
-function onMapLeave() {
-  clearHoverPreview();
-}
 function getCurrentNation() { return getLockedNation() || getHoverNation() || ''; }
 function overlayModelDataVersionKey(activeData, indices) {
   const summary = activeData?.regionMap?.summary || {};
@@ -2634,7 +2531,7 @@ function refreshLanguage() {
     renderManualEnvelopeOverlay: () => renderManualEnvelopeOverlay(currentOverlayModel),
     refreshReachableCapitalCandidateOutputs: () => refreshReachableCapitalCandidateOutputs(currentOverlayModel),
     refreshHoverPill: () => {
-      const hoveredRegionId = tooltipController.currentRegionId();
+      const hoveredRegionId = mapInteractionController.currentTooltipRegionId();
       const hoveredRegion = hoveredRegionId != null ? REGIONS[hoveredRegionId] : null;
       setHoverPill(hoveredRegion);
     },
@@ -2713,29 +2610,7 @@ bindAppControls({
     toggleReachableCapitalCandidatesState();
   },
 });
-if (gHitRegions) {
-  gHitRegions.addEventListener('pointerover', onHitLayerPointerOver);
-  gHitRegions.addEventListener('pointermove', onHitLayerPointerMove);
-  gHitRegions.addEventListener('pointerout', onHitLayerPointerOut);
-  gHitRegions.addEventListener('click', onHitLayerClick);
-}
-  svg.addEventListener('pointerdown', onMapPointerDown);
-  svg.addEventListener('pointermove', onMapPointerMove);
-  svg.addEventListener('pointerup', onMapPointerUp);
-  svg.addEventListener('pointercancel', onMapPointerCancel);
-  svg.addEventListener('lostpointercapture', onMapLostPointerCapture);
-
-svg.addEventListener('mousemove', onMapMove);
-svg.addEventListener('wheel', onMapWheel, {passive:false});
-svg.addEventListener('click', e => {
-  if (consumeSuppressedMapClick(e)) return;
-  const target = e.target;
-  if (target === svg || target === gGrid || target === gHitRegions || target.classList?.contains('graticule')) clearPinsOrSelection();
-});
-svg.addEventListener('mouseleave', onMapLeave);
-window.addEventListener('resize', invalidateTooltipLayout);
-window.addEventListener('scroll', invalidateTooltipLayout, true);
-if ('ResizeObserver' in window) new ResizeObserver(invalidateTooltipLayout).observe(svgWrap);
+mapInteractionController.bind();
 
 setHoverPill();
 setClaimsPillEmpty();

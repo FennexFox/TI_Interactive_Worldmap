@@ -67,20 +67,30 @@
 ## Evidence
 
 - Baseline: phase-1 interaction counters and targeted E2E.
-- After: pending.
-- Delta: pending.
-- Interpretation: pending.
+- After:
+  - `npm run lint`: passed.
+  - `npm run test:unit`: passed, 40 Node tests and 48 Python tests; the three new controller tests cover idempotent binding/destruction, observer cleanup, frame cancellation on context reset, fresh region lookup, and one-shot drag-click suppression.
+  - `npm run build`: passed and rebuilt the checked-in Pages assets from source.
+  - `npm run verify`: passed, including generated-output verification and the complete Node/Python unit suites.
+  - targeted Playwright (`debug`, `pan`, `pins`, `world-wrap`): 46/46 passed.
+  - source audit: `src/app.js` retains only the loading-screen `requestAnimationFrame`; raw map/hit/window interaction listeners and the `ResizeObserver` are owned by `map-interaction-controller.js`.
+- Delta: listener targets, listener order/options, hit resolution, pan threshold/suppression, tooltip copy, and synchronous wheel behavior remain unchanged. Pending hover preview, full hover visual, pan map-view, pan-hover, and tooltip frames now have explicit reset/destroy cancellation.
+- Interpretation: the controller boundary preserves the baseline interaction behavior while adding a testable lifecycle. Current scenario lookup is read through `getContext()` at event time, so scenario changes cannot leave a stale region index closure.
 - Commit: pending.
-- Commit blocker: none.
+- Commit blocker: commits are intentionally left to the orchestrating agent for this delegated phase.
 
 ## Progress
 
-- Not started.
+- Implementation and required validation complete; awaiting phase commit.
 
 ## Decision log
 
 - State mutation is available only through injected semantic adapters.
+- Existing semantic transition/render functions remain injected callbacks; the controller owns DOM event interpretation and lifecycle without importing `appState`.
+- `map-pan.js` and `tooltip.js` gained narrow `reset`/`destroy` hooks so the composed controller can cancel their private frames and timeout state.
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- `bind()` is idempotent and registers the existing four hit-layer listeners, nine SVG listeners, two window listeners, and one resize observer exactly once.
+- `resetContext()` cancels every interaction-owned pending frame, clears pan/tooltip transient state, and invokes the injected scenario reset callback.
+- `destroy()` is idempotent and removes all listeners, disconnects the observer, and destroys the composed pan/tooltip controllers.

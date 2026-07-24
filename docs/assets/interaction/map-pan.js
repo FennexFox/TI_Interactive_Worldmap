@@ -16,6 +16,7 @@ export function createMapPanController({
 } = {}) {
   let mapPanState = null;
   let suppressMapClick = false;
+  let suppressMapClickTimeout = 0;
   let panHoverRefreshFrame = 0;
   let pendingPanHoverPoint = null;
 
@@ -48,7 +49,9 @@ export function createMapPanController({
 
   function markSuppressNextMapClick() {
     suppressMapClick = true;
-    window.setTimeout(() => {
+    if (suppressMapClickTimeout) window.clearTimeout(suppressMapClickTimeout);
+    suppressMapClickTimeout = window.setTimeout(() => {
+      suppressMapClickTimeout = 0;
       suppressMapClick = false;
     }, 80);
   }
@@ -56,6 +59,10 @@ export function createMapPanController({
   function consumeSuppressedMapClick(event) {
     if (!suppressMapClick) return false;
     suppressMapClick = false;
+    if (suppressMapClickTimeout) {
+      window.clearTimeout(suppressMapClickTimeout);
+      suppressMapClickTimeout = 0;
+    }
     event?.preventDefault?.();
     event?.stopPropagation?.();
     return true;
@@ -145,14 +152,31 @@ export function createMapPanController({
     finishMapPan({cancel: true});
   }
 
+  function reset() {
+    finishMapPan({cancel: true});
+    if (panHoverRefreshFrame) {
+      window.cancelAnimationFrame(panHoverRefreshFrame);
+      panHoverRefreshFrame = 0;
+    }
+    pendingPanHoverPoint = null;
+    suppressMapClick = false;
+    if (suppressMapClickTimeout) {
+      window.clearTimeout(suppressMapClickTimeout);
+      suppressMapClickTimeout = 0;
+    }
+    svg?.classList.remove('is-panning-ready', 'is-panning');
+  }
+
   return {
     consumeSuppressedMapClick,
+    destroy: reset,
     isDragging: () => !!mapPanState?.dragging,
     onLostPointerCapture,
     onPointerCancel,
     onPointerDown,
     onPointerMove,
     onPointerUp,
+    reset,
     shouldSuppressHitLayerPointerEvent,
   };
 }
