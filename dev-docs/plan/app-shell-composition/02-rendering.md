@@ -73,15 +73,15 @@
 ## Evidence
 
 - Baseline: phase-1 render stats and targeted E2E.
-- After: pending.
-- Delta: pending.
-- Interpretation: pending.
-- Commit: pending.
+- After: `src/app.js` is 2,759 lines; claim, manual-envelope, and marker SVG construction now lives in three explicit renderer services. `npm run lint`, `npm run build`, `npm run verify`, 37 Node unit tests, 48 Python tests, and the 58 targeted rendering/debug/pins/world-wrap Playwright tests pass.
+- Delta: no targeted E2E, SVG structure, debug-counter, buffer-churn, hostile-hatch, manual-envelope, marker, or world-wrap compatibility failures were observed. Four focused renderer lifecycle/context tests were added, including cancellation of delayed overlay and label frames during reset/destroy.
+- Interpretation: the phase is behavior-neutral under the planned correctness and DOM/debug probes. The five-run timing comparison remains assigned to phase 6 so it uses the final source composition.
+- Commit: parent agent owns the phase-sized commit after reviewing this uncommitted handoff.
 - Commit blocker: none.
 
 ## Progress
 
-- Not started.
+- Implementation and validation complete; ready for the parent-owned phase commit.
 
 ## Decision log
 
@@ -89,4 +89,9 @@
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- `createClaimOverlayRenderer`, `createManualEnvelopeRenderer`, and `createMapMarkerRenderer` each expose `render`, `clear`, `reset`, and idempotent `destroy`.
+- Scenario-specific region lookup, world-copy plans, translations, model/descriptor data, and debug recorders are supplied per call; none of the render modules imports `appState`.
+- Claim overlay and label generation/swap behavior remains double-buffered, including delayed-commit stale-generation protection and the established debug counter names.
+- Manual-envelope descriptor/model calculation remains in the claim/data orchestration path; only keyed SVG ownership moved.
+- Capital, selection, hover/foreign-preview, pinned, and reachable marker semantic collection remains in `app.js`; keyed SVG fragment construction and layer replacement moved to the marker service.
+- The runtime-injected claim style element was removed. Its exact override declarations now follow the related claim/selection rules in `src/styles.css`, preserving selector specificity and cascade order.
