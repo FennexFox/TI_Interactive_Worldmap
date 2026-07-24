@@ -104,10 +104,17 @@ test('scenario selector switches supported start scenarios and keeps map workflo
 test('scenario ownership drives one consistent base fill per nation', async ({ page }) => {
   await page.goto('/?worldWrap=0');
   await expect(page.locator('#regions .region[data-wrap-canonical="1"]').first()).toBeVisible({ timeout: 10000 });
+  const crimeaRegion = page.locator(
+    '#regions .region[data-wrap-canonical="1"][data-region="Crimea"]'
+  );
 
   for (const scenario of ['2022', '2026', '2070']) {
     await page.locator('#scenarioSel').selectOption(scenario);
     await expect(page.locator('#scenarioSel')).toHaveValue(scenario);
+    await expect(crimeaRegion).toHaveAttribute(
+      'data-nation',
+      scenario === '2070' ? 'EUA' : 'RUS'
+    );
     const audit = await baseColorAudit(page);
     expect(audit.missingRegions, `${scenario} regions without exactly one base fill`).toEqual([]);
     expect(audit.inconsistentNations, `${scenario} nations with inconsistent base fills`).toEqual([]);
@@ -115,20 +122,20 @@ test('scenario ownership drives one consistent base fill per nation', async ({ p
 
   // Installed game data assigns Crimea to RUS in 2026 and EUA in 2070.
   await page.locator('#scenarioSel').selectOption('2026');
+  await expect(crimeaRegion).toHaveAttribute('data-nation', 'RUS');
   const state2026 = await canonicalRegionBaseState(page, 'Crimea');
   expect(state2026.nation).toBe('RUS');
   expect(state2026.fills).toHaveLength(1);
 
   await page.locator('#scenarioSel').selectOption('2070');
-  await expect(
-    page.locator('#regions .region[data-wrap-canonical="1"][data-region="Crimea"]')
-  ).toHaveAttribute('data-nation', 'EUA');
+  await expect(crimeaRegion).toHaveAttribute('data-nation', 'EUA');
   const state2070 = await canonicalRegionBaseState(page, 'Crimea');
   expect(state2070.nation).toBe('EUA');
   expect(state2070.fills).toHaveLength(1);
   expect(state2070.fills[0]).not.toBe(state2026.fills[0]);
 
   await page.locator('#scenarioSel').selectOption('2026');
+  await expect(crimeaRegion).toHaveAttribute('data-nation', 'RUS');
   const restored = await canonicalRegionBaseState(page, 'Crimea');
   expect(restored).toEqual(state2026);
 });

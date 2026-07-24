@@ -241,10 +241,12 @@ def load_region_metadata(
     initial_owners = load_scenario_initial_owners(templates_dir, scenario_year)
     metadata: dict[str, dict[str, Any]] = {}
     region_names = sorted({norm_id(name) for name in region_templates if norm_id(name)})
+    resolved_region_names: set[str] = set()
     for region_name in region_names:
         template = select_scenario_template(region_templates, region_name, scenario_year)
         if not template:
             continue
+        resolved_region_names.add(region_name)
         map_name = str(template.get("mapRegionName") or f"map_{region_name}")
         map_template = map_region_templates.get(map_name, {})
         display_name = dict(sorted((localizations.get(region_name) or {}).items()))
@@ -278,7 +280,7 @@ def load_region_metadata(
             "ownerName": owner_name,
             "sourceDataName": template.get("dataName"),
         }
-    missing_templates = sorted(set(initial_owners) - set(region_names))
+    missing_templates = sorted(set(initial_owners) - resolved_region_names)
     if missing_templates:
         raise ValueError(
             f"{scenario_year} initial-owner Claims reference unknown region templates: "

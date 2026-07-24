@@ -294,6 +294,30 @@ class CatalogBuilderTests(unittest.TestCase):
             ):
                 ro.load_region_metadata(templates_dir, ["en"], "2026")
 
+    def test_region_map_rejects_initial_owner_claims_without_scenario_template(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            templates_dir = Path(tmp) / "Templates"
+            write_region_owner_fixture(
+                templates_dir,
+                regions=(),
+                claims=(("AAA", "FutureRegion"),),
+            )
+            write_json(
+                templates_dir / "TIRegionTemplate.json",
+                [
+                    {
+                        "dataName": "2070_FutureRegion",
+                        "mapRegionName": "map_FutureRegion",
+                    }
+                ],
+            )
+
+            with self.assertRaisesRegex(
+                ValueError,
+                r"2026 initial-owner Claims reference unknown region templates: \['FutureRegion'\]",
+            ):
+                ro.load_region_metadata(templates_dir, ["en"], "2026")
+
     def test_region_map_strips_inline_data_comments_from_display_names(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
