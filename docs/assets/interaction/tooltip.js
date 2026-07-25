@@ -73,11 +73,18 @@ export function createTooltipController({
     schedulePosition(event);
   }
 
+  function destroy() {
+    hide();
+    invalidateLayout();
+  }
+
   return {
     currentRegionId: () => regionId,
+    destroy,
     hasActiveTooltip: () => regionId != null || !!pendingTooltipPoint,
     hide,
     invalidateLayout,
+    reset: destroy,
     show,
   };
 }

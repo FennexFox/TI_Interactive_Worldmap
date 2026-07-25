@@ -28,15 +28,24 @@ Windows PowerShell:
 
 ```powershell
 python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
 npm ci
 npx playwright install chromium
 ```
 
 WSL:
 
+Install `nvm` and `pyenv` inside WSL, then select the repository-pinned
+toolchain from the repository root:
+
 ```bash
-sudo apt update
-sudo apt install -y python3 python3-venv python3-pip nodejs npm
+set -euo pipefail
+nvm install "$(cat .nvmrc)"
+nvm use "$(cat .nvmrc)"
+pyenv install --skip-existing "$(cat .python-version)"
+pyenv local "$(cat .python-version)"
+node -e "if (process.versions.node.split('.')[0] !== '24') process.exit(1)"
+python3 -c "import sys; assert sys.version_info[:2] == (3, 12), sys.version"
 ./scripts/build-wsl.sh --help
 ```
 
@@ -48,6 +57,27 @@ which node
 which npm
 which python3
 ```
+
+CI and contributor checks use Node 24 and Python 3.12 (also recorded in
+`.nvmrc` and `.python-version`). Run the correctness-focused safety gates with:
+
+```bash
+npm run lint
+npm run test:unit
+npm run build
+npm run check:generated
+npm run verify
+npm run test:e2e -- --shard=1/2
+npm run test:e2e -- --shard=2/2
+```
+
+The Pages build manifest is shared by the builder, generated-output verifier, and
+publishing helper. Any new `src/**/*.js` module is copied to the matching
+`docs/assets/**` path automatically; stale or missing deployment copies fail
+`npm run verify`. Browser-free Node and Python coverage runs under
+`npm run test:unit`; Playwright behavior coverage is organized under
+`tests/e2e/**` and shares app-ready, selection, region interaction, and
+animation-frame fixtures from `tests/fixtures/app.js`.
 
 ## Build workflow overview
 
@@ -73,6 +103,31 @@ catalog data for `2022`, `2026`, and `2070`; `2026` remains the default scenario
 also copied to the legacy top-level generated files for compatibility. The static app
 loads the bundle and exposes those three scenarios through the sidebar selector.
 
+### Scenario-specific region ownership
+
+Starting ownership comes from the active scenario's `TIBilateralTemplate.json` Claim
+rows where `initialOwner` is `true`. In those rows, `nation1` is the starting owner and
+`region1` identifies the scenario region template. The region builder resolves that
+template through `TIRegionTemplate.mapRegionName` before writing the canonical
+`regions[].nationTag`. `outlineNationTag` remains separate as Unity geometry/extraction
+provenance.
+
+Do not derive starting ownership from `TIRegionTemplate.sortNation` or
+`TIMapRegionTemplate.friendlyNationName`; those are sorting/display metadata and do not
+represent scenario-specific 2070 ownership. The generated-output verifier cross-checks
+every region's `nationTag` against its scenario-filtered `initialOwner` Claim, and the
+catalog-builder tests require generation to fail when initial-owner rows conflict or a
+scenario region has no initial owner.
+
+Ownership/color regression coverage spans three levels:
+
+- generator fixtures prove one canonical region can have different owners by scenario,
+  and reject conflicting or missing initial-owner relations;
+- `npm run verify` semantically compares generated region ownership with the
+  authoritative Claims carried in each scenario claim map;
+- Playwright checks every supported scenario for one base fill per non-empty
+  `data-nation` and verifies a real 2026/2070 ownership switch restores correctly.
+
 ## Windows workflows
 
 ### Rebuild locally from checked-in generated data
@@ -94,8 +149,7 @@ region geometry:
 ```powershell
 python .\tools\rebuild_pages.py `
   --templates-dir "C:\Program Files (x86)\Steam\steamapps\common\Terra Invicta\TerraInvicta_Data\StreamingAssets\Templates" `
-  --region-outlines "C:\Program Files (x86)\Steam\steamapps\common\Terra Invicta\TerraInvicta_Data\StreamingAssets\AssetBundles\regionoutlines" `
-  --no-commit
+  --region-outlines "C:\Program Files (x86)\Steam\steamapps\common\Terra Invicta\TerraInvicta_Data\StreamingAssets\AssetBundles\regionoutlines"
 ```
 
 `--region-outlines` is accepted here so the same command can refresh geometry if needed,
@@ -106,8 +160,7 @@ Unity outline extraction, add `--refresh-region-outlines`:
 python .\tools\rebuild_pages.py `
   --templates-dir "C:\Program Files (x86)\Steam\steamapps\common\Terra Invicta\TerraInvicta_Data\StreamingAssets\Templates" `
   --region-outlines "C:\Program Files (x86)\Steam\steamapps\common\Terra Invicta\TerraInvicta_Data\StreamingAssets\AssetBundles\regionoutlines" `
-  --refresh-region-outlines `
-  --no-commit
+  --refresh-region-outlines
 ```
 
 Template-derived region ownership, nation status, research claim grants, and claim rows
@@ -119,8 +172,7 @@ For development fixtures, use:
 ```powershell
 python .\tools\rebuild_pages.py `
   --bilateral-template .\fixtures\TIBilateralTemplate.json `
-  --region-map-json .\fixtures\region_outlines.raw.json `
-  --no-commit
+  --region-map-json .\fixtures\region_outlines.raw.json
 ```
 
 `TI_TEMPLATES_DIR` can also point to `TerraInvicta_Data/StreamingAssets/Templates`.
@@ -174,11 +226,24 @@ Useful WSL options:
 
 Enable GitHub Pages for the repository with GitHub Actions as the source. The workflow in `.github/workflows/pages.yml` publishes the `docs/` directory on pushes to `main`, or when run manually.
 
-To rebuild, verify, commit generated changes, and push the current branch:
+`rebuild_pages.py` is non-publishing by default: it rebuilds all scenario catalogs
+and Pages output, verifies them, and leaves changes in the working tree. Use
+`npm run rebuild:game` for that safe workflow. Git operations are opt-in:
+
+- `--commit` stages only manifest-declared generated/deployment paths and commits them;
+- `--push` implies `--commit` and pushes the selected branch, or the current branch;
+- `--no-commit` and `--no-push` remain accepted as deprecated compatibility aliases
+  for one transition cycle (`--no-push` preserves the former commit-only behavior).
+
+To rebuild, verify, commit generated changes, and push the current branch explicitly:
 
 ```powershell
-python .\tools\rebuild_pages.py --templates-dir "<Templates>" --region-outlines "<regionoutlines>"
+python .\tools\rebuild_pages.py --templates-dir "<Templates>" --region-outlines "<regionoutlines>" --push
 ```
+
+`npm run deploy` is the equivalent explicit `--push` workflow. Pass
+`--branch <name>` with `--push` to select a branch; otherwise the current branch is
+used. Neither local nor CI validation performs a real push.
 
 The deploy helper only stages generated paths:
 
@@ -187,6 +252,7 @@ The deploy helper only stages generated paths:
 - `data/generated/region_map.generated.json`
 - `data/generated/claim_map.generated.json`
 - `data/generated/scenario_bundle.generated.json`
+- `data/generated/scenarios/**`
 - `docs/data/generated/nations.catalog.json`
 - `docs/data/generated/research.catalog.json`
 - `docs/data/region_map.generated.json`
@@ -196,7 +262,10 @@ The deploy helper only stages generated paths:
 - `docs/assets/app.js`
 - `docs/assets/state/*.js`
 - `docs/assets/data/*.js`
+- `docs/assets/interaction/*.js`
 - `docs/assets/render/*.js`
+- `docs/assets/runtime/*.js`
+- `docs/assets/ui/*.js`
 - `docs/assets/styles.css`
 - `docs/index.html`
 

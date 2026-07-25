@@ -243,6 +243,9 @@ bootstrap_python() {
     export PATH="$ROOT/$VENV_DIR/bin:$PATH"
     python -m pip install --upgrade pip
     python -m pip install -r requirements.txt
+    if [[ "$REFRESH_REGION_OUTLINES" -eq 1 ]]; then
+      python -m pip install -r requirements-geometry.txt
+    fi
   else
     if [[ -x "$VENV_DIR/bin/python" ]]; then
       export PATH="$ROOT/$VENV_DIR/bin:$PATH"
@@ -283,7 +286,6 @@ run_from_game_build() {
     tools/rebuild_pages.py
     --templates-dir "$templates"
     --catalog-languages "$CATALOG_LANGUAGES"
-    --no-commit
   )
 
   if [[ "$SCENARIO_YEAR" != "2026" ]]; then

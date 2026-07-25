@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - docs/**
-      - .github/workflows/pages.yml
   workflow_dispatch:
 
 permissions:
@@ -19,7 +16,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  checks:
+    uses: ./.github/workflows/checks.yml
+
   deploy:
+    needs: checks
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

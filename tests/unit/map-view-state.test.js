@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
 // SPDX-License-Identifier: MIT
 
-import { expect, test } from '@playwright/test';
+import {expect} from '@playwright/test';
+import {test} from 'node:test';
+import {createMapViewController} from '../../src/interaction/map-view-controller.js';
 import {
   clampMapViewY,
   createMapViewState,
@@ -11,7 +13,7 @@ import {
   panMapView,
   viewBoxForMapView,
   zoomMapView,
-} from '../src/state/map-view-state.js';
+} from '../../src/state/map-view-state.js';
 
 const SUMMARY_VIEW_BOX = [-3.17409138, -1.543560305, 6.52568676, 2.58888961];
 
@@ -33,6 +35,31 @@ test('initializes map view from active region-map summary viewBox', () => {
   expect(mapView.boundsWidth).toBe(SUMMARY_VIEW_BOX[2]);
   expect(mapView.boundsHeight).toBe(SUMMARY_VIEW_BOX[3]);
   expect(formatViewBoxForMapView(mapView)).toBe('-3.17409138 -1.543560305 6.52568676 2.58888961');
+});
+
+test('map view controller refreshes wrapped copy offsets when reset changes world width', () => {
+  const attributes = {};
+  const worldWrapChanges = [];
+  const svg = {
+    classList: {toggle() {}},
+    setAttribute(name, value) {
+      attributes[name] = value;
+    },
+  };
+  const controller = createMapViewController({
+    svg,
+    activeData: sampleActiveData([0, 0, 360, 180]),
+    location: {search: '?worldWrap=1'},
+    onWorldWrapChanged: change => worldWrapChanges.push(change),
+  });
+
+  expect(controller.getCopyContexts().map(context => context.xOffset)).toEqual([-360, 0, 360]);
+  controller.reset(sampleActiveData([0, 0, 720, 180]));
+
+  expect(controller.getCopyContexts().map(context => context.xOffset)).toEqual([-720, 0, 720]);
+  expect(controller.renderKey()).toContain('1:720:0');
+  expect(worldWrapChanges).toHaveLength(1);
+  expect(attributes.viewBox).toBe('0 0 720 180');
 });
 
 test('normalizes positive and negative horizontal offsets by whole world widths', () => {

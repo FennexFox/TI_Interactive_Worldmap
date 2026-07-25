@@ -35,3 +35,7 @@ Temporary planning material belongs in:
 `docs/` is generated/deployment output for GitHub Pages. Source changes should normally happen in `src/**`, `tools/**`, tests, or manual data files, followed by the normal build/verify workflow.
 
 Do not hand-edit generated `docs/**` outputs as documentation.
+
+The shared deployment/staging contract lives in `tools/build_manifest.py`.
+`tools/build_pages.py` writes only `docs/**`; `tools/rebuild_pages.py` publishes only
+when `--commit` or `--push` is explicitly supplied.

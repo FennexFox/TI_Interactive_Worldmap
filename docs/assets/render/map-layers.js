@@ -311,10 +311,9 @@ export function renderLabels({
   replaceLayerChildren(layer, frag);
 }
 
-export function renderRegions({
+export function renderRegionGeometry({
   layer,
   hitLayer,
-  labelLayer,
   indices,
   copyContexts,
   pathByRegion,
@@ -323,11 +322,7 @@ export function renderRegions({
   hitPathByRegion,
   hitPathInstancesByRegion,
   hitPathElements,
-  labelTextElements,
-  labelsVisible,
   colorFor,
-  labelPosition,
-  localizedRegionName,
   useCanonicalHitPaths = false,
 }) {
   const contexts = normalizeWorldCopyContexts(copyContexts);
@@ -353,5 +348,17 @@ export function renderRegions({
   }
   replaceLayerChildren(layer, frag);
   renderHitLayer({parent: hitLayer, indices, hitPathByRegion, hitPathInstancesByRegion, hitPathElements, copyContexts: contexts, useCanonicalHitPaths});
-  renderLabels({layer: labelLayer, labelTextElements, labelsVisible, regions: indices.regions, labelPosition, localizedRegionName, copyContexts: contexts});
+}
+
+export function renderRegions(options) {
+  renderRegionGeometry(options);
+  renderLabels({
+    layer: options.labelLayer,
+    labelTextElements: options.labelTextElements,
+    labelsVisible: options.labelsVisible,
+    regions: options.indices.regions,
+    labelPosition: options.labelPosition,
+    localizedRegionName: options.localizedRegionName,
+    copyContexts: normalizeWorldCopyContexts(options.copyContexts),
+  });
 }

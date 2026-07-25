@@ -271,6 +271,74 @@
   .selection-outline { pointer-events:none; fill:none; stroke:white; stroke-width:.034; vector-effect:non-scaling-stroke; }
   .selection-dot { pointer-events:none; fill:oklch(0.91 0.17 92 / .96); stroke:rgba(0,0,0,.8); stroke-width:.01; vector-effect:non-scaling-stroke; }
   .selection-label { pointer-events:none; font-size:.055px; font-weight:800; fill:#fff7b8; text-anchor:middle; paint-order:stroke; stroke:rgba(0,0,0,.82); stroke-width:.015; }
+  #normalRegionColors {
+    pointer-events:none;
+  }
+  #normalRegionColors .normal-region-color.hidden {
+    display:none;
+  }
+  svg.claims-active #normalRegionColors {
+    display:none;
+  }
+  svg.claims-active .region {
+    fill:oklch(0.32 0.026 260) !important;
+    opacity:1;
+    filter:none;
+    stroke:oklch(1 0 0 / .14);
+  }
+  svg.claims-active .region.dimmed {
+    fill:oklch(0.32 0.026 260) !important;
+    opacity:1;
+    filter:none;
+    stroke:oklch(1 0 0 / .14);
+  }
+  svg.claims-active .region.claim-target,
+  svg.claims-active .region.owned-highlight {
+    fill:transparent !important;
+    opacity:.82;
+    filter:none;
+  }
+  svg.claims-active .region.selected {
+    filter:none;
+    stroke:#fff;
+    stroke-width:.02;
+  }
+  svg.claims-active .region.pinned-node {
+    stroke:#5eead4;
+    stroke-width:.021;
+    opacity:1;
+  }
+  svg.claims-active .region:hover,
+  svg.claims-active .region.hovered {
+    filter:none;
+    stroke:white;
+  }
+  svg.claims-active .claim-overlay {
+    mix-blend-mode:normal;
+    filter:none;
+    opacity:1;
+  }
+  .claim-fill-group {
+    pointer-events:none;
+    stroke:none;
+    mix-blend-mode:normal;
+    filter:none;
+    opacity:1;
+  }
+  .claim-fill-group.gated {
+    opacity:.72;
+  }
+  svg.claims-active .claim-overlay.gated {
+    opacity:1;
+  }
+  .claim-overlay.owned-territory {
+    stroke:oklch(0.90 0.08 155 / .95);
+    stroke-width:.018;
+  }
+  .claim-overlay.basic-claim,
+  .claim-overlay.research-claim {
+    stroke-width:.016;
+  }
   #manualEnvelopeOverlays { pointer-events:none; mix-blend-mode:normal; }
   .manual-envelope-fill { pointer-events:none; stroke:none; mix-blend-mode:screen; }
   .manual-envelope-region-outline { pointer-events:none; stroke:rgba(255,255,255,.50); stroke-width:.014; vector-effect:non-scaling-stroke; stroke-dasharray:.036 .026; }

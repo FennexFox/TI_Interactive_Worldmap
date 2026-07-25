@@ -30,6 +30,10 @@ export function createAsideCardController({
   t = key => key,
   updateMapViewControlsLabels = () => {},
 } = {}) {
+  let list = null;
+  let bound = false;
+  let destroyed = false;
+
   function infoSectionOpenAttribute(key) {
     const state = readJsonSetting(storage, NATION_INFO_SECTION_STORAGE_KEY, {}, isPlainObject);
     return state[key] === false ? '' : ' open';
@@ -77,23 +81,35 @@ export function createAsideCardController({
   }
 
   function initAsideCards() {
-    const list = document.getElementById('asideCardList');
-    if (!list) return;
+    if (bound || destroyed) return false;
+    list = document.getElementById('asideCardList');
+    if (!list) return false;
     const cards = [...list.querySelectorAll('.sideCard[data-aside-card]')];
     const collapsed = readJsonSetting(storage, ASIDE_CARD_COLLAPSE_STORAGE_KEY, {}, isPlainObject);
     cards.forEach(card => setAsideCardCollapsed(card, !!collapsed[card.dataset.asideCard]));
-    list.addEventListener('click', event => {
-      const card = event.target.closest('.sideCard[data-aside-card]');
-      if (!card || !list.contains(card)) return;
-      if (event.target.closest('[data-card-toggle]')) {
-        setAsideCardCollapsed(card, card.dataset.collapsed !== 'true');
-        saveAsideCardState();
-        updateAsideCardControls();
-        return;
-      }
-    });
+    list.addEventListener('click', onAsideCardClick);
+    bound = true;
     updateAsideCardControls();
     updateMapViewControlsLabels();
+    return true;
+  }
+
+  function onAsideCardClick(event) {
+    const card = event.target.closest('.sideCard[data-aside-card]');
+    if (!card || !list?.contains(card)) return;
+    if (event.target.closest('[data-card-toggle]')) {
+      setAsideCardCollapsed(card, card.dataset.collapsed !== 'true');
+      saveAsideCardState();
+      updateAsideCardControls();
+    }
+  }
+
+  function destroy() {
+    if (destroyed) return;
+    destroyed = true;
+    if (bound) list?.removeEventListener('click', onAsideCardClick);
+    bound = false;
+    list = null;
   }
 
   return {
@@ -101,5 +117,6 @@ export function createAsideCardController({
     bindNationInfoSectionToggles,
     updateAsideCardControls,
     initAsideCards,
+    destroy,
   };
 }

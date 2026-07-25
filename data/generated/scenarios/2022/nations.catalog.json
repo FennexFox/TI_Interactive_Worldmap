@@ -5,8 +5,8 @@
     "scenarioYear": "2022",
     "nationTemplate": {
       "file": "TINationTemplate.json",
-      "size": 745675,
-      "sha256": "0b18f27203b0b240ddabcd07dbc12ad47051e3acae8e5fc8a8eec35a9dc7bbf5"
+      "size": 799599,
+      "sha256": "1633bf56d634eb52a90807c04e98ef289902a3130b44bafe9617b9760907bd75"
     },
     "localizationLanguages": [
       "kor",
@@ -14,10 +14,10 @@
     ]
   },
   "counts": {
-    "total": 305,
+    "total": 301,
     "withTemplate": 295,
     "withLocalizedName": 301,
-    "existsAtStart": 172,
+    "existsAtStart": 174,
     "claimIssuers": 295,
     "breakaways": 4
   },
@@ -226,32 +226,6 @@
         "includedBecause": [
           "template",
           "claimIssuer"
-        ]
-      }
-    },
-    "ALB": {
-      "tag": "ALB",
-      "displayName": {},
-      "baseDisplayName": {},
-      "displayNameWithArticle": {},
-      "nationAdjective": {},
-      "unionDisplayName": {},
-      "unionDisplayNameWithArticle": {},
-      "unionAdjective": {},
-      "aliases": [
-        "ALB"
-      ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
-      "isClaimIssuer": false,
-      "claimRegionCount": 0,
-      "isBreakaway": false,
-      "breakawayFrom": "",
-      "source": {
-        "template": "",
-        "localizationKeys": [],
-        "includedBecause": [
-          "initialRegion"
         ]
       }
     },
@@ -913,15 +887,15 @@
     "BAH": {
       "tag": "BAH",
       "displayName": {
-        "en": "Bahamas",
+        "en": "The Bahamas",
         "kor": "바하마"
       },
       "baseDisplayName": {
-        "en": "Bahamas",
+        "en": "The Bahamas",
         "kor": "바하마"
       },
       "displayNameWithArticle": {
-        "en": "the Bahamas",
+        "en": "The Bahamas",
         "kor": "바하마"
       },
       "nationAdjective": {
@@ -934,10 +908,10 @@
       "friendlyName": "Bahamas",
       "aliases": [
         "BAH",
-        "Bahamas",
+        "The Bahamas",
         "바하마",
-        "the Bahamas",
-        "Bahaman"
+        "Bahaman",
+        "Bahamas"
       ],
       "existsAtStart": true,
       "initialRegionCount": 1,
@@ -2589,32 +2563,6 @@
         ]
       }
     },
-    "COB": {
-      "tag": "COB",
-      "displayName": {},
-      "baseDisplayName": {},
-      "displayNameWithArticle": {},
-      "nationAdjective": {},
-      "unionDisplayName": {},
-      "unionDisplayNameWithArticle": {},
-      "unionAdjective": {},
-      "aliases": [
-        "COB"
-      ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
-      "isClaimIssuer": false,
-      "claimRegionCount": 0,
-      "isBreakaway": false,
-      "breakawayFrom": "",
-      "source": {
-        "template": "",
-        "localizationKeys": [],
-        "includedBecause": [
-          "initialRegion"
-        ]
-      }
-    },
     "COD": {
       "tag": "COD",
       "displayName": {
@@ -2755,8 +2703,8 @@
         "Congolese",
         "콩고"
       ],
-      "existsAtStart": false,
-      "initialRegionCount": 0,
+      "existsAtStart": true,
+      "initialRegionCount": 1,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -2770,6 +2718,7 @@
         ],
         "includedBecause": [
           "template",
+          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -7620,32 +7569,6 @@
         ]
       }
     },
-    "LGN": {
-      "tag": "LGN",
-      "displayName": {},
-      "baseDisplayName": {},
-      "displayNameWithArticle": {},
-      "nationAdjective": {},
-      "unionDisplayName": {},
-      "unionDisplayNameWithArticle": {},
-      "unionAdjective": {},
-      "aliases": [
-        "LGN"
-      ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
-      "isClaimIssuer": false,
-      "claimRegionCount": 0,
-      "isBreakaway": false,
-      "breakawayFrom": "",
-      "source": {
-        "template": "",
-        "localizationKeys": [],
-        "includedBecause": [
-          "initialRegion"
-        ]
-      }
-    },
     "LKA": {
       "tag": "LKA",
       "displayName": {
@@ -7912,8 +7835,8 @@
         "가봉",
         "Gabonese"
       ],
-      "existsAtStart": false,
-      "initialRegionCount": 0,
+      "existsAtStart": true,
+      "initialRegionCount": 1,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -7927,6 +7850,7 @@
         ],
         "includedBecause": [
           "template",
+          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -10140,7 +10064,7 @@
         "멜라네시아"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 2,
+      "initialRegionCount": 1,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -10347,8 +10271,8 @@
         "Polynesian",
         "폴리네시아"
       ],
-      "existsAtStart": false,
-      "initialRegionCount": 0,
+      "existsAtStart": true,
+      "initialRegionCount": 1,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -10362,6 +10286,7 @@
         ],
         "includedBecause": [
           "template",
+          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -11664,8 +11589,8 @@
         "알바니아",
         "Albanian"
       ],
-      "existsAtStart": false,
-      "initialRegionCount": 0,
+      "existsAtStart": true,
+      "initialRegionCount": 1,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -11679,6 +11604,7 @@
         ],
         "includedBecause": [
           "template",
+          "initialRegion",
           "claimIssuer"
         ]
       }
@@ -13589,8 +13515,8 @@
         "동티모르",
         "Timorese"
       ],
-      "existsAtStart": false,
-      "initialRegionCount": 0,
+      "existsAtStart": true,
+      "initialRegionCount": 1,
       "isClaimIssuer": true,
       "claimRegionCount": 1,
       "isBreakaway": false,
@@ -13604,33 +13530,8 @@
         ],
         "includedBecause": [
           "template",
+          "initialRegion",
           "claimIssuer"
-        ]
-      }
-    },
-    "TMR": {
-      "tag": "TMR",
-      "displayName": {},
-      "baseDisplayName": {},
-      "displayNameWithArticle": {},
-      "nationAdjective": {},
-      "unionDisplayName": {},
-      "unionDisplayNameWithArticle": {},
-      "unionAdjective": {},
-      "aliases": [
-        "TMR"
-      ],
-      "existsAtStart": true,
-      "initialRegionCount": 1,
-      "isClaimIssuer": false,
-      "claimRegionCount": 0,
-      "isBreakaway": false,
-      "breakawayFrom": "",
-      "source": {
-        "template": "",
-        "localizationKeys": [],
-        "includedBecause": [
-          "initialRegion"
         ]
       }
     },
@@ -14827,7 +14728,7 @@
         "Yemeni"
       ],
       "existsAtStart": true,
-      "initialRegionCount": 2,
+      "initialRegionCount": 1,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": false,
@@ -14875,8 +14776,8 @@
         "남예멘",
         "South Yemeni"
       ],
-      "existsAtStart": false,
-      "initialRegionCount": 0,
+      "existsAtStart": true,
+      "initialRegionCount": 1,
       "isClaimIssuer": true,
       "claimRegionCount": 2,
       "isBreakaway": true,
@@ -14890,6 +14791,7 @@
         ],
         "includedBecause": [
           "template",
+          "initialRegion",
           "claimIssuer",
           "breakaway"
         ]

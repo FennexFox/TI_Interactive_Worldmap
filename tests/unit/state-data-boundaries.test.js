@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
 // SPDX-License-Identifier: MIT
 
-import {expect, test} from '@playwright/test';
+import {expect} from '@playwright/test';
 import {readFileSync} from 'node:fs';
+import {test} from 'node:test';
 import {
   clearPinnedRegions,
   clearSelectionState,
@@ -20,11 +21,11 @@ import {
   setSelectedNation,
   setSelectedRegions,
   unpinPinnedRegion,
-} from '../src/state/app-state.js';
-import {createAppData, getActiveData, getScenarioIds} from '../src/data/active-data.js';
-import {createClaimModel} from '../src/data/claim-model.js';
-import {buildDerivedIndices, resolveSecondaryCapitalPreview} from '../src/data/derived-indices.js';
-import {createI18n, normalizeLanguage} from '../src/ui/i18n.js';
+} from '../../src/state/app-state.js';
+import {createAppData, getActiveData, getScenarioIds} from '../../src/data/active-data.js';
+import {createClaimModel} from '../../src/data/claim-model.js';
+import {buildDerivedIndices, resolveSecondaryCapitalPreview} from '../../src/data/derived-indices.js';
+import {createI18n, normalizeLanguage} from '../../src/ui/i18n.js';
 import {
   applyMapVisualState,
   applyMapVisualStateForRegions,
@@ -35,14 +36,14 @@ import {
   setOverlayVisualState,
   syncPinnedVisualState,
   syncSelectedVisualState,
-} from '../src/state/map-visual-state.js';
+} from '../../src/state/map-visual-state.js';
 
 function sortedValues(values) {
   return [...values].sort();
 }
 
 function loadGeneratedClaimMap() {
-  return JSON.parse(readFileSync(new URL('../data/generated/claim_map.generated.json', import.meta.url), 'utf8'));
+  return JSON.parse(readFileSync(new URL('../../data/generated/claim_map.generated.json', import.meta.url), 'utf8'));
 }
 
 function generatedClaimModel(claimMap) {
@@ -667,6 +668,51 @@ test('generated Indonesia and Ethiopia claims do not taint unrelated project cla
   }
 });
 
+test('incoming claims keep an empty cumulative claim region set authoritative', () => {
+  const claimsByNation = {
+    AAA: {
+      nation: 'AAA',
+      baseRegions: ['Alpha'],
+      projects: [{
+        project: '',
+        label: 'Base claims',
+        regions: ['Alpha'],
+        claims: {Alpha: {hostileClaim: false}},
+      }],
+    },
+    BBB: {
+      nation: 'BBB',
+      baseRegions: ['Alpha'],
+      projects: [],
+    },
+  };
+  let incomingClaimsByRegion = new Map();
+  const model = createClaimModel({
+    claimsByNation: () => claimsByNation,
+    nationRegions: () => new Map([
+      ['AAA', ['Alpha']],
+      ['BBB', ['Alpha']],
+    ]),
+    incomingClaimsByRegion: () => incomingClaimsByRegion,
+  });
+  incomingClaimsByRegion = model.buildIncomingClaimIndex();
+
+  const [incoming] = model.incomingClaimsForTarget(
+    'BBB',
+    claimsByNation.BBB,
+    new Set(['Alpha'])
+  );
+  expect(incoming.entryRegions).toEqual(['Alpha']);
+  expect(incoming.regions).toEqual([]);
+  expect(incoming.resultRegions).toEqual(['Alpha']);
+});
+
+test('reachable capital candidates tolerate an unavailable capital index', () => {
+  const model = createClaimModel({capitalNationsByRegion: () => null});
+
+  expect(model.reachableCapitalCandidateNations('Alpha', 'AAA')).toEqual([]);
+});
+
 test('claim model filters reachable capitals and assembles manual envelope data', () => {
   const fixture = sampleClaimModelFixture();
   const {model} = fixture;
@@ -820,39 +866,4 @@ test('map visual state applies explicit classes and bounded updates to copied re
   expect(beta.classList.values()).toEqual(['pinned-node']);
   expect(betaHit.classList.values()).toEqual([]);
   expect(gamma.classList.values()).toEqual(['selected']);
-});
-
-test('app runtime scenario API rebuilds active scenario context without stale map data', async ({page}) => {
-  await page.goto('/');
-  await page.waitForFunction(() => window.__TI_SCENARIO_API__?.activeScenario === '2026');
-
-  const initial = await page.evaluate(() => ({
-    scenarios: window.__TI_SCENARIO_API__.scenarios,
-    activeScenario: window.__TI_SCENARIO_API__.activeScenario,
-    canonicalRegions: document.querySelectorAll('#hitRegions .region-hit[data-wrap-canonical="1"]').length,
-  }));
-  expect(initial.scenarios).toEqual(['2022', '2026', '2070']);
-  expect(initial.activeScenario).toBe('2026');
-  expect(initial.canonicalRegions).toBeGreaterThan(300);
-
-  await page.locator('#search').fill('Canada');
-  await expect(page.locator('#nationDropdown')).toContainText('Canada');
-  await page.evaluate(() => window.__TI_SCENARIO_API__.setActiveScenario('2070'));
-  await page.waitForFunction(() => window.__TI_SCENARIO_API__?.activeScenario === '2070');
-
-  const switched = await page.evaluate(() => ({
-    activeScenario: window.__TI_SCENARIO_API__.activeScenario,
-    canonicalRegions: document.querySelectorAll('#hitRegions .region-hit[data-wrap-canonical="1"]').length,
-    claimsActive: document.querySelector('#map')?.classList.contains('claims-active') || false,
-    selectedPill: document.querySelector('#selectedPill')?.textContent || '',
-  }));
-  expect(switched.activeScenario).toBe('2070');
-  expect(switched.canonicalRegions).toBe(initial.canonicalRegions);
-  expect(switched.claimsActive).toBe(false);
-  expect(switched.selectedPill).toBe('');
-  await expect(page.locator('#nationDropdown')).toContainText('Canada');
-
-  await page.evaluate(() => window.__TI_SCENARIO_API__.setActiveScenario('2026'));
-  await page.waitForFunction(() => window.__TI_SCENARIO_API__?.activeScenario === '2026');
-  await expect(page.locator('#nationDropdown')).toContainText('Canada');
 });
