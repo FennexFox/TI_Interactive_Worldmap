@@ -76,21 +76,29 @@
 
 - Target interaction: same as phase 1.
 - Scenario: same browser/data/viewport/eight scenarios/five repeats as phase 1.
-- Environment: pending.
-- Baseline counters: pending phase-1 result.
-- After counters: pending.
-- Baseline timings: pending phase-1 result.
-- After timings: pending.
-- Node counts: pending.
-- Delta: pending.
-- Interpretation: pending.
+- Environment: commit `eead65c`; Node 24.16.0; Python 3.12.3; Playwright 1.61.1; checked-in Pages data; Chromium headless at the phase-1 1400x950 measurement viewport.
+- Baseline counters: all 40 phase-1 captures reported `setupOk=1`; equivalent measured scenarios had zero pan-time claim-overlay, claim-label, and label DOM replacements. Wrap-off base/hit counts were 363/363; wrap-on base/hit counts were 1,089/1,089.
+- After counters: all 40 final captures reported `setupOk=1`. Count-like SVG node, DOM replacement, render-call, path/use, and buffer-rebuild medians had zero differences from the phase-1 baseline; no counter median increased.
+- Baseline timings:
+  - wrap off: 0.875 ms pan average / 3.0 ms maximum; complex 0.950 / 3.1 ms;
+  - wrap off labels disabled: 1.025 / 3.2 ms; complex disabled 0.675 / 2.1 ms;
+  - wrap on: 1.725 / 6.3 ms; complex 1.650 / 5.9 ms;
+  - wrap on labels disabled: 1.400 / 5.1 ms; complex disabled 1.150 / 3.9 ms.
+- After timings:
+  - wrap off: 0.775 ms pan average / 2.5 ms maximum; complex 0.825 / 2.7 ms;
+  - wrap off labels disabled: 0.625 / 2.0 ms; complex disabled 0.650 / 2.1 ms;
+  - wrap on: 1.450 / 5.4 ms; complex 1.450 / 5.5 ms;
+  - wrap on labels disabled: 1.025 / 3.8 ms; complex disabled 1.050 / 3.7 ms.
+- Node counts: unchanged from baseline for every measured scenario: wrap-off base/hit counts 363/363 with 1,238 visible SVG nodes when labels are enabled and 875 when disabled; wrap-on base/hit counts 1,089/1,089 with 3,695 visible nodes when labels are enabled and 2,603 when disabled.
+- Delta: pan average medians changed by -3.7% to -39.0%; pan max medians changed by 0.0% to -37.5%. No reproducible 10% regression, node-count increase, DOM replacement increase, render-call increase, or buffer/cache rebuild increase was observed.
+- Interpretation: the refactor remains behavior-neutral under final correctness gates and does not reproduce a hot-path timing, SVG node, replacement, or cache/rebuild regression. Timing changes are not claimed as an optimization because this phase only proves the architecture refactor stayed inside the performance boundary.
 - Remaining bottleneck: no optimization claim is planned.
-- Commit: pending.
+- Commit: final validation phase commit.
 - Commit blocker: none.
 
 ## Progress
 
-- Not started.
+- Final validation complete; final phase commit is the only remaining mechanical step.
 
 ## Decision log
 
@@ -98,21 +106,21 @@
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- Final verification closed the composition-root work without a source follow-up: validation passed, generated Pages output stayed clean, Graphify was refreshed once, source boundary audits matched the intended ownership, and performance counters/timings stayed within the phase contract.
 
 ## Final Audit
 
-- Completion classification: pending.
-- Completed: pending.
-- Not completed: pending.
-- Validation: pending.
-- Manual smoke tests: pending.
-- Generated-file policy: pending.
+- Completion classification: complete.
+- Completed: `app.js` composition-root extraction, renderer/interaction/UI/runtime lifecycle boundaries, final generated Pages check, final Graphify refresh, performance comparison, source boundary audit, and commit-scope audit.
+- Not completed: no known required item remains.
+- Validation: `npm run lint`, `npm run test:unit`, `npm run build`, `npm run verify`, `npm run test:e2e`, `npm run check:generated`, final five-repeat render-stat measurement, plan validation, and performance phase gate passed.
+- Manual smoke tests: covered by the final Playwright cross-section and full suite: scenario order `2022 -> 2026 -> 2070 -> 2022`, language changes, base modes, search, claims, hostile/manual-envelope overlays, pins, reachable capitals, hover/click/drag/pan, world wrap, public debug/scenario APIs, and base-mode DOM identity.
+- Generated-file policy: followed. `npm run build` left `docs/**` and `data/generated/**` clean against `HEAD`; `data/generated/**` was unchanged; Graphify was refreshed once at the end and treated as derived navigation output.
 - Commit audit:
-  - Phase-sized commits made: pending.
-  - Plan / baseline committed before source implementation: pending.
-  - Generated artifacts policy followed: pending.
-  - Unrelated changes excluded: pending.
-  - Commit-flow classification: pending.
-- Known risks: pending.
-- Follow-up recommendation: pending.
+  - Phase-sized commits made: yes: `4d524df`, `746ce5a`, `4007e11`, `229a173`, and `eead65c`, plus this final validation commit.
+  - Plan / baseline committed before source implementation: yes, `4d524df` precedes source commits.
+  - Generated artifacts policy followed: yes; Pages assets were rebuilt only through `npm run build`, and final uncommitted generated output is limited to Graphify derived files.
+  - Unrelated changes excluded: yes; final source/generated audit shows no `data/generated/**` or unrelated source changes.
+  - Commit-flow classification: compliant after this final phase commit.
+- Known risks: timing measurements remain browser-environment-sensitive, but final medians did not approach the regression threshold and no count/counter increase was detected.
+- Follow-up recommendation: none for this scope; any future runtime-size reduction should be a separate issue with its own behavior and performance contract.

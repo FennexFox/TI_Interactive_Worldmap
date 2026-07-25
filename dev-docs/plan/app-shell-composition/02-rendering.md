@@ -76,12 +76,12 @@
 - After: `src/app.js` is 2,759 lines; claim, manual-envelope, and marker SVG construction now lives in three explicit renderer services. `npm run lint`, `npm run build`, `npm run verify`, 37 Node unit tests, 48 Python tests, and the 58 targeted rendering/debug/pins/world-wrap Playwright tests pass.
 - Delta: no targeted E2E, SVG structure, debug-counter, buffer-churn, hostile-hatch, manual-envelope, marker, or world-wrap compatibility failures were observed. Four focused renderer lifecycle/context tests were added, including cancellation of delayed overlay and label frames during reset/destroy.
 - Interpretation: the phase is behavior-neutral under the planned correctness and DOM/debug probes. The five-run timing comparison remains assigned to phase 6 so it uses the final source composition.
-- Commit: parent agent owns the phase-sized commit after reviewing this uncommitted handoff.
+- Commit: `746ce5a` (`Extract map rendering services`).
 - Commit blocker: none.
 
 ## Progress
 
-- Implementation and validation complete; ready for the parent-owned phase commit.
+- Implementation, validation, and phase commit complete.
 
 ## Decision log
 

@@ -140,15 +140,15 @@
 
 ## Final Audit Checklist
 
-- [ ] Final diff reviewed against the user request and this master plan.
-- [ ] `app.js` and `createAppRuntime` responsibilities reviewed directly.
-- [ ] Every phase acceptance criterion and outcome checked.
-- [ ] Validation and manual smoke evidence recorded.
-- [ ] Public browser/DOM/data contracts preserved.
-- [ ] Before/after performance evidence compared.
-- [ ] Generated-file policy followed.
-- [ ] Phase-sized commits and unrelated-change exclusion audited.
-- [ ] Completion classification assigned honestly.
+- [x] Final diff reviewed against the user request and this master plan.
+- [x] `app.js` and `createAppRuntime` responsibilities reviewed directly.
+- [x] Every phase acceptance criterion and outcome checked.
+- [x] Validation and manual smoke evidence recorded.
+- [x] Public browser/DOM/data contracts preserved.
+- [x] Before/after performance evidence compared.
+- [x] Generated-file policy followed.
+- [x] Phase-sized commits and unrelated-change exclusion audited.
+- [x] Completion classification assigned honestly.
 
 ## Commit Audit Requirements
 

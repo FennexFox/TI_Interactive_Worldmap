@@ -91,12 +91,12 @@
   - reachable-capital presentation deliberately performs the historical cached descriptor reads for panel and marker output, preserving debug cache-hit counter semantics without increasing descriptor builds or DOM replacements.
   - search selection clearing now preserves an in-progress replacement query, preventing stale default dropdown choices after changing an already selected nation.
 - Interpretation: the entrypoint is now minimal and the runtime is a composition/refresh root rather than a data, DOM, interaction, or rendering implementation module. Scenario services consume a single live snapshot, lifecycle teardown is explicit and idempotent, and the public/browser/rendering contracts remain compatible across the complete automated suite.
-- Commit: pending.
-- Commit blocker: none; phase commit is owned by the parent agent.
+- Commit: `eead65c` (`Introduce app runtime composition root`).
+- Commit blocker: none.
 
 ## Progress
 
-- Implementation and required validation complete; awaiting phase commit.
+- Implementation, required validation, and phase commit complete.
 
 ## Decision log
 

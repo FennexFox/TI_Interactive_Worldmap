@@ -76,12 +76,12 @@
   - source audit: `src/app.js` retains only the loading-screen `requestAnimationFrame`; raw map/hit/window interaction listeners and the `ResizeObserver` are owned by `map-interaction-controller.js`.
 - Delta: listener targets, listener order/options, hit resolution, pan threshold/suppression, tooltip copy, and synchronous wheel behavior remain unchanged. Pending hover preview, full hover visual, pan map-view, pan-hover, and tooltip frames now have explicit reset/destroy cancellation.
 - Interpretation: the controller boundary preserves the baseline interaction behavior while adding a testable lifecycle. Current scenario lookup is read through `getContext()` at event time, so scenario changes cannot leave a stale region index closure.
-- Commit: pending.
-- Commit blocker: commits are intentionally left to the orchestrating agent for this delegated phase.
+- Commit: `4007e11` (`Extract map interaction controller`).
+- Commit blocker: none.
 
 ## Progress
 
-- Implementation and required validation complete; awaiting phase commit.
+- Implementation, required validation, and phase commit complete.
 
 ## Decision log
 
