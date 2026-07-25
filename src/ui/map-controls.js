@@ -47,7 +47,9 @@ export function initMapViewControls({
   onReset,
   onToggleWrap,
 } = {}) {
-  if (!svgWrap || document?.getElementById('mapViewControls')) return;
+  if (!svgWrap) return Object.freeze({destroy() {}});
+  const existing = document?.getElementById('mapViewControls');
+  if (existing) return Object.freeze({destroy() {}});
   const controls = document.createElement('div');
   controls.id = 'mapViewControls';
   controls.className = 'mapViewControls';
@@ -59,7 +61,7 @@ export function initMapViewControls({
       <span data-map-view-wrap-label></span>
     </button>
   `;
-  controls.addEventListener('click', event => {
+  const onClick = event => {
     const wrapToggle = event.target.closest('[data-map-view-wrap-toggle]');
     if (wrapToggle) {
       event.preventDefault();
@@ -73,7 +75,17 @@ export function initMapViewControls({
     if (action === 'zoomIn') onZoomIn?.();
     else if (action === 'zoomOut') onZoomOut?.();
     else if (action === 'reset') onReset?.();
-  });
+  };
+  controls.addEventListener('click', onClick);
   svgWrap.appendChild(controls);
   updateMapViewControlsLabels({document, t, currentLanguage, worldWrapEnabled});
+  let destroyed = false;
+  return Object.freeze({
+    destroy() {
+      if (destroyed) return;
+      destroyed = true;
+      controls.removeEventListener('click', onClick);
+      controls.remove();
+    },
+  });
 }
