@@ -214,6 +214,10 @@ test('manual envelope renderer uses per-call region and translation dependencies
       overlapSources: [{}],
     }],
   };
+  model.regionItems.push({
+    ...model.regionItems[0],
+    region: 'MissingRegion',
+  });
   const baseContext = {
     model,
     copyContexts: canonicalCopies(),
@@ -231,6 +235,10 @@ test('manual envelope renderer uses per-call region and translation dependencies
 
   assert.equal(renderer.render(baseContext), true);
   assert.equal(recorder.stats.manualEnvelopeRebuilds, 1);
+  assert.equal(
+    layer.querySelectorAll('[data-region]').some(node => node.dataset.region === 'MissingRegion'),
+    false
+  );
   assert.equal(renderer.render(baseContext), false);
   assert.equal(renderer.render({
     ...baseContext,

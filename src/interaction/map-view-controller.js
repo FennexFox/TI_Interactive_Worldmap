@@ -18,6 +18,12 @@ import {
 const MAP_ZOOM_BUTTON_FACTOR = 1.25;
 const MAP_WHEEL_ZOOM_FACTOR = 1.18;
 
+function worldCopyContextsRenderKey(copyContexts) {
+  return normalizeWorldCopyContexts(copyContexts)
+    .map(item => `${item.copyIndex}:${item.xOffset}:${item.isCanonical ? 1 : 0}`)
+    .join('|');
+}
+
 export function createMapViewController({
   document,
   svg,
@@ -88,7 +94,14 @@ export function createMapViewController({
   function reset(nextActiveData = getActiveData()) {
     if (destroyed) return;
     initializeMapView(nextActiveData, mapView);
+    const nextCopyContexts = createWorldCopyContexts(mapView, worldWrapEnabled);
+    const copyContextsChanged = worldCopyContextsRenderKey(nextCopyContexts)
+      !== worldCopyContextsRenderKey(copyContexts);
+    copyContexts = nextCopyContexts;
     apply();
+    if (copyContextsChanged) {
+      onWorldWrapChanged?.({enabled: worldWrapEnabled, copyContexts});
+    }
   }
 
   function onWheel(event) {
@@ -152,9 +165,7 @@ export function createMapViewController({
     destroy,
     getCopyContexts: () => copyContexts,
     isWorldWrapEnabled: () => worldWrapEnabled,
-    renderKey: () => normalizeWorldCopyContexts(copyContexts)
-      .map(item => `${item.copyIndex}:${item.xOffset}:${item.isCanonical ? 1 : 0}`)
-      .join('|'),
+    renderKey: () => worldCopyContextsRenderKey(copyContexts),
     apply,
     onWheel,
     pointFromClient,

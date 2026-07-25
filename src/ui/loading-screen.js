@@ -45,9 +45,10 @@ export function createLoadingScreen({window, document}) {
       }
       return;
     }
-    document.body.innerHTML = `<pre style="white-space:pre-wrap;padding:24px;color:#f8fafc;background:#0b1020">${message}
-
-${String(error?.stack || error)}</pre>`;
+    const pre = document.createElement('pre');
+    pre.style.cssText = 'white-space:pre-wrap;padding:24px;color:#f8fafc;background:#0b1020';
+    pre.textContent = `${message}\n\n${String(error?.stack || error)}`;
+    document.body.replaceChildren(pre);
   }
 
   return {dismiss, showFailure};

@@ -155,15 +155,15 @@ export function createPresentationFormatters({getContext, getClaimHelpers} = {})
   }
 
   function claimCardTitleParts(entry, kind) {
-    const {t, getActiveNation} = context();
-    const nation = kind === 'incoming' ? (entry.claimant || '') : getActiveNation();
+    const {t, getActiveNation = () => ''} = context();
+    const nation = kind === 'incoming' ? (entry?.claimant || '') : getActiveNation();
     const nationName = entry?.project
       ? nationEffectiveDisplayName(nation)
       : nationDisplayName(nation);
     return {
       tag: nation || '-',
       nation: nationName || nation || '-',
-      project: entry.project ? projectDisplay(entry.project) : t('claimCard.projectBaseline'),
+      project: entry?.project ? projectDisplay(entry.project) : t('claimCard.projectBaseline'),
       research: claimCardResearchLabel(entry, nation, {compact: true}),
     };
   }

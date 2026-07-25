@@ -18,7 +18,7 @@ const EMPTY_CATALOG = Object.freeze({
   regionChoices: [],
 });
 
-function regionSearchText(region, localizedRegionName) {
+function regionSearchText(region, localizedRegionName = () => '') {
   return [
     region?.name,
     region?.regionName,

@@ -154,6 +154,8 @@ test('scenario context replaces one immutable live scenario snapshot at a time',
   assert.notEqual(past.runtime, previousRuntime);
   assert.deepEqual(context.availableNationIds(), ['PST']);
   assert.equal(context.resolveScenarioId('missing'), '2026');
+  assert.equal(context.resolveScenarioId('constructor'), '2026');
+  assert.equal(context.resolveScenarioId('toString'), '2026');
 });
 
 test('scenario refresh action factory requires and returns explicit dependencies', () => {

@@ -283,7 +283,9 @@ function activeIncomingClaimKeysForState() {
 }
 
 function applyRuntimeScenarioData(scenarioId) {
-  scenarioSnapshot = scenarioContext.setActiveScenario(scenarioId);
+  const nextSnapshot = scenarioContext.setActiveScenario(scenarioId);
+  if (!nextSnapshot) return;
+  scenarioSnapshot = nextSnapshot;
   recordRenderStat('scenarioRuntimeBuilds');
 }
 

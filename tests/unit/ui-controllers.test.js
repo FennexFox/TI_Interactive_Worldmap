@@ -5,6 +5,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {createNationOverlayController} from '../../src/ui/nation-overlay-controller.js';
+import {createLoadingScreen} from '../../src/ui/loading-screen.js';
+import {createPresentationFormatters} from '../../src/ui/presentation-formatters.js';
 import {createSearchController} from '../../src/ui/search-controller.js';
 
 class FakeElement {
@@ -175,6 +177,73 @@ test('search controller owns catalog, dropdown state, filtering, and listener te
   assert.equal(search.listeners.get('input').length, 0);
   assert.equal(dropdown.listeners.get('click').length, 0);
   assert.equal(document.listeners.get('click').length, 0);
+});
+
+test('search controller tolerates filtering before a localized region formatter is wired', () => {
+  const search = new FakeElement();
+  const dropdown = new FakeElement();
+  const combo = new FakeElement();
+  const document = new FakeElement();
+  const visibilityChanges = [];
+  const regions = [{id: 0, regionName: 'Alpha', name: 'Alpha', nationTag: 'AAA'}];
+  const controller = createSearchController({search, dropdown, combo, document});
+  controller.setContext({
+    regions,
+    getSearchRegions: () => regions,
+    onRegionVisibilityChange: change => visibilityChanges.push(change),
+  });
+
+  search.value = 'alpha';
+  assert.doesNotThrow(() => controller.applyFilters(false));
+  assert.deepEqual([...visibilityChanges.at(-1).visibleRegionIds], ['Alpha']);
+  controller.destroy();
+});
+
+test('loading screen fallback inserts error details as text instead of markup', () => {
+  const body = new FakeElement();
+  body.childNodes = [];
+  body.replaceChildren = (...nodes) => {
+    body.childNodes = nodes;
+  };
+  const document = {
+    body,
+    documentElement: {lang: 'en'},
+    createElement: () => new FakeElement(),
+    getElementById: () => null,
+  };
+  const controller = createLoadingScreen({
+    window: {localStorage: {getItem: () => null}},
+    document,
+  });
+
+  controller.showFailure(new Error('<img src=x onerror=alert(1)>'));
+
+  assert.equal(body.childNodes.length, 1);
+  assert.match(body.childNodes[0].textContent, /<img src=x onerror=alert\(1\)>/);
+  assert.equal(body.childNodes[0].innerHTML, '');
+});
+
+test('presentation formatters tolerate a null claim entry and missing active-nation callback', () => {
+  const formatters = createPresentationFormatters({
+    getContext: () => ({
+      t: key => key,
+      dataLanguageKey: () => 'en',
+      nationMeta: {},
+      claimsByNation: {},
+      nationRegions: new Map(),
+    }),
+    getClaimHelpers: () => ({
+      countryProjectTier: () => 0,
+      countryProjectTierMap: () => new Map(),
+    }),
+  });
+
+  assert.deepEqual(formatters.claimCardTitleParts(null, 'incoming'), {
+    tag: '-',
+    nation: '-',
+    project: 'claimCard.projectBaseline',
+    research: 'claimCard.researchBaselineValue',
+  });
 });
 
 test('nation overlay controller renders panel/options/pill and resolves events from current model', () => {

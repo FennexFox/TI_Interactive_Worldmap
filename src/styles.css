@@ -339,43 +339,6 @@
   .claim-overlay.research-claim {
     stroke-width:.016;
   }
-  .selection-fill {
-    pointer-events:none;
-    fill:oklch(0.86 0.17 95 / .26);
-    stroke:none;
-    mix-blend-mode:screen;
-  }
-  .selection-outline-glow {
-    pointer-events:none;
-    fill:none;
-    stroke:oklch(0.87 0.18 92 / .92);
-    stroke-width:.082;
-    vector-effect:non-scaling-stroke;
-  }
-  .selection-outline {
-    pointer-events:none;
-    fill:none;
-    stroke:white;
-    stroke-width:.034;
-    vector-effect:non-scaling-stroke;
-  }
-  .selection-dot {
-    pointer-events:none;
-    fill:oklch(0.91 0.17 92 / .96);
-    stroke:rgba(0,0,0,.8);
-    stroke-width:.01;
-    vector-effect:non-scaling-stroke;
-  }
-  .selection-label {
-    pointer-events:none;
-    font-size:.055px;
-    font-weight:800;
-    fill:#fff7b8;
-    text-anchor:middle;
-    paint-order:stroke;
-    stroke:rgba(0,0,0,.82);
-    stroke-width:.015;
-  }
   #manualEnvelopeOverlays { pointer-events:none; mix-blend-mode:normal; }
   .manual-envelope-fill { pointer-events:none; stroke:none; mix-blend-mode:screen; }
   .manual-envelope-region-outline { pointer-events:none; stroke:rgba(255,255,255,.50); stroke-width:.014; vector-effect:non-scaling-stroke; stroke-dasharray:.036 .026; }

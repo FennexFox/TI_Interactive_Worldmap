@@ -21,7 +21,7 @@ export function createMapInteractionController({
   onRegionClick,
   onBlankMapMove,
   onBlankMapClick,
-  onMapLeave,
+  onMapLeave = () => {},
   onMapWheel,
   onHoverPreview,
   onHoverFullVisualPass,

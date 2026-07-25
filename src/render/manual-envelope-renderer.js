@@ -99,12 +99,13 @@ function manualEnvelopeHostileContribution(item, claimIsEffectivelyHostile) {
 function createManualEnvelopeFragment(model, context) {
   const {
     copyContexts,
-    regionByName,
+    regionByName = {},
     hostileHatchingDisabled = false,
     claimIsEffectivelyHostile,
     t,
   } = context;
-  const fillDescriptors = model.regionItems.map(item => {
+  const renderableItems = model.regionItems.filter(item => regionByName[item.region]?.path);
+  const fillDescriptors = renderableItems.map(item => {
     const region = regionByName[item.region];
     const depth = item.primary.depth;
     const fill = manualEnvelopeDepthColor(depth);
@@ -120,7 +121,7 @@ function createManualEnvelopeFragment(model, context) {
     };
   });
   const fillGroups = buildVisualFillGroups(fillDescriptors);
-  const hatchDescriptors = hostileHatchingDisabled ? [] : model.regionItems
+  const hatchDescriptors = hostileHatchingDisabled ? [] : renderableItems
     .map(item => ({
       item,
       contribution: manualEnvelopeHostileContribution(item, claimIsEffectivelyHostile),
@@ -181,7 +182,7 @@ function createManualEnvelopeFragment(model, context) {
         ...copyData,
       }));
     });
-    for (const item of model.regionItems) {
+    for (const item of renderableItems) {
       const region = regionByName[item.region];
       const primary = item.primary;
       const hasOverlap = item.overlapSources.length > 1;

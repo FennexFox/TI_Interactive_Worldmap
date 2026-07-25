@@ -30,6 +30,7 @@ class FakeEventTarget {
   }
 
   addEventListener(type, listener, options) {
+    assert.equal(typeof listener, 'function', `${type} listener must be callable`);
     const entries = this.listeners.get(type) || [];
     entries.push({listener, options});
     this.listeners.set(type, entries);

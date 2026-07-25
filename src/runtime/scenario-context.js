@@ -12,7 +12,9 @@ export function createScenarioContext(generatedData) {
 
   function resolveScenarioId(candidate = '') {
     const requested = String(candidate || appData.defaultScenario || '').trim();
-    return appData.scenarios[requested] ? requested : appData.defaultScenario;
+    return Object.hasOwn(appData.scenarios || {}, requested)
+      ? requested
+      : appData.defaultScenario;
   }
 
   function setActiveScenario(candidate = '') {
