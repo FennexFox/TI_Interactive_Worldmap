@@ -63,8 +63,26 @@ test('scenario selector switches supported start scenarios and keeps map workflo
   await expect(page.locator('#regions .region').first()).toBeVisible({ timeout: 10000 });
 
   await expect(page.locator('#scenarioSel')).toHaveValue('2026');
-  await expect(page.locator('#scenarioSel option')).toHaveText(['2022', '2026', '2070']);
+  const scenarioValues = await page.locator('#scenarioSel option').evaluateAll(
+    options => options.map(option => option.value).sort()
+  );
+  expect(scenarioValues).toEqual(['1962', '2003', '2022', '2026', '2070']);
+  await expect(page.locator('#scenarioSel option')).toHaveText([
+    '2022',
+    '2026',
+    '2070',
+    '2003 (DLC)',
+    '2112 - Broken Earth (DLC)',
+  ]);
+  const scenarioGroups = await page.locator('#scenarioSel optgroup').evaluateAll(
+    groups => groups.map(group => group.label)
+  );
+  expect(scenarioGroups).toEqual(['Base Game', 'DLC']);
 
+  await page.locator('#scenarioSel').selectOption('2003');
+  await expect(page.locator('#scenarioSel')).toHaveValue('2003');
+  await page.locator('#scenarioSel').selectOption('1962');
+  await expect(page.locator('#scenarioSel')).toHaveValue('1962');
   await page.locator('#scenarioSel').selectOption('2022');
   await expect(page.locator('#scenarioSel')).toHaveValue('2022');
 
@@ -100,13 +118,14 @@ test('scenario ownership drives one consistent base fill per nation', async ({ p
     '#regions .region[data-wrap-canonical="1"][data-region="Crimea"]'
   );
 
-  for (const scenario of ['2022', '2026', '2070']) {
+  for (const scenario of ['1962', '2003', '2022', '2026', '2070']) {
     await page.locator('#scenarioSel').selectOption(scenario);
     await expect(page.locator('#scenarioSel')).toHaveValue(scenario);
-    await expect(crimeaRegion).toHaveAttribute(
-      'data-nation',
-      scenario === '2070' ? 'EUA' : 'RUS'
-    );
+    if (scenario === '2022' || scenario === '2026') {
+      await expect(crimeaRegion).toHaveAttribute('data-nation', 'RUS');
+    } else if (scenario === '2070') {
+      await expect(crimeaRegion).toHaveAttribute('data-nation', 'EUA');
+    }
     const audit = await baseColorAudit(page);
     expect(audit.missingRegions, `${scenario} regions without exactly one base fill`).toEqual([]);
     expect(audit.inconsistentNations, `${scenario} nations with inconsistent base fills`).toEqual([]);
@@ -136,7 +155,7 @@ test('one scenario transition prepares each runtime index and refresh exactly on
   await page.goto('/?worldWrap=0&debugRenderStats=1');
   await expect(page.locator('#regions .region').first()).toBeVisible({timeout: 10000});
 
-  for (const scenario of ['2070', '2022', '2026']) {
+  for (const scenario of ['1962', '2003', '2070', '2022', '2026']) {
     await page.evaluate(() => window.__TI_DEBUG_RENDER_STATS__.reset());
     expect(await page.evaluate(nextScenario => (
       window.__TI_SCENARIO_API__.setActiveScenario(nextScenario)

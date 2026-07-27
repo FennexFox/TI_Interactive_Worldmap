@@ -83,11 +83,21 @@ class ScenarioGenerationTests(unittest.TestCase):
         rows = [
             {"dataName": "Claim2026_ACE2026_Aceh", "relationType": "Claim", "nation1": "2026_ACE", "region1": "2026_Aceh"},
             {"dataName": "Claim2070_ACE2070_Aceh", "relationType": "Claim", "nation1": "2070_ACE", "region1": "2070_Aceh"},
+            {"dataName": "Claim2003_ACE2003_Aceh", "relationType": "Claim", "nation1": "2003_ACE", "region1": "2003_Aceh"},
+            {"dataName": "Claim1962_ACE1962_Aceh", "relationType": "Claim", "nation1": "1962_ACE", "region1": "1962_Aceh"},
         ]
 
         self.assertEqual(
             [row["dataName"] for row in sr.filter_bilateral_rows_for_scenario(rows, "2070", relation_types=("Claim",))],
             ["Claim2070_ACE2070_Aceh"],
+        )
+        self.assertEqual(
+            [row["dataName"] for row in sr.filter_bilateral_rows_for_scenario(rows, "2003", relation_types=("Claim",))],
+            ["Claim2003_ACE2003_Aceh"],
+        )
+        self.assertEqual(
+            [row["dataName"] for row in sr.filter_bilateral_rows_for_scenario(rows, "1962", relation_types=("Claim",))],
+            ["Claim1962_ACE1962_Aceh"],
         )
 
     def test_scenario_bundle_records_default_and_summary_counts(self):
@@ -95,7 +105,16 @@ class ScenarioGenerationTests(unittest.TestCase):
 
         self.assertEqual(bundle["schemaVersion"], 2)
         self.assertEqual(bundle["defaultScenario"], "2026")
-        self.assertEqual(list(bundle["scenarios"]), ["2022", "2026", "2070"])
+        self.assertEqual(list(bundle["scenarios"]), list(sb.SUPPORTED_SCENARIOS))
+        self.assertCountEqual(list(bundle["scenarios"]), ["1962", "2003", "2022", "2026", "2070"])
+        self.assertEqual(
+            bundle["scenarios"]["1962"]["label"],
+            "2112 - Broken Earth (DLC)",
+        )
+        self.assertEqual(bundle["scenarios"]["1962"]["group"], "dlc")
+        self.assertEqual(bundle["scenarios"]["1962"]["startYear"], 2112)
+        self.assertEqual(bundle["scenarios"]["2003"]["label"], "2003 (DLC)")
+        self.assertEqual(bundle["scenarios"]["2026"]["group"], "base")
         summary = bundle["scenarios"]["2026"]["summary"]
         self.assertEqual(summary["regionCount"], 2)
         self.assertEqual(summary["ownedRegionCount"], 1)

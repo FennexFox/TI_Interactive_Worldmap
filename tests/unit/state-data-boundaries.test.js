@@ -22,7 +22,12 @@ import {
   setSelectedRegions,
   unpinPinnedRegion,
 } from '../../src/state/app-state.js';
-import {createAppData, getActiveData, getScenarioIds} from '../../src/data/active-data.js';
+import {
+  createAppData,
+  getActiveData,
+  getScenarioChoices,
+  getScenarioIds,
+} from '../../src/data/active-data.js';
 import {createClaimModel} from '../../src/data/claim-model.js';
 import {buildDerivedIndices, resolveSecondaryCapitalPreview} from '../../src/data/derived-indices.js';
 import {createI18n, normalizeLanguage} from '../../src/ui/i18n.js';
@@ -369,8 +374,19 @@ test('active data normalizes generated scenario bundle payloads', () => {
         catalogs: {nations: {nations: {PST: {tag: 'PST'}}}, research: {nodes: []}},
         summary: {claimRowsNormalized: 1},
       },
+      1962: {
+        label: '2112 - Broken Earth (DLC)',
+        group: 'dlc',
+        startYear: 2112,
+        regionMap: {summary: {scenarioYear: '1962'}, regions: [{regionName: 'Broken', nationTag: 'BRK'}]},
+        claimMap: {summary: {scenarioYear: '1962'}, claimsByNation: {BRK: {baseRegions: ['Broken']}}},
+        catalogs: {nations: {nations: {BRK: {tag: 'BRK'}}}, research: {nodes: []}},
+        summary: {claimRowsNormalized: 4},
+      },
       2026: {
         label: '2026',
+        group: 'base',
+        startYear: 2026,
         regionMap: {summary: {scenarioYear: '2026'}, regions: [{regionName: 'Now', nationTag: 'NOW'}]},
         claimMap: {summary: {scenarioYear: '2026'}, claimsByNation: {NOW: {baseRegions: ['Now']}}},
         catalogs: {nations: {nations: {NOW: {tag: 'NOW'}}}, research: {nodes: []}},
@@ -388,7 +404,13 @@ test('active data normalizes generated scenario bundle payloads', () => {
 
   expect(appData.schemaVersion).toBe(2);
   expect(appData.defaultScenario).toBe('2026');
-  expect(getScenarioIds(appData)).toEqual(['2022', '2026', '2070']);
+  expect(getScenarioIds(appData)).toEqual(['2022', '2026', '2070', '1962']);
+  expect(getScenarioChoices(appData).at(-1)).toEqual({
+    id: '1962',
+    label: '2112 - Broken Earth (DLC)',
+    group: 'dlc',
+    startYear: 2112,
+  });
   expect(getActiveData(appData, '2022').regionMap.regions[0].regionName).toBe('Past');
   expect(getActiveData(appData, '2070').summary.claimRowsNormalized).toBe(3);
   expect(getActiveData(appData, 'missing').regionMap.regions[0].regionName).toBe('Now');

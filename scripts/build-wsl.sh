@@ -41,7 +41,7 @@ Common examples:
     --region-outlines '/mnt/c/Program Files (x86)/Steam/steamapps/common/Terra Invicta/TerraInvicta_Data/StreamingAssets/AssetBundles/regionoutlines'
 
 Environment variables:
-  TI_TEMPLATES_DIR      Terra Invicta StreamingAssets/Templates path.
+  TI_TEMPLATES_DIR      Base Terra Invicta StreamingAssets/Templates path.
   TI_REGION_OUTLINES   Terra Invicta StreamingAssets/AssetBundles/regionoutlines path.
   TI_REGION_MAP_JSON   Pre-extracted raw region outline JSON fixture.
   SCENARIO_YEAR        Deprecated compatibility setting. All supported scenarios are rebuilt.
@@ -52,7 +52,7 @@ Environment variables:
 Options:
   --checked-in         Build docs/ from committed data/generated/*.json. Default.
   --from-game          Rebuild generated catalogs from a local Terra Invicta install.
-  --templates-dir PATH Override Terra Invicta Templates directory.
+  --templates-dir PATH Override the base Terra Invicta Templates directory.
   --region-outlines PATH
                        Override regionoutlines asset bundle path.
   --region-map-json PATH
@@ -197,7 +197,7 @@ parse_args() {
         shift
         ;;
       --scenario-year)
-        [[ $# -ge 2 ]] || die "--scenario-year requires 2022, 2026, or 2070"
+        [[ $# -ge 2 ]] || die "--scenario-year requires one of: 1962, 2003, 2022, 2026, 2070"
         SCENARIO_YEAR="$2"
         shift 2
         ;;
@@ -229,8 +229,8 @@ parse_args() {
   done
 
   case "$SCENARIO_YEAR" in
-    2022|2026|2070) ;;
-    *) die "--scenario-year must be one of: 2022, 2026, 2070" ;;
+    1962|2003|2022|2026|2070) ;;
+    *) die "--scenario-year must be one of: 1962, 2003, 2022, 2026, 2070 (1962 is 2112 - Broken Earth)" ;;
   esac
 }
 
@@ -289,7 +289,7 @@ run_from_game_build() {
   )
 
   if [[ "$SCENARIO_YEAR" != "2026" ]]; then
-    echo "warning: --scenario-year/SCENARIO_YEAR is deprecated; rebuilding 2022, 2026, and 2070 with 2026 as default" >&2
+    echo "warning: --scenario-year/SCENARIO_YEAR is deprecated; rebuilding 2003 (DLC), 2022, 2026, 2070, and 2112 - Broken Earth (DLC, internal ID 1962) with 2026 as default" >&2
   fi
 
   if [[ "$SKIP_VERIFY" -eq 1 ]]; then

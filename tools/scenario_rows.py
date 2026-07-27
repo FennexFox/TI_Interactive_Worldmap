@@ -11,7 +11,9 @@ from typing import Any, Iterable
 from scenario_config import SUPPORTED_SCENARIOS, validate_scenario
 
 
-SCENARIO_TOKEN_RE = re.compile(rf"({'|'.join(SUPPORTED_SCENARIOS)})_")
+SCENARIO_TOKEN_RE = re.compile(
+    rf"({'|'.join(re.escape(scenario) for scenario in SUPPORTED_SCENARIOS)})_"
+)
 
 
 def scenario_refs(row: dict[str, Any]) -> set[str]:

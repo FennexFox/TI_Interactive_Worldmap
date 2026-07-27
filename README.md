@@ -15,7 +15,8 @@ The generated Pages site lives in `docs/index.html`.
 - Build direct claim profiles from `TIBilateralTemplate.json`.
 - Include projectless/basic claims as well as project-unlocked claims.
 - Distinguish hostile claims from peaceful claims.
-- Switch the visible map between the supported `2022`, `2026`, and `2070` start scenarios.
+- Switch the visible map between `2003 (DLC)`, `2022`, `2026`, `2070`, and
+  `2112 - Broken Earth (DLC)`. Broken Earth uses the internal scenario ID `1962`.
 - Treat Taiwan-style cases as `breakaway_gated_existing` instead of pure formables.
 - Keep the first pass static and save-file independent.
 - Leave recursive megastate absorption closure for a later issue.
@@ -85,9 +86,10 @@ There are three build levels:
 
 1. **Checked-in/UI build**: rebuilds `docs/` from source files and committed generated
    data. It does not read the Terra Invicta install.
-2. **Local game data rebuild**: reads Terra Invicta `Templates` to refresh nation,
-   research, claim, and metadata catalogs for all supported start scenarios while
-   reusing the committed `data/generated/region_map.generated.json` geometry.
+2. **Local game data rebuild**: reads the base Terra Invicta `Templates` and installed
+   Dark Skies DLC scenario templates to refresh nation, research, claim, and metadata
+   catalogs for all supported start scenarios while reusing the committed
+   `data/generated/region_map.generated.json` geometry.
 3. **Region outline refresh**: explicitly re-extracts the Unity `regionoutlines` asset
    before rebuilding catalogs and pages. This is only needed when the game's region
    geometry changes or when validating the outline extractor.
@@ -99,9 +101,11 @@ Use `--refresh-region-outlines` only when you intend to update
 
 Generated scenario data is checked in as `data/generated/scenario_bundle.generated.json`
 with schema version 2. It contains duplicated per-scenario `regionMap`, `claimMap`, and
-catalog data for `2022`, `2026`, and `2070`; `2026` remains the default scenario and is
-also copied to the legacy top-level generated files for compatibility. The static app
-loads the bundle and exposes those three scenarios through the sidebar selector.
+catalog data for `2003 (DLC)`, `2022`, `2026`, `2070`, and
+`2112 - Broken Earth (DLC)` (internal ID `1962`);
+`2026` remains the default scenario and is also copied to the legacy top-level generated
+files for compatibility. The static app loads the bundle and exposes all five scenarios
+through the sidebar selector.
 
 ### Scenario-specific region ownership
 
@@ -143,8 +147,8 @@ language selector updates both static shell copy and dynamic UI text.
 
 ### Rebuild from a local Terra Invicta install
 
-This refreshes generated catalogs from the local game install while reusing the existing
-region geometry:
+This refreshes generated catalogs from the local game install, including installed Dark
+Skies DLC scenario templates, while reusing the existing region geometry:
 
 ```powershell
 python .\tools\rebuild_pages.py `
@@ -164,8 +168,13 @@ python .\tools\rebuild_pages.py `
 ```
 
 Template-derived region ownership, nation status, research claim grants, and claim rows
-are rebuilt for `2022`, `2026`, and `2070` in one pass. The `--scenario-year` option is
-deprecated; `2026` remains the default and legacy top-level output.
+are rebuilt for `2003 (DLC)`, `2022`, `2026`, `2070`, and
+`2112 - Broken Earth (DLC)` (`1962`) in one pass.
+The Dark Skies DLC scenario templates are discovered alongside the base game templates.
+For a nonstandard DLC location, set `TI_DLC_DIR` or pass `--dlc-dir` with the path to
+`DLC_Content/DarkSkies`.
+The `--scenario-year` option is deprecated; `2026` remains the default and legacy
+top-level output.
 
 For development fixtures, use:
 

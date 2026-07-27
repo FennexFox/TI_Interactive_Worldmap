@@ -372,11 +372,21 @@ def verify_structure_and_replication() -> None:
     scenarios = object_value(scenario_bundle.get("scenarios"))
     require(research_catalog.get("schemaVersion") == 2, "research catalog schemaVersion must be 2")
     require(scenario_bundle.get("schemaVersion") == 2, "scenario bundle schemaVersion must be 2")
-    require(scenario_bundle.get("defaultScenario") == DEFAULT_SCENARIO, "scenario bundle default scenario must be 2026")
-    require(tuple(sorted(scenarios)) == EXPECTED_SCENARIOS, "scenario bundle must contain exactly 2022, 2026, and 2070")
+    expected_scenarios = ", ".join(EXPECTED_SCENARIOS)
+    require(
+        scenario_bundle.get("defaultScenario") == DEFAULT_SCENARIO,
+        f"scenario bundle default scenario must be {DEFAULT_SCENARIO}",
+    )
+    require(
+        tuple(sorted(scenarios)) == tuple(sorted(EXPECTED_SCENARIOS)),
+        f"scenario bundle must contain exactly the configured scenarios: {expected_scenarios}",
+    )
     require_json_equal(scenario_bundle, docs_scenario_bundle, "docs scenario bundle differs from source generated bundle")
     require_json_equal(object_value(generated_js_data.get("scenarios")), scenarios, "generated JS scenario payload differs from source bundle")
-    require(generated_js_data.get("defaultScenario") == DEFAULT_SCENARIO, "generated JS default scenario must be 2026")
+    require(
+        generated_js_data.get("defaultScenario") == DEFAULT_SCENARIO,
+        f"generated JS default scenario must be {DEFAULT_SCENARIO}",
+    )
     require_json_equal(region, object_value(generated_js_data.get("regionMap")), "generated JS region map differs from source")
     require_json_equal(claim, object_value(generated_js_data.get("claimMap")), "generated JS claim map differs from source")
     generated_js_catalogs = object_value(generated_js_data.get("catalogs"))
@@ -384,10 +394,26 @@ def verify_structure_and_replication() -> None:
     require_json_equal(research_catalog, object_value(generated_js_catalogs.get("research")), "generated JS research catalog differs from source")
     default_entry = object_value(scenarios.get(DEFAULT_SCENARIO))
     default_catalogs = object_value(default_entry.get("catalogs"))
-    require_json_equal(region, object_value(default_entry.get("regionMap")), "top-level region map must match default 2026 scenario")
-    require_json_equal(claim, object_value(default_entry.get("claimMap")), "top-level claim map must match default 2026 scenario")
-    require_json_equal(nation_catalog, object_value(default_catalogs.get("nations")), "top-level nation catalog must match default 2026 scenario")
-    require_json_equal(research_catalog, object_value(default_catalogs.get("research")), "top-level research catalog must match default 2026 scenario")
+    require_json_equal(
+        region,
+        object_value(default_entry.get("regionMap")),
+        f"top-level region map must match default {DEFAULT_SCENARIO} scenario",
+    )
+    require_json_equal(
+        claim,
+        object_value(default_entry.get("claimMap")),
+        f"top-level claim map must match default {DEFAULT_SCENARIO} scenario",
+    )
+    require_json_equal(
+        nation_catalog,
+        object_value(default_catalogs.get("nations")),
+        f"top-level nation catalog must match default {DEFAULT_SCENARIO} scenario",
+    )
+    require_json_equal(
+        research_catalog,
+        object_value(default_catalogs.get("research")),
+        f"top-level research catalog must match default {DEFAULT_SCENARIO} scenario",
+    )
     require_json_equal(region, docs_region, "docs region map differs from source")
     require_json_equal(claim, docs_claim, "docs claim map differs from source")
     require_json_equal(nation_catalog, docs_nation_catalog, "docs nation catalog differs from source")
