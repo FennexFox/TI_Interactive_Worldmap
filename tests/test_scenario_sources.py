@@ -15,6 +15,19 @@ import scenario_sources
 
 
 class ScenarioSourceTests(unittest.TestCase):
+    def test_missing_dlc_templates_explain_location_overrides(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+
+            with self.assertRaisesRegex(SystemExit, r"TI_DLC_DIR.*--dlc-dir"):
+                scenario_sources.prepare_scenario_templates(
+                    root / "Templates",
+                    root / "missing-dark-skies",
+                    "1962",
+                    root / "merged",
+                    ["en"],
+                )
+
     def test_dlc_templates_and_localizations_overlay_base_inputs(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

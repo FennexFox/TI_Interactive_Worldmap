@@ -109,7 +109,9 @@ def prepare_scenario_templates(
     overlay_templates_dir = dark_skies_dir / scenario_directory / "Templates"
     if not overlay_templates_dir.is_dir():
         raise SystemExit(
-            f"Missing Dark Skies DLC scenario templates for {scenario}: {overlay_templates_dir}"
+            f"Missing Dark Skies DLC scenario templates for {scenario}: "
+            f"{overlay_templates_dir}. Set TI_DLC_DIR or pass --dlc-dir "
+            "to point to the Dark Skies installation."
         )
 
     scenario_root = output_root / scenario
