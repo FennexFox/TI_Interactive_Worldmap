@@ -1,7 +1,12 @@
 // SPDX-FileCopyrightText: 2026 TI Interactive Worldmap contributors
 // SPDX-License-Identifier: MIT
 
-import {createAppData, getActiveData, getScenarioIds} from '../data/active-data.js';
+import {
+  createAppData,
+  getActiveData,
+  getScenarioChoices,
+  getScenarioIds,
+} from '../data/active-data.js';
 import {createScenarioRuntime} from './scenario-runtime.js';
 
 export function createScenarioContext(generatedData) {
@@ -61,6 +66,7 @@ export function createScenarioContext(generatedData) {
 
   return Object.freeze({
     availableNationIds,
+    getScenarioChoices: () => getScenarioChoices(appData),
     getScenarioIds: () => getScenarioIds(appData),
     resolveScenarioId,
     setActiveScenario,

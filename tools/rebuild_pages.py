@@ -15,11 +15,13 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Sequence
 
 from build_manifest import GENERATED_STAGING_PATHS
 from scenario_config import DEFAULT_SCENARIO, SUPPORTED_SCENARIOS
+from scenario_sources import default_dark_skies_dir, prepare_scenario_templates
 
 ROOT = Path(__file__).resolve().parents[1]
 SCENARIO_YEARS = SUPPORTED_SCENARIOS
@@ -221,14 +223,33 @@ def build_pages(args: argparse.Namespace) -> None:
         print(f"Warning: --scenario-year is deprecated; generating all scenarios and keeping {DEFAULT_SCENARIO_YEAR} as default.")
 
     raw_region_input = prepare_region_geometry(args)
-    for scenario_year in SCENARIO_YEARS:
-        build_scenario_outputs(
-            args,
-            templates_dir=templates_dir,
-            bilateral_template=bilateral_template,
-            raw_region_input=raw_region_input,
-            scenario_year=scenario_year,
-        )
+    dark_skies_dir = (
+        Path(args.dlc_dir)
+        if args.dlc_dir
+        else default_dark_skies_dir(templates_dir)
+    )
+    languages = [language.strip() for language in args.catalog_languages.split(",") if language.strip()]
+    with tempfile.TemporaryDirectory(prefix="ti-worldmap-scenarios-") as temporary_root:
+        for scenario_year in SCENARIO_YEARS:
+            scenario_templates_dir = prepare_scenario_templates(
+                templates_dir,
+                dark_skies_dir,
+                scenario_year,
+                Path(temporary_root),
+                languages,
+            )
+            scenario_bilateral_template = (
+                template_file(scenario_templates_dir, "TIBilateralTemplate.json")
+                if scenario_templates_dir != templates_dir
+                else bilateral_template
+            )
+            build_scenario_outputs(
+                args,
+                templates_dir=scenario_templates_dir,
+                bilateral_template=scenario_bilateral_template,
+                raw_region_input=raw_region_input,
+                scenario_year=scenario_year,
+            )
     copy_default_scenario_outputs()
     run([
         python,
@@ -296,6 +317,7 @@ def publish_generated_changes(args: argparse.Namespace) -> None:
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--templates-dir", help="Path to TerraInvicta_Data/StreamingAssets/Templates.")
+    parser.add_argument("--dlc-dir", help="Path to DLC_Content/DarkSkies. Defaults beside the base game data.")
     parser.add_argument("--bilateral-template", help="Explicit path to TIBilateralTemplate.json.")
     parser.add_argument("--region-outlines", help="Path to Terra Invicta regionoutlines Unity asset bundle.")
     parser.add_argument("--refresh-region-outlines", action="store_true", help="Rebuild region map data from --region-outlines instead of reusing existing generated region map data.")

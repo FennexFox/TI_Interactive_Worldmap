@@ -8,6 +8,7 @@ import {createNationOverlayController} from '../../src/ui/nation-overlay-control
 import {createLoadingScreen} from '../../src/ui/loading-screen.js';
 import {createPresentationFormatters} from '../../src/ui/presentation-formatters.js';
 import {createSearchController} from '../../src/ui/search-controller.js';
+import {renderScenarioOptions} from '../../src/ui/controls.js';
 
 class FakeElement {
   constructor() {
@@ -70,6 +71,35 @@ class FakeSelect extends FakeElement {
     return this._innerHTML || '';
   }
 }
+
+test('scenario options keep internal ids and render friendly labels', () => {
+  const select = new FakeSelect();
+
+  renderScenarioOptions({
+    select,
+    scenarioChoices: [
+      {id: '2022', label: '2022', group: 'base'},
+      {id: '2026', label: '2026', group: 'base'},
+      {id: '"unsafe"', label: '<unsafe>', group: 'dlc'},
+      {id: '1962', label: '2112 - Broken Earth (DLC)', group: 'dlc'},
+    ],
+    groupLabels: {base: '본편', dlc: 'DLC'},
+    activeScenarioId: '1962',
+  });
+
+  assert.equal(select.value, '1962');
+  assert.equal(
+    select.innerHTML,
+    '<optgroup label="본편">'
+      + '<option value="2022">2022</option>'
+      + '<option value="2026">2026</option>'
+      + '</optgroup>'
+      + '<optgroup label="DLC">'
+      + '<option value="&quot;unsafe&quot;">&lt;unsafe&gt;</option>'
+      + '<option value="1962">2112 - Broken Earth (DLC)</option>'
+      + '</optgroup>'
+  );
+});
 
 const translate = (key, values = {}) => {
   if (key === 'search.noResults') return 'No results';

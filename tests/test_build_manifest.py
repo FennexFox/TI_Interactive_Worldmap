@@ -36,6 +36,13 @@ class BuildManifestTests(unittest.TestCase):
         self.assertTrue(destinations <= staging)
         self.assertIn("data/generated/scenarios", staging)
 
+    def test_scenario_manifest_includes_dark_skies_outputs(self):
+        generated = set(build_manifest.expected_scenario_generated_files())
+
+        for scenario in ("1962", "2003"):
+            for filename in build_manifest.SCENARIO_OUTPUT_FILENAMES:
+                self.assertIn(Path("data/generated/scenarios") / scenario / filename, generated)
+
     def test_browser_manifest_rejects_missing_source_directory(self):
         with tempfile.TemporaryDirectory() as temporary:
             with self.assertRaisesRegex(FileNotFoundError, "browser source directory is missing"):

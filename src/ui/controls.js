@@ -13,11 +13,22 @@ function escapeHtml(value) {
 
 export function renderScenarioOptions({
   select,
-  scenarioIds = [],
+  scenarioChoices = [],
+  groupLabels = {base: 'Base Game', dlc: 'DLC'},
   activeScenarioId = '',
 } = {}) {
   if (!select) return;
-  const html = scenarioIds.map(id => `<option value="${escapeHtml(id)}">${escapeHtml(id)}</option>`).join('');
+  const html = ['base', 'dlc'].map(group => {
+    const options = scenarioChoices
+      .filter(choice => choice.group === group)
+      .map(({id, label}) => (
+        `<option value="${escapeHtml(id)}">${escapeHtml(label || id)}</option>`
+      ))
+      .join('');
+    return options
+      ? `<optgroup label="${escapeHtml(groupLabels[group] || group)}">${options}</optgroup>`
+      : '';
+  }).join('');
   if (select.innerHTML !== html) select.innerHTML = html;
   select.value = activeScenarioId;
 }

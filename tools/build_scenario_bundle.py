@@ -12,7 +12,13 @@ from typing import Any
 
 from catalog_utils import sanitize_data_value
 from input_contracts import load_required_json
-from scenario_config import DEFAULT_SCENARIO, SUPPORTED_SCENARIOS
+from scenario_config import (
+    DEFAULT_SCENARIO,
+    SUPPORTED_SCENARIOS,
+    scenario_group,
+    scenario_label,
+    scenario_start_year,
+)
 
 
 SCHEMA_VERSION = 2
@@ -96,7 +102,9 @@ def scenario_entry(
     research_catalog: dict[str, Any],
 ) -> dict[str, Any]:
     return {
-        "label": scenario,
+        "label": scenario_label(scenario),
+        "group": scenario_group(scenario),
+        "startYear": scenario_start_year(scenario),
         "regionMap": region_map,
         "claimMap": claim_map,
         "catalogs": {

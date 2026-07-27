@@ -229,7 +229,7 @@ const {
   statusLabel,
 } = presentationFormatters;
 appShell.setContext({
-  scenarioIds: scenarioContext.getScenarioIds,
+  scenarioChoices: scenarioContext.getScenarioChoices,
   activeScenarioId,
   getShowReachableCapitalCandidates: () => getShowReachableCapitalCandidates(),
   localizedRegionName,

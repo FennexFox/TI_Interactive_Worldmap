@@ -36,8 +36,11 @@ class PythonContractTests(unittest.TestCase):
 
     def test_scenario_contract_is_shared_and_strict(self):
         self.assertEqual(strip_scenario_prefix("2070_CAN"), "CAN")
+        self.assertEqual(strip_scenario_prefix("2003_CAN"), "CAN")
+        self.assertEqual(strip_scenario_prefix("1962_CAN"), "CAN")
         self.assertEqual(scenario_template_name("2022_CAN", "2026"), "2026_CAN")
-        with self.assertRaisesRegex(ValueError, "Unsupported scenario year"):
+        self.assertEqual(scenario_template_name("2026_CAN", "1962"), "1962_CAN")
+        with self.assertRaisesRegex(ValueError, "Unsupported scenario"):
             validate_scenario("2040")
 
     def test_required_json_reports_file_and_json_location(self):

@@ -120,7 +120,11 @@ export function createAppShellController({window, document} = {}) {
   function renderScenarioChoices() {
     renderScenarioOptions({
       select: elements.scenarioSelect,
-      scenarioIds: context.scenarioIds?.() || [],
+      scenarioChoices: context.scenarioChoices?.() || [],
+      groupLabels: {
+        base: i18n.t('scenario.group.base'),
+        dlc: i18n.t('scenario.group.dlc'),
+      },
       activeScenarioId: context.activeScenarioId?.() || '',
     });
   }

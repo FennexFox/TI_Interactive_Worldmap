@@ -4,8 +4,8 @@
     "templateRoot": "TerraInvicta_Data/StreamingAssets/Templates",
     "techTemplate": {
       "file": "TITechTemplate.json",
-      "size": 52332,
-      "sha256": "586693b67e018f537c65a0a7fdab7ae9b118f6e7b2807fe167f763f09022a583"
+      "size": 52432,
+      "sha256": "761d307177c86fb1b6945c9e9c03deda08814143967597b54d1647c84c7dbde5"
     },
     "projectTemplate": {
       "file": "TIProjectTemplate.json",
