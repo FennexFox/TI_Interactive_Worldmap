@@ -68,9 +68,13 @@ function renderClaimSection(context, title, items, emptyText, kind) {
     const claimTitle = context.t('claimCard.title', titleParts);
     const claimTitleHtml = renderClaimCardTitle(context, item, kind);
     const key = context.claimKey(item, kind);
-    const active = kind === 'incoming'
+    const selected = kind === 'incoming'
       ? context.activeIncomingClaimKey() === key
       : activeOutgoing === key;
+    // Baseline claims have no project filter to guide the user to their individual
+    // regions. Keep their full target list visible when the outgoing section is
+    // opened, while reserving the active treatment for an explicitly selected card.
+    const expanded = selected || (kind === 'outgoing' && !item.project);
     const targetNames = targetRegions.map(context.prettyRegionName);
     const targetPreview = targetNames.slice(0, 4).join(', ')
       + (targetNames.length > 4 ? `, +${targetNames.length - 4}` : '');
@@ -88,7 +92,7 @@ function renderClaimSection(context, title, items, emptyText, kind) {
       ? context.t('claimDirection.cumulative', {direct, inherited})
       : '';
     const statsText = `${hostile ? context.t('claimStat.hostile', {count: hostile}) : ''}${capital ? context.t('claimStat.capital', {count: capital}) : ''}${gated ? context.t('claimStat.gated', {count: gated}) : ''}`;
-    const regionDetails = active
+    const regionDetails = expanded
       ? renderRegionList(
         context,
         detailRegions,
@@ -97,7 +101,7 @@ function renderClaimSection(context, title, items, emptyText, kind) {
         item.regionSourceLabels || {},
       )
       : '';
-    return `<div class="claimListGroup${active ? ' active' : ''}"><button type="button" class="claimListItem${active ? ' active' : ''}" data-claim-kind="${kind}" data-claim-index="${index}" data-claim-key="${escapeHtml(key)}" title="${escapeHtml(claimTitle + ' · ' + detailRegions.map(context.prettyRegionName).join(', '))}">${claimTitleHtml}<span class="claimListMeta">${escapeHtml(direction + cumulativeText + statsText)}</span></button>${regionDetails}</div>`;
+    return `<div class="claimListGroup${selected ? ' active' : ''}"><button type="button" class="claimListItem${selected ? ' active' : ''}" data-claim-kind="${kind}" data-claim-index="${index}" data-claim-key="${escapeHtml(key)}" title="${escapeHtml(claimTitle + ' · ' + detailRegions.map(context.prettyRegionName).join(', '))}">${claimTitleHtml}<span class="claimListMeta">${escapeHtml(direction + cumulativeText + statsText)}</span></button>${regionDetails}</div>`;
   }).join('');
   return `<details class="infoSubsection claimSection" data-info-section="${sectionKey}"${sectionOpen}><summary><span>${escapeHtml(title)}</span></summary><div class="infoSubsectionBody claimList">${rows}</div></details>`;
 }
