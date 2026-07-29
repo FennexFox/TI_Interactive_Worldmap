@@ -839,7 +839,7 @@ nationOverlayController.setContext({
   claimCardTitleParts,
   projectSummary,
   claimKey: (entry, kind) => kind === 'incoming' ? incomingClaimKey(entry) : outgoingClaimKey(entry),
-  prettyRegionName: prettyRegion,
+  prettyRegionName: localizedRegionName,
   regionCountText,
   regionPresentation: ({regionName, claim, prefix, source}) => {
     const meta = claimRegionSummary(claim);

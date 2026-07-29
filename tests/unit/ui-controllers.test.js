@@ -107,6 +107,7 @@ const translate = (key, values = {}) => {
   if (key === 'project.all') return 'All';
   if (key === 'pill.claimSummary') return `${values.nation}:${values.claims}`;
   if (key === 'claimCard.title') return `${values.nation}:${values.project}`;
+  if (key === 'claimDirection.outgoing') return `claims: ${values.targets}`;
   if (key === 'regionList.detail') {
     return `${values.prefix}${values.owner}${values.meta}${values.source}`;
   }
@@ -357,4 +358,61 @@ test('nation overlay controller renders panel/options/pill and resolves events f
   assert.doesNotThrow(() => controller.destroy());
   assert.equal(root.listeners.get('click').length, 0);
   assert.equal(root.textContent, '');
+});
+
+test('nation overlay exposes baseline targets with display region names', () => {
+  const root = new FakeElement();
+  const controller = createNationOverlayController({root});
+  const displayNames = {Dakota: 'Minneapolis', HighPlains: 'St. Louis'};
+  const model = {
+    nation: 'ONT',
+    data: {status: 'existing'},
+    ownedCount: 2,
+    claimCount: 2,
+    projectCount: 0,
+    outgoingEntries: [{
+      project: '',
+      label: 'Baseline claim',
+      regions: ['Dakota', 'HighPlains'],
+      claims: {Dakota: {}, HighPlains: {}},
+    }],
+    incomingEntries: [],
+  };
+  controller.setContext({
+    t: translate,
+    getModel: () => model,
+    bindSections() {},
+    infoSectionOpenAttribute: () => ' open',
+    nationDisplayName: nation => nation,
+    nationTierText: () => '0 tiers',
+    statusLabel: status => status,
+    basicRows: () => [],
+    claimMode: () => 'all',
+    projectFilter: () => '',
+    projectOptionValue: () => '',
+    activeIncomingClaimKey: () => '',
+    claimIsEffectivelyHostile: () => false,
+    claimCardTitleParts: () => ({nation: 'Ontario', project: 'baseline claim', research: 'base'}),
+    projectSummary: () => '',
+    claimKey: entry => entry.project || '__base__',
+    prettyRegionName: region => displayNames[region] || region,
+    regionCountText: count => `${count} regions`,
+    regionPresentation: ({regionName}) => ({
+      active: false,
+      name: displayNames[regionName] || regionName,
+      detail: 'claimed',
+    }),
+    projectEntries: () => [],
+    projectDisplay: project => project,
+  });
+
+  controller.render(model);
+
+  assert.match(root.innerHTML, /claims: Minneapolis, St\. Louis/);
+  assert.match(root.innerHTML, /title="Ontario:baseline claim · Minneapolis, St\. Louis"/);
+  assert.match(root.innerHTML, /<b>Minneapolis<\/b>/);
+  assert.match(root.innerHTML, /<b>St\. Louis<\/b>/);
+  assert.doesNotMatch(root.innerHTML, /claimListItem active/);
+
+  controller.destroy();
 });
