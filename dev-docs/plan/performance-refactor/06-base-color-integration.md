@@ -38,7 +38,7 @@
 
 ## Progress
 
-- Not started.
+- Completed review of the bounded cache, explicit invalidation and generated scope. Before/after evidence is recorded in MEASUREMENTS.md; full validation passed.
 
 ## Decision log
 
@@ -46,4 +46,5 @@
 
 ## Outcomes / Retrospective
 
-- Pending this phase’s validation.
+- Implementation phase committed as af95e06. WSL build/verify (70 JS + 53 Python), lint, focused browser invalidation and full browser 76/76 passed. Direct before/after records show unchanged-input rebuilds 1→0 with correct changed-input rebuilding. Generated consistency, diff-check and strict six-phase plan validation also passed. Push and PR update complete the handoff.
+- No manual human visual review or trace-based paint/FPS measurement; synchronous timing limitations and higher single language-refresh timings are explicitly recorded.

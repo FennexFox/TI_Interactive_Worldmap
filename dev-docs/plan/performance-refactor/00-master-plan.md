@@ -44,7 +44,7 @@
 ## Completion evidence
 
 - Candidate 1 implemented and verified; see [MEASUREMENTS.md](MEASUREMENTS.md) for direct before/after evidence and explicit deferral reasons for candidates 2–5.
-- Initial phases 1–3 are complete. Follow-up phases 4–6 implement candidate 2 and update PR #101 against `develop`.
+- Initial phases 1–3 are complete. Follow-up phases 4–6 complete candidate 2; PR #101 against `develop` includes candidates 1+2. See MEASUREMENTS.md for final evidence and limitations.
 
 ## Follow-up strategy
 
