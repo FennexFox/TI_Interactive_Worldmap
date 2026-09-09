@@ -7,6 +7,7 @@ import test from 'node:test';
 import {createNationOverlayController} from '../../src/ui/nation-overlay-controller.js';
 import {createLoadingScreen} from '../../src/ui/loading-screen.js';
 import {createPresentationFormatters} from '../../src/ui/presentation-formatters.js';
+import {filterSearchCatalog} from '../../src/data/search-catalog.js';
 import {createSearchController} from '../../src/ui/search-controller.js';
 import {renderScenarioOptions} from '../../src/ui/controls.js';
 
@@ -15,7 +16,8 @@ class FakeElement {
     this.attributes = {};
     this.dataset = {};
     this.hidden = false;
-    this.innerHTML = '';
+    this._innerHTML = '';
+    this.innerHTMLWriteCount = 0;
     this.listeners = new Map();
     this.style = {};
     this.textContent = '';
@@ -47,6 +49,15 @@ class FakeElement {
     return true;
   }
 
+  set innerHTML(value) {
+    this._innerHTML = value;
+    this.innerHTMLWriteCount += 1;
+  }
+
+  get innerHTML() {
+    return this._innerHTML;
+  }
+
   focus() {
     this.focusCount += 1;
   }
@@ -57,6 +68,37 @@ class FakeElement {
 
   setAttribute(name, value) {
     this.attributes[name] = value;
+  }
+}
+
+class FakeDropdown extends FakeElement {
+  constructor() {
+    super();
+    this.optionNodes = [];
+  }
+
+  set innerHTML(value) {
+    super.innerHTML = value;
+    this.optionNodes = [...value.matchAll(/<button[^>]+class="([^"]*)"[^>]+aria-selected="([^"]*)"[^>]+data-index="(\d+)"/g)]
+      .map(match => {
+        const classes = new Set(match[1].split(/\s+/).filter(Boolean));
+        return {
+          classList: {
+            contains: name => classes.has(name),
+            toggle: (name, force) => force ? classes.add(name) : classes.delete(name),
+          },
+          dataset: {index: match[3]},
+          getAttribute: name => name === 'aria-selected' ? match[2] : null,
+        };
+      });
+  }
+
+  get innerHTML() {
+    return super.innerHTML;
+  }
+
+  querySelectorAll(selector) {
+    return selector === '.searchOption[data-index]' ? this.optionNodes : [];
   }
 }
 
@@ -207,6 +249,120 @@ test('search controller owns catalog, dropdown state, filtering, and listener te
   assert.equal(search.listeners.get('input').length, 0);
   assert.equal(dropdown.listeners.get('click').length, 0);
   assert.equal(document.listeners.get('click').length, 0);
+});
+
+test('search dropdown resolves once per invalidation and moves its active option in place', () => {
+  const search = new FakeElement();
+  const dropdown = new FakeDropdown();
+  const combo = new FakeElement();
+  const results = new FakeElement();
+  const document = new FakeElement();
+  let dropdownResolutions = 0;
+  let selectionClears = 0;
+  const selectedNations = [];
+  const filterCatalog = (catalog, query, limits) => {
+    if (limits.nationLimit === 12 && limits.regionLimit === 16) dropdownResolutions += 1;
+    return filterSearchCatalog(catalog, query, limits);
+  };
+  const controller = createSearchController({
+    search,
+    dropdown,
+    combo,
+    results,
+    document,
+    filterCatalog,
+  });
+  const regions = [
+    {id: 0, regionName: 'Alpha', nationTag: 'AAA', name: 'Alpha'},
+    {id: 1, regionName: 'Beta', nationTag: 'BBB', name: 'Beta'},
+  ];
+  controller.setContext({
+    t: translate,
+    regions,
+    nationMeta: {AAA: {aliases: ['Alpha']}, BBB: {aliases: ['Beta']}},
+    nationLabel: tag => tag,
+    localizedRegionName: region => region.name,
+    prettyRegionName: value => value,
+    getSelectedRegionIds: () => new Set(),
+    getSearchRegions: () => regions,
+    onSelectedNationCleared: () => {
+      selectionClears += 1;
+      controller.setSelectedNation('', {updateValue: false});
+    },
+    onNationSelected: nation => selectedNations.push(nation),
+  });
+  controller.rebuildCatalog();
+  controller.setSelectedNation('AAA', {updateValue: false});
+
+  search.value = 'AAA';
+  search.dispatch('input');
+  assert.equal(dropdownResolutions, 1);
+  assert.equal(dropdown.innerHTMLWriteCount, 1);
+  assert.equal(dropdown.optionNodes[0].classList.contains('active'), true);
+  assert.equal(dropdown.optionNodes[0].classList.contains('selected'), true);
+  assert.equal(dropdown.optionNodes[0].getAttribute('aria-selected'), 'true');
+  assert.equal(search.attributes['aria-expanded'], 'true');
+
+  const firstOption = dropdown.optionNodes[0];
+  search.dispatch('keydown', {key: 'ArrowDown'});
+  assert.equal(dropdownResolutions, 1);
+  assert.equal(dropdown.innerHTMLWriteCount, 1);
+  assert.equal(dropdown.optionNodes[0], firstOption);
+  assert.equal(firstOption.classList.contains('active'), false);
+  assert.equal(firstOption.classList.contains('selected'), true);
+  assert.equal(firstOption.getAttribute('aria-selected'), 'true');
+  assert.equal(dropdown.optionNodes[1].classList.contains('active'), true);
+
+  controller.setSelectedNation('BBB', {updateValue: false});
+  search.dispatch('keydown', {key: 'ArrowUp'});
+  assert.equal(dropdownResolutions, 1);
+  assert.equal(dropdown.innerHTMLWriteCount, 2);
+  assert.equal(dropdown.optionNodes[0].classList.contains('selected'), false);
+  assert.equal(dropdown.optionNodes[0].getAttribute('aria-selected'), 'false');
+  controller.setSelectedNation('AAA', {updateValue: false});
+
+  search.dispatch('input');
+  assert.equal(dropdownResolutions, 1);
+  assert.equal(dropdown.innerHTMLWriteCount, 3);
+  assert.equal(dropdown.optionNodes[0].classList.contains('active'), true);
+
+  controller.setContext({getSelectedRegionIds: () => new Set(['Alpha'])});
+  search.dispatch('keydown', {key: 'ArrowDown'});
+  assert.equal(dropdownResolutions, 2);
+  assert.equal(dropdown.innerHTMLWriteCount, 4);
+  assert.equal(dropdown.optionNodes[1].classList.contains('selected'), true);
+
+  search.value = 'Beta';
+  search.dispatch('input');
+  assert.equal(selectionClears, 1);
+  assert.equal(dropdownResolutions, 3);
+  assert.equal(dropdown.innerHTMLWriteCount, 5);
+
+  search.value = 'missing';
+  search.dispatch('input');
+  assert.equal(dropdownResolutions, 4);
+  assert.equal(dropdown.innerHTMLWriteCount, 6);
+  assert.equal(dropdown.optionNodes.length, 0);
+  assert.match(dropdown.innerHTML, /No results/);
+
+  search.value = 'AAA';
+  search.dispatch('input');
+  const writesBeforeCatalogChange = dropdown.innerHTMLWriteCount;
+  controller.setContext({
+    regions: [regions[1]],
+    nationMeta: {BBB: {aliases: ['Beta']}},
+  });
+  controller.rebuildCatalog();
+  search.dispatch('keydown', {key: 'Enter'});
+  assert.equal(dropdownResolutions, 6);
+  assert.equal(dropdown.innerHTMLWriteCount, writesBeforeCatalogChange + 1);
+  assert.equal(dropdown.optionNodes.length, 0);
+  assert.deepEqual(selectedNations, []);
+  search.dispatch('keydown', {key: 'ArrowDown'});
+  assert.equal(dropdownResolutions, 6);
+  assert.equal(dropdown.innerHTMLWriteCount, writesBeforeCatalogChange + 1);
+
+  controller.destroy();
 });
 
 test('search controller tolerates filtering before a localized region formatter is wired', () => {
