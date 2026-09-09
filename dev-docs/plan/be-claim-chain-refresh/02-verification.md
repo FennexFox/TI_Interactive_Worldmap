@@ -59,7 +59,8 @@
 - `npm run test:e2e` passed all 74 Playwright tests.
 - A headless browser smoke selected Broken Earth and rendered the two changed hostile
   claim overlays for PAK/Afghanistan and VEN/Amazonia.
-- Final branch and generated artifact review is complete; push and PR creation remain.
+- Final branch and generated artifact review is complete.
+- Pushed `update/be-claim-chain` and opened PR #100 against `develop`.
 
 ## Decision log
 
@@ -75,3 +76,4 @@
   and renders Afghanistan/Amazonia in hostile claim groups.
 - The full browser suite found no scenario switching, map ownership, claim rendering,
   pinning, or world-wrap regressions.
+- PR: https://github.com/FennexFox/TI_Interactive_Worldmap/pull/100
