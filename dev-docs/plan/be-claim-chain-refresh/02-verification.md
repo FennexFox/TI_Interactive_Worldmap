@@ -1,0 +1,65 @@
+# Phase 02: Validate generated output and publish the PR
+
+## Goal
+
+- Validate the rebuilt data and deployed app, then push the branch and open a PR with
+  a precise description of the Broken Earth claim-chain delta.
+
+## Scope
+
+- Run the full generated-data verifier and unit suite.
+- Run the Playwright end-to-end suite against rebuilt Pages output.
+- Review the final branch diff, commits, and generated artifact scope.
+- Push `update/be-claim-chain` and open a PR targeting `develop`.
+
+## Non-goals
+
+- Further data changes not required by validation findings.
+- Deployment or merge of the PR.
+
+## Affected files
+
+- Generated artifacts from phase 1 if validation requires regeneration.
+- `dev-docs/plan/be-claim-chain-refresh/**` for final validation evidence.
+
+## Implementation steps
+
+- Run `npm run verify` and fix any source-consistency failure.
+- Run `npm run test:e2e` and investigate any scenario/UI regression.
+- Confirm `git diff --check`, a clean worktree, and reviewable phase commits.
+- Push the branch and create a GitHub PR against `develop`.
+
+## Acceptance criteria
+
+- All automated verification passes.
+- Generated changes are limited to manifest-declared outputs and plan evidence.
+- The pushed branch matches the local verified HEAD.
+- The PR explains source provenance, semantic claim changes, and validation results.
+
+## Validation commands
+
+- npm run verify
+- npm run test:e2e
+
+## Manual smoke tests
+
+- Switch the app to `2112 - Broken Earth (DLC)` and exercise a changed claim chain,
+  confirming the displayed project/region sequence matches generated data.
+
+## Rollback risks
+
+- Playwright can expose unrelated environment or browser-install failures; distinguish
+  those from product regressions and record exact evidence.
+- Pushing and PR creation depend on configured GitHub credentials and remote access.
+
+## Progress
+
+- Not started.
+
+## Decision log
+
+- No decisions recorded yet.
+
+## Outcomes / Retrospective
+
+- Not completed yet.

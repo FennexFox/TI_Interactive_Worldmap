@@ -241,6 +241,42 @@ def research_project_ids(research_catalog: dict[str, object]) -> set[str]:
     return projects
 
 
+def research_node(research_catalog: dict[str, object], data_name: str) -> dict[str, object]:
+    for node in list_value(research_catalog.get("nodes")):
+        if isinstance(node, dict) and node.get("dataName") == data_name:
+            return node
+    return {}
+
+
+def verify_broken_earth_chain_claim(
+    claims_by_nation: dict[str, object],
+    claimant: str,
+    region_name: str,
+    current_owner: str,
+) -> None:
+    nation_claims = object_value(claims_by_nation.get(claimant))
+    baseline = next(
+        (
+            project
+            for project in list_value(nation_claims.get("projects"))
+            if isinstance(project, dict) and not project.get("project")
+        ),
+        {},
+    )
+    claim = object_value(object_value(baseline.get("claims")).get(region_name))
+    require(bool(claim), f"1962 missing {claimant} claim on {region_name}")
+    require(claim.get("hostileClaim") is True, f"1962 {claimant} claim on {region_name} must be hostile")
+    require(
+        claim.get("currentOwner") == current_owner,
+        f"1962 {claimant} claim on {region_name} must target {current_owner}",
+    )
+    owner_claims = object_value(claims_by_nation.get(current_owner))
+    require(
+        region_name in list_value(owner_claims.get("capitalRegions")),
+        f"1962 {claimant} claim on {region_name} must reach the {current_owner} capital chain",
+    )
+
+
 def scenario_bundle_value(scenario_entry: dict[str, object], filename: str) -> dict[str, object]:
     bundle_key = SCENARIO_OUTPUT_BUNDLE_KEYS.get(filename)
     require(bundle_key is not None, f"unsupported scenario output filename: {filename}")
@@ -351,6 +387,18 @@ def verify_scenario_entry(scenario: str, entry: dict[str, object]) -> None:
         not unexpected_initial_owners,
         f"{scenario} initial-owner Claims reference missing regions: {unexpected_initial_owners[:5]}",
     )
+    if scenario == "1962":
+        verify_broken_earth_chain_claim(claims_by_nation, "PAK", "Afghanistan", "AFG")
+        verify_broken_earth_chain_claim(claims_by_nation, "VEN", "Amazonia", "FAM")
+        sensing_weakness = research_node(research_catalog, "Project_BSBE_SensingWeakness")
+        requirements = list_value(object_value(sensing_weakness.get("requirements")).get("all"))
+        required_nations = {
+            str(requirement.get("nation"))
+            for requirement in requirements
+            if isinstance(requirement, dict) and requirement.get("nation")
+        }
+        require("ZAB" in required_nations, "1962 Sensing Weakness must require ZAB")
+        require("GRE" not in required_nations, "1962 Sensing Weakness retains stale GRE requirement")
 
 
 def verify_structure_and_replication() -> None:
