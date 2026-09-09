@@ -90,6 +90,8 @@ const RENDER_STAT_KEYS = Object.freeze([
   'debugLabelsDisabled',
   'debugCanonicalHitPaths',
   'selectionOutlinePathCount',
+  'selectionOutlineRebuilds',
+  'selectionOutlineRenderSkips',
   'hoverOutlinePathCount',
   'hoverClaimPreviewOverlayPathCount',
   'manualEnvelopeOverlayPathCount',

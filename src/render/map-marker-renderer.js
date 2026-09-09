@@ -442,35 +442,66 @@ function renderHoverOutlines(context, state) {
   return foreignChanged || secondaryChanged || hoverChanged;
 }
 
-function renderSelectionOutlines(context) {
+const SELECTION_INPUT_FIELDS = ['regionName', 'path', 'hasLabel', 'x', 'y', 'text', 'showDot'];
+
+function renderSelectionOutlines(context, state) {
   const {
     layer,
     selectedRegionNames = [],
     regionByName,
     copyContexts,
     isSelectedCapital,
+    recordRenderStat = () => {},
   } = context;
   if (!layer) return false;
-  replaceLayerChildren(layer);
-  layer.appendChild(createProjectedCopyFragment(
-    copyContexts,
+  const contexts = normalizeWorldCopyContexts(copyContexts);
+  const copyKey = copyContextRenderKey(contexts);
+  // Resolve mutable callback outputs before comparing; object IDs and language
+  // alone cannot identify changed geometry, label positions or capital status.
+  const entries = [];
+  for (const regionName of selectedRegionNames) {
+    const region = regionByName[regionName];
+    if (!region) continue;
+    const label = context.labelPosition(region);
+    entries.push({
+      regionName: region.regionName,
+      path: region.path,
+      hasLabel: !!label,
+      x: label?.x,
+      y: label?.y,
+      text: label ? context.localizedRegionName(region) : '',
+      showDot: !isSelectedCapital(regionName),
+    });
+  }
+  const previous = state.selectionLayerSnapshots.get(layer);
+  if (!context.force && previous?.copyKey === copyKey
+    && previous.entries.length === entries.length
+    && entries.every((entry, index) => SELECTION_INPUT_FIELDS.every(field => (
+      Object.is(entry[field], previous.entries[index][field])
+    )))) {
+    recordRenderStat('selectionOutlineRenderSkips');
+    return false;
+  }
+  const fragment = createProjectedCopyFragment(
+    contexts,
     'selection-outline-copy',
     copyContext => {
-      const fragment = document.createDocumentFragment();
-      for (const regionName of selectedRegionNames) {
-        const region = regionByName[regionName];
-        if (!region) continue;
-        appendRegionHighlight(fragment, region, 'selection', copyContext);
-        appendSelectedRegionMarker(fragment, region, {
-          showDot: !isSelectedCapital(regionName),
+      const copyFragment = document.createDocumentFragment();
+      for (const entry of entries) {
+        appendRegionHighlight(copyFragment, entry, 'selection', copyContext);
+        appendSelectedRegionMarker(copyFragment, entry, {
+          showDot: entry.showDot,
           copyContext,
-          labelPosition: context.labelPosition,
-          localizedRegionName: context.localizedRegionName,
+          labelPosition: () => entry.hasLabel ? {x: entry.x, y: entry.y} : null,
+          localizedRegionName: () => entry.text,
         });
       }
-      return fragment;
+      return copyFragment;
     }
-  ));
+  );
+  replaceLayerChildren(layer, fragment);
+  state.selectionLayerSnapshots.set(layer, {copyKey, entries});
+  recordRenderStat('selectionOutlineRebuilds');
   return true;
 }
 
@@ -549,6 +580,7 @@ function renderReachableCapitalCandidates(context, state) {
 
 export function createMapMarkerRenderer(layers = {}) {
   let state = {
+    selectionLayerSnapshots: new WeakMap(),
     capitalLayerRenderKeys: new WeakMap(),
     pinnedLayerRenderKeys: new WeakMap(),
     reachableLayerRenderKeys: new WeakMap(),
@@ -579,7 +611,7 @@ export function createMapMarkerRenderer(layers = {}) {
       }, state);
     }
     if (context.kind === 'selection') {
-      return renderSelectionOutlines(withLayer(context, 'selectionLayer'));
+      return renderSelectionOutlines(withLayer(context, 'selectionLayer'), state);
     }
     if (context.kind === 'reachable') {
       return renderReachableCapitalCandidates(withLayer(context, 'reachableLayer'), state);
@@ -605,6 +637,7 @@ export function createMapMarkerRenderer(layers = {}) {
     let changed = false;
     for (const name of names) {
       const layer = context.layer || layers[name];
+      state.selectionLayerSnapshots.delete(layer);
       if (!layer?.childNodes?.length) continue;
       replaceLayerChildren(layer);
       changed = true;
@@ -616,6 +649,7 @@ export function createMapMarkerRenderer(layers = {}) {
     if (destroyed) return false;
     const changed = clear(context);
     state = {
+      selectionLayerSnapshots: new WeakMap(),
       capitalLayerRenderKeys: new WeakMap(),
       pinnedLayerRenderKeys: new WeakMap(),
       reachableLayerRenderKeys: new WeakMap(),

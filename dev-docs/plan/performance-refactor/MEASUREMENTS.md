@@ -132,3 +132,20 @@ The local query-matrix timing median was1.174→0.455ms (25 measured iterations 
 The existing pan RAF queue now accepts wheel work and combines pan/wheel flags. Every wheel event still reads a fresh viewport rect and updates logical zoom using its own anchor and delta sign. Buttons/reset/apply consume the pending write; wrap flushes pending state before runtime wrap adjustments (possibly2 synchronous writes at that control boundary). Scenario reset flushes accumulated view state; destroy cancels without rendering. No rect cache or delta truncation added.
 
 Validation: build/verify76JS+53Python, full lint,17 focused map-view/interaction unit tests,25 existing pan/wrap/lifecycle browser tests and5 new wheel tests passed. The new browser tests initially used the default viewport and failed the measured coordinate constants; explicitly matching1440×900 fixed quantized event-coordinate differences without changing expected values. New tests assert actual writes with debug off/on, final viewBox at clamp, and same-task scenario transition plus subsequent frames. Unit checks cover sequential moving-anchor zoom, changed viewport rect, merged pan/wheel scheduling, synchronous controls and destroy. No human visual check, real wheel/trackpad input study or paint-duration claim. Local files: `wheel-before.json`, `wheel-after.json` in the measurement directory.
+
+
+## Candidate 5 — selection outline reuse (completed)
+
+The authoritative baseline was rerun from built ffb1fdb after candidate4 with `tools/measure_selection_updates.mjs OUTPUT.json [BASE_URL]`; after uses the candidate5 working source. Chromium149.0.7827.55,1440×900, debug enabled; Amazonia selected, wrap off/on, one warmup plus5 equal-language refreshes each. The probe compares actual SVG path and label arrays as well as first-child identity. All before/after output signatures match, including language and wrap transitions. Local raw records: `selection-before.json`, `selection-after.json`.
+
+| Selection work | Before | After |
+| --- | ---: | ---: |
+| Equal-language refresh: outline construction | 1 | 0 |
+| Equal-language refresh: layer child mutations | 2 | 0 |
+| Wrap transition: outline construction | 2 | 1 |
+| Wrap transition: layer child mutations (including lifecycle clear) | 4 | 2 |
+| Actual language change: outline construction | 1 | 1 |
+
+All10 equal-language samples retained node identity and recorded0 rebuilds/1 skip. The changed-language samples rebuilt correct labels. Wrap transition still clears renderer lifecycle state and builds required copies, then skips the redundant second render. One snapshot per layer compares ordered effective region paths/names, resolved label coordinates/text and capital-dot visibility, and normalized world-copy values. It recomputes cheap callback outputs each attempt, then builds SVG from captured values only on change. Clear (even empty), reset and destroy invalidate. Geometry is never serialized into a key.
+
+Selection counts are the evidence; the small synchronous refresh timing samples include all UI work, debug overhead and concurrent browser test load in the after run, and do not establish latency/paint/FPS improvement. Benefit is bounded by selected-region count. WSL build/verify78JS+53Python, full lint and17 focused pins/language/scenario/selection browser checks passed. Unit checks isolate mutable path/position/localization/capital inputs, order/multiplicity, copy values, independent layers, force, null labels and lifecycle invalidation. No human visual review.

@@ -42,12 +42,16 @@
 
 ## Progress
 
-- Planned; source investigation and baseline are pending.
+- Authoritative baseline rerun from ffb1fdb after candidate4, before selection source changes. Chromium149, viewport1440×900, debug on: same-language refresh reconstructs selection (two layer child mutations); wrap change reconstructs twice (four mutations). Probe: tools/measure_selection_updates.mjs; raw selection-before.json in local measurement directory.
+- Source and regression tests complete. WSL build/verify78JS+53Python, lint and focused pins/language/scenario/selection browser suite17/17 pass.
 
 ## Decision log
 
 - User authorized remaining candidates; prior scope deferrals are superseded. Keep candidate measurements and commits separate.
+- Store a WeakMap entry per layer with ordered primitive snapshots (regionName/path, resolved marker position, localized text, dot visibility) and normalized copy key. Compare before SVG allocation, then render directly from captured values. No path serialization. Clear must delete the entry even when the layer is empty; reset replaces stores; destroy remains inert.
+- Existing selection highlight overrides data-id and data-nation to null; actual selection output depends on regionName/path rather than those omitted fields. Runtime presentation already forwards recordRenderStat.
 
 ## Outcomes / Retrospective
 
-- Pending execution and validation; no performance claim yet.
+- All10 unchanged browser repeats preserved DOM with0 rebuilds/1 skip. Changed language rebuilds once; wrap construction2→1 (lifecycle clear plus replacement gives2 child mutations, formerly4). Before/after path+label signatures match in all cases.
+- Per-layer primitive snapshots compare actual output dependencies; no serialized geometry key. Unit tests independently vary path, position, localization, capital, order, copies and lifecycle state. Browser test exercises pin/unpin, capital stars/dots, empty selection, language, wrap and same-ID scenario geometry. No human visual check; timings are not used for a latency claim.
