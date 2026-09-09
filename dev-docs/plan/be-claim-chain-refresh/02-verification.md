@@ -54,12 +54,24 @@
 
 ## Progress
 
-- Not started.
+- `npm run verify` passed with 66 JavaScript tests, 51 Python tests, and generated
+  output verification.
+- `npm run test:e2e` passed all 74 Playwright tests.
+- A headless browser smoke selected Broken Earth and rendered the two changed hostile
+  claim overlays for PAK/Afghanistan and VEN/Amazonia.
+- Final branch and generated artifact review is complete; push and PR creation remain.
 
 ## Decision log
 
-- No decisions recorded yet.
+- The first manual smoke attempt looked for per-region overlay attributes, but claim
+  fills are intentionally grouped under `data-regions`; the corrected smoke asserted
+  the grouped fill and hostile hatch representation used by the production renderer.
+- No permanent E2E case was added because exact data provenance is enforced by the
+  generated verifier and recursive hostile-chain behavior already has browser coverage.
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- The rebuilt Pages app loads scenario `1962`, selects both changed claimant nations,
+  and renders Afghanistan/Amazonia in hostile claim groups.
+- The full browser suite found no scenario switching, map ownership, claim rendering,
+  pinning, or world-wrap regressions.
