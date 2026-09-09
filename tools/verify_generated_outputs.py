@@ -250,6 +250,7 @@ def research_node(research_catalog: dict[str, object], data_name: str) -> dict[s
 
 def verify_broken_earth_chain_claim(
     claims_by_nation: dict[str, object],
+    region_owners: dict[str, str],
     claimant: str,
     region_name: str,
     current_owner: str,
@@ -263,12 +264,17 @@ def verify_broken_earth_chain_claim(
         ),
         {},
     )
+    require(bool(baseline), f"1962 {claimant} missing projectless claims bucket")
     claim = object_value(object_value(baseline.get("claims")).get(region_name))
     require(bool(claim), f"1962 missing {claimant} claim on {region_name}")
     require(claim.get("hostileClaim") is True, f"1962 {claimant} claim on {region_name} must be hostile")
     require(
         claim.get("currentOwner") == current_owner,
         f"1962 {claimant} claim on {region_name} must target {current_owner}",
+    )
+    require(
+        region_owners.get(region_name) == current_owner,
+        f"1962 region map must assign {region_name} to {current_owner}",
     )
     owner_claims = object_value(claims_by_nation.get(current_owner))
     require(
@@ -388,9 +394,10 @@ def verify_scenario_entry(scenario: str, entry: dict[str, object]) -> None:
         f"{scenario} initial-owner Claims reference missing regions: {unexpected_initial_owners[:5]}",
     )
     if scenario == "1962":
-        verify_broken_earth_chain_claim(claims_by_nation, "PAK", "Afghanistan", "AFG")
-        verify_broken_earth_chain_claim(claims_by_nation, "VEN", "Amazonia", "FAM")
+        verify_broken_earth_chain_claim(claims_by_nation, region_owners, "PAK", "Afghanistan", "AFG")
+        verify_broken_earth_chain_claim(claims_by_nation, region_owners, "VEN", "Amazonia", "FAM")
         sensing_weakness = research_node(research_catalog, "Project_BSBE_SensingWeakness")
+        require(bool(sensing_weakness), "1962 research catalog missing Project_BSBE_SensingWeakness")
         requirements = list_value(object_value(sensing_weakness.get("requirements")).get("all"))
         required_nations = {
             str(requirement.get("nation"))
