@@ -42,12 +42,15 @@
 
 ## Progress
 
-- Planned; source investigation and baseline are pending.
+- Completed source, unit coverage, WSL build/verify (73 JavaScript + 53 Python), full lint and focused browser search/language/scenario suite (9/9).
 
 ## Decision log
 
 - User authorized remaining candidates; prior scope deferrals are superseded. Keep candidate measurements and commits separate.
+- Cache map search strings by region object in a WeakMap per context/catalog revision because canonical arrays are freshly allocated. Iterate the runtime canonical subset/order, preserve separate dropdown pretty-name semantics, and skip preparation for empty queries. Context/catalog/clear/destroy invalidate; region data is stable within that revision.
+- Precompute catalog normalized rank fields, calculate rank once per matching nation, skip exactly zero limits while preserving slice behavior for other limits. Unit tests cover all rank tiers and label/tag ties.
+- Previous delegated draft was interrupted between turns; root reviewed and completed it, fixing canonical-array cache misses and strengthening tests/measurement. Baseline source restored in an isolated temporary source tree from13b73ac for the final identical measurement tool.
 
 ## Outcomes / Retrospective
 
-- Pending execution and validation; no performance claim yet.
+- Fixed synthetic workload: rank input evaluations 240→121; zero-limit region searchText reads 363→0; three canonical-map filters localized callbacks 1,089→363. All 24 query/limit signatures match baseline. No application paint or perceived-speed claim. Human visual smoke check not performed; built browser tests cover search aliases/projects/keyboard/language/scenario.

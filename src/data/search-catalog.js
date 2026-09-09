@@ -75,6 +75,10 @@ export function buildSearchCatalog({
       label,
       aliases,
       projectAliases,
+      normalizedTag: tag.toLowerCase(),
+      normalizedLabel: String(label || '').toLowerCase(),
+      normalizedAliases: aliases.map(alias => alias.toLowerCase()),
+      normalizedProjectAliases: projectAliases.map(alias => alias.toLowerCase()),
       searchText: [label, ...aliases, ...projectAliases].join(' ').toLowerCase(),
     };
   });
@@ -107,13 +111,13 @@ export function buildSearchCatalog({
 }
 
 function nationMatchRank(choice, query) {
-  const tag = choice.tag.toLowerCase();
-  const aliases = choice.aliases.map(alias => alias.toLowerCase());
-  const projectAliases = choice.projectAliases.map(alias => alias.toLowerCase());
+  const tag = choice.normalizedTag ?? choice.tag.toLowerCase();
+  const aliases = choice.normalizedAliases ?? choice.aliases.map(alias => alias.toLowerCase());
+  const projectAliases = choice.normalizedProjectAliases ?? choice.projectAliases.map(alias => alias.toLowerCase());
   if (tag === query) return 0;
   if (aliases.some(alias => alias === query)) return 1;
   if (tag.startsWith(query) || aliases.some(alias => alias.startsWith(query))) return 2;
-  if (choice.label.toLowerCase().startsWith(query)) return 3;
+  if ((choice.normalizedLabel ?? choice.label.toLowerCase()).startsWith(query)) return 3;
   if (projectAliases.some(alias => alias === query)) return 4;
   if (projectAliases.some(alias => alias.startsWith(query))) return 5;
   return 6;
@@ -122,17 +126,23 @@ function nationMatchRank(choice, query) {
 export function filterSearchCatalog(catalog, query, {nationLimit = 25, regionLimit = 90} = {}) {
   const normalized = String(query || '').trim().toLowerCase();
   if (!normalized) return {nationMatches: [], regionMatches: []};
-  const nationMatches = catalog.nationChoices
-    .filter(choice => choice.searchText.includes(normalized))
-    .sort((left, right) => (
-      nationMatchRank(left, normalized) - nationMatchRank(right, normalized)
-      || left.label.localeCompare(right.label)
-      || left.tag.localeCompare(right.tag)
-    ))
-    .slice(0, nationLimit);
-  const regionMatches = catalog.regionChoices
-    .filter(choice => choice.searchText.includes(normalized))
-    .slice(0, regionLimit);
+  const nationMatches = nationLimit === 0
+    ? []
+    : catalog.nationChoices
+      .filter(choice => choice.searchText.includes(normalized))
+      .map(choice => ({choice, rank: nationMatchRank(choice, normalized)}))
+      .sort((left, right) => (
+        left.rank - right.rank
+        || left.choice.label.localeCompare(right.choice.label)
+        || left.choice.tag.localeCompare(right.choice.tag)
+      ))
+      .slice(0, nationLimit)
+      .map(entry => entry.choice);
+  const regionMatches = regionLimit === 0
+    ? []
+    : catalog.regionChoices
+      .filter(choice => choice.searchText.includes(normalized))
+      .slice(0, regionLimit);
   return {nationMatches, regionMatches};
 }
 

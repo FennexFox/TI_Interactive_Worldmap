@@ -385,6 +385,65 @@ test('search controller tolerates filtering before a localized region formatter 
   controller.destroy();
 });
 
+test('map search preserves canonical order and semantics across cache invalidation', () => {
+  const search = new FakeElement();
+  const regions = [
+    {id: 0, regionName: 'Alpha', nationTag: 'AAA'},
+    {id: 1, regionName: 'Beta', nationTag: 'BBB'},
+    {id: 2, regionName: 'CatalogOnly', nationTag: 'CCC'},
+  ];
+  let canonical = [regions[1], null, regions[0]];
+  let localizedCalls = 0;
+  let language = 'en';
+  let visible;
+  const localizedRegionName = region => {
+    localizedCalls += 1;
+    return language === 'en' ? `City ${region.regionName}` : `도시 ${region.regionName}`;
+  };
+  const controller = createSearchController({search});
+  controller.setContext({
+    regions, getSearchRegions: () => [...canonical], localizedRegionName,
+    prettyRegionName: () => 'DropdownOnly',
+    onRegionVisibilityChange: state => { visible = [...state.visibleRegionIds]; },
+  });
+  search.value = '';
+  controller.applyFilters(false);
+  assert.equal(localizedCalls, 0);
+  assert.deepEqual(visible, ['Beta', 'Alpha']);
+  search.value = 'city';
+  controller.applyFilters(false);
+  controller.applyFilters(false);
+  assert.equal(localizedCalls, 2);
+  assert.deepEqual(visible, ['Beta', 'Alpha']);
+  canonical = [regions[0]];
+  controller.applyFilters(false);
+  assert.deepEqual(visible, ['Alpha']);
+  assert.equal(localizedCalls, 2);
+  search.value = 'DropdownOnly';
+  controller.applyFilters(false);
+  assert.deepEqual(visible, []);
+  language = 'ko';
+  controller.setContext({localizedRegionName});
+  search.value = '도시';
+  controller.applyFilters(false);
+  assert.deepEqual(visible, ['Alpha']);
+  assert.equal(localizedCalls, 3);
+  controller.rebuildCatalog();
+  localizedCalls = 0;
+  controller.applyFilters(false);
+  assert.equal(localizedCalls, 1);
+  canonical = [{...regions[0], regionName: 'NewScenario'}];
+  controller.applyFilters(false);
+  assert.equal(localizedCalls, 2);
+  assert.deepEqual(visible, ['NewScenario']);
+  controller.clear();
+  controller.applyFilters(false);
+  assert.equal(localizedCalls, 3);
+  controller.destroy();
+  controller.applyFilters(false);
+  assert.equal(localizedCalls, 3);
+});
+
 test('loading screen fallback inserts error details as text instead of markup', () => {
   const body = new FakeElement();
   body.childNodes = [];

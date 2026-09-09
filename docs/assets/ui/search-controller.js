@@ -46,6 +46,7 @@ export function createSearchController({
   let dropdownChoicesCatalog = null;
   let dropdownChoicesQuery = '';
   let dropdownSelectionKey = '';
+  let mapSearchTextCache = new WeakMap();
   let destroyed = false;
 
   const selectedRegionIds = () => context.getSelectedRegionIds?.() || new Set();
@@ -66,6 +67,18 @@ export function createSearchController({
   const invalidateDropdownChoices = () => {
     dropdownChoicesCatalog = null;
     dropdownChoicesQuery = '';
+  };
+  const invalidateMapSearch = () => {
+    mapSearchTextCache = new WeakMap();
+  };
+  // Region objects are stable within a context/catalog revision; canonical
+  // arrays are recreated by the renderer on every filter application.
+  const mapSearchText = region => {
+    const cached = mapSearchTextCache.get(region);
+    if (cached !== undefined) return cached;
+    const text = regionSearchText(region, context.localizedRegionName);
+    mapSearchTextCache.set(region, text);
+    return text;
   };
   const resolveDropdownChoices = () => {
     const query = dropdownQuery();
@@ -162,7 +175,7 @@ export function createSearchController({
     const regions = context.getSearchRegions?.() || context.regions || [];
     for (const region of regions) {
       if (!region) continue;
-      const visible = !query || regionSearchText(region, context.localizedRegionName).includes(query);
+      const visible = !query || mapSearchText(region).includes(query);
       if (visible) {
         visibleRegionIds.add(region.regionName);
         if (matches.length < 90) matches.push(region);
@@ -214,6 +227,7 @@ export function createSearchController({
       if (destroyed) return;
       context = {...context, ...nextContext};
       invalidateDropdownChoices();
+      invalidateMapSearch();
     },
     rebuildCatalog() {
       if (destroyed) return catalog;
@@ -227,6 +241,7 @@ export function createSearchController({
         prettyRegionName: context.prettyRegionName,
       });
       invalidateDropdownChoices();
+      invalidateMapSearch();
       context.onCatalogBuilt?.(catalog);
       return catalog;
     },
@@ -243,6 +258,7 @@ export function createSearchController({
       highlightedIndex = -1;
       dropdownChoices = [];
       invalidateDropdownChoices();
+      invalidateMapSearch();
       renderDropdown();
       if (dropdown) dropdown.textContent = '';
       if (results) results.textContent = '';
@@ -260,6 +276,7 @@ export function createSearchController({
       disposeSearchEvents();
       context = {};
       catalog = EMPTY_CATALOG;
+      invalidateMapSearch();
     },
   };
   return Object.freeze(controller);

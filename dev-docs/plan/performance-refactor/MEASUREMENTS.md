@@ -108,3 +108,18 @@ Authoritative raw records remain untracked at `.chatgpt/tool-tests/performance-r
 - No manual human visual review or debug-off browser performance trace; no perceived-speed claim or deployment.
 
 Candidates 3–5 remain outside this request, which asked to choose one remaining candidate. Candidate 2 is now implemented, not deferred.
+
+
+## Candidate 3 — search computation (completed)
+
+`tools/measure_search_computation.mjs OUTPUT.json` runs a synthetic Node workload, not game/browser latency: 363 regions, 121 nations, 6 queries × 4 limit combinations. Baseline source13b73ac was restored in a temporary source tree and selected with `PERF_SOURCE_ROOT`; the working source ran the identical tool. All 24 result signatures (including zero/negative limits) match. Local raw records: `search-computation-before.json` and `search-computation-after.json` in `.chatgpt/tool-tests/performance-refactor/`.
+
+| Fixed-workload operation | Before | After |
+| --- | ---: | ---: |
+| Rank input evaluations for 121 matched nations | 240 | 121 |
+| Region searchText reads with regionLimit0 | 363 | 0 |
+| Localized map text callbacks over3 filters with fresh canonical arrays | 1,089 | 363 |
+
+Map strings retain the original matching fields, independently of dropdown pretty names, and canonical subset/order. The WeakMap is discarded on context/catalog rebuild, clear and destroy. Catalog normalization moves work to catalog construction; ranks remain query specific and computed once per matching nation. Per-query sorting remains. Empty map queries do no string preparation.
+
+The local query-matrix timing median was1.174→0.455ms (25 measured iterations after5 warmups; ranges0.782–3.154 and0.414–1.644ms). Getter instrumentation, synthetic data and unisolated CPU limit interpretation; these are not browser typing/paint/FPS measurements. No timing threshold tests. Source tests assert rank ordering, skipped categories, canonical subset/order, language/context/catalog/clear invalidation and dropdown/map semantic separation. Build/verify73JS+53Python, full lint and9 focused search/language/scenario browser tests passed. No human visual smoke check.
