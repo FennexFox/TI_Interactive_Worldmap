@@ -38,12 +38,14 @@
 
 ## Progress
 
-- Not started.
+- Implemented the ordered last-input snapshot, separate debug counters and lifecycle invalidation. Focused renderer unit tests passed 7/7; WSL rebuild/verify passed 70 JavaScript + 53 Python tests; full lint passed. Focused real-browser invalidation test passed.
 
 ## Decision log
 
-- User explicitly authorized choosing by estimated benefit. Candidate 2 processes every visible region and joins long SVG paths on filter refresh, making it the strongest estimated remaining candidate; this is a hypothesis, not a measured ranking.
+- Keep one ordered snapshot of visible region names, path strings and resolved fills, plus baseMode and normalized copy contexts. Preserve source order/multiplicity; hidden-set iteration order does not affect it. Only map-scene-renderer owns base-layer replacement, so invalidate on its renderGeometry/reset/destroy instead of observing external DOM.
+- Runtime colorFor closure identity is insufficient because baseMode/data may change beneath it. Compare its actual output on each visible region. Rebuild and skip counters are registered separately so debug reset clears both.
 
 ## Outcomes / Retrospective
 
-- Pending this phase’s validation.
+- Completed full browser suite (76/76) and after measurement. Both wrap modes produced 0 mutations / 0 rebuilds / 1 skip per unchanged input in all five all-visible and five Ontario repeats; language-only refresh also preserved DOM. Changed visibility still rebuilt once, and group counts/path string lengths matched baseline. Unit checks cover normalized copy equivalence, hidden-set order, changed fill from the same callback, same-ID changed geometry, source order/multiplicity, copy values, mode, empty output, reset/geometry invalidation and destroy. Browser test verifies exact canonical fill/hit membership as well as skip/rebuild counts and node identity.
+- Delegated source implementation remained pending after the resumed turn; the orchestrator completed it locally using the reviewed design. No manual human visual smoke check performed.

@@ -7,6 +7,7 @@ import test from 'node:test';
 import {createClaimOverlayRenderer} from '../../src/render/claim-overlay-renderer.js';
 import {createManualEnvelopeRenderer} from '../../src/render/manual-envelope-renderer.js';
 import {createMapMarkerRenderer} from '../../src/render/map-marker-renderer.js';
+import {createMapSceneRenderer} from '../../src/render/map-scene-renderer.js';
 
 class FakeClassList {
   constructor(node) {
@@ -288,4 +289,129 @@ test('map marker renderer owns capital render keys and lifecycle without semanti
   assert.equal(renderer.destroy(), true);
   assert.equal(renderer.destroy(), false);
   assert.equal(renderer.render(baseContext), false);
+}));
+
+function baseColorFixture() {
+  const layer = new FakeNode('g');
+  const recorder = statRecorder();
+  const regions = [
+    {id: 0, regionName: 'A', path: 'M 0 0 L 1 1', fill: '#123'},
+    {id: 1, regionName: 'B', path: 'M 2 2 L 3 3', fill: '#456'},
+  ];
+  const context = {
+    regions,
+    indices: {regions},
+    copyContexts: canonicalCopies(),
+    baseMode: 'nation',
+    colorFor: region => region.fill,
+    recordRenderStat: recorder.record,
+  };
+  const renderer = createMapSceneRenderer({
+    normalRegionColorLayer: layer,
+    regionLayer: new FakeNode('g'),
+    hitLayer: new FakeNode('g'),
+    getContext: () => context,
+  });
+  return {layer, stats: recorder.stats, context, renderer};
+}
+
+test('base colors reuse equal visible inputs without creating SVG fragments', () => withFakeDom(() => {
+  const {layer, stats, context, renderer} = baseColorFixture();
+  let fragments = 0;
+  const createFragment = document.createDocumentFragment.bind(document);
+  document.createDocumentFragment = () => {
+    fragments += 1;
+    return createFragment();
+  };
+  renderer.renderBaseColors();
+  const first = layer.childNodes[0];
+  const initialFragments = fragments;
+  context.copyContexts = [{copyIndex: '0', xOffset: '0', isCanonical: true}];
+  context.regions = context.regions.map(region => ({...region}));
+  renderer.renderBaseColors();
+  assert.equal(layer.childNodes[0], first);
+  assert.equal(fragments, initialFragments);
+  assert.equal(stats.baseColorRebuilds, 1);
+  assert.equal(stats.baseColorRenderSkips, 1);
+
+  renderer.setHidden(new Set(['B', 'not-in-catalog']));
+  renderer.renderBaseColors();
+  const filtered = layer.childNodes[0];
+  const filteredFragments = fragments;
+  renderer.setHidden(new Set(['not-in-catalog', 'B']));
+  renderer.renderBaseColors();
+  assert.equal(layer.childNodes[0], filtered);
+  assert.equal(layer.childNodes.length, 1);
+  assert.equal(layer.childNodes[0].dataset.regions, 'A');
+  assert.equal(fragments, filteredFragments);
+
+  renderer.setHidden(new Set(['A', 'B']));
+  renderer.renderBaseColors();
+  const emptyFragments = fragments;
+  renderer.renderBaseColors();
+  assert.equal(layer.childNodes.length, 0);
+  assert.equal(fragments, emptyFragments);
+  assert.equal(stats.baseColorRenderCalls, 6);
+  assert.equal(stats.baseColorRebuilds, 3);
+  assert.equal(stats.baseColorRenderSkips, 3);
+}));
+
+test('base colors detect mutable fills, same-ID geometry, modes, source order and copy values', () => withFakeDom(() => {
+  const {layer, stats, context, renderer} = baseColorFixture();
+  renderer.renderBaseColors();
+  const expectRebuild = change => {
+    const previous = layer.childNodes[0];
+    const count = stats.baseColorRebuilds;
+    change();
+    renderer.renderBaseColors();
+    assert.notEqual(layer.childNodes[0], previous);
+    assert.equal(stats.baseColorRebuilds, count + 1);
+  };
+  expectRebuild(() => { context.regions[0].fill = '#abc'; });
+  assert.equal(layer.childNodes[0].attributes.fill, '#abc');
+  expectRebuild(() => { context.regions[0].path = 'M 10 10 L 20 20'; });
+  assert.equal(layer.childNodes[0].attributes.d, 'M 10 10 L 20 20');
+  expectRebuild(() => { context.baseMode = 'plain'; });
+  assert.equal(layer.childNodes[0].dataset.fillKey, 'base:plain:#abc');
+  expectRebuild(() => { context.regions.reverse(); });
+  assert.equal(layer.childNodes[0].dataset.regions, 'B');
+
+  expectRebuild(() => {
+    context.copyContexts = [...canonicalCopies(), {copyIndex: 1, xOffset: 360, isCanonical: false}];
+  });
+  assert.equal(layer.childNodes.length, 2);
+  expectRebuild(() => { context.copyContexts[1].xOffset = 720; });
+  assert.equal(layer.childNodes[1].attributes.transform, 'translate(720 0)');
+  expectRebuild(() => { context.copyContexts[1].isCanonical = true; });
+  assert.equal(layer.childNodes[1].dataset.wrapCanonical, '1');
+  expectRebuild(() => { context.copyContexts[1].copyIndex = 2; });
+  assert.equal(layer.childNodes[1].dataset.wrapCopy, '2');
+
+  // Duplicated names/order must not be collapsed into a Map-key cache.
+  expectRebuild(() => { context.regions.push({...context.regions[0]}); });
+  assert.equal(layer.childNodes[0].childNodes[0].dataset.visualGroupSize, '2');
+}));
+
+test('base colors invalidate with geometry/reset and stop after destroy', () => withFakeDom(() => {
+  const {layer, stats, renderer} = baseColorFixture();
+  renderer.renderBaseColors();
+  let previous = layer.childNodes[0];
+  renderer.renderGeometry();
+  renderer.renderBaseColors();
+  assert.notEqual(layer.childNodes[0], previous);
+  previous = layer.childNodes[0];
+  renderer.reset();
+  renderer.renderBaseColors();
+  assert.notEqual(layer.childNodes[0], previous);
+  assert.equal(stats.baseColorRebuilds, 3);
+
+  const finalChildren = layer.childNodes;
+  const finalStats = {...stats};
+  renderer.destroy();
+  renderer.destroy();
+  renderer.reset();
+  renderer.renderGeometry();
+  renderer.renderBaseColors();
+  assert.equal(layer.childNodes, finalChildren);
+  assert.deepEqual(stats, finalStats);
 }));

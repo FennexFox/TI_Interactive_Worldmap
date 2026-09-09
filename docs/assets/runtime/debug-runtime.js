@@ -107,6 +107,8 @@ const RENDER_STAT_KEYS = Object.freeze([
   'scenarioRefreshRuns',
   'languageRefreshRuns',
   'baseColorRenderCalls',
+  'baseColorRebuilds',
+  'baseColorRenderSkips',
   'regionGeometryRenderCalls',
 ]);
 
