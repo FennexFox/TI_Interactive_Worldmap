@@ -36,3 +36,8 @@
 ## Known Risks And Assumptions
 
 - Wall-clock measurements are noisy and existing render metrics do not measure search latency. Report deterministic operation counts separately from timing; defer other candidates unless measurements justify their invalidation complexity.
+
+## Completion evidence
+
+- Candidate 1 implemented and verified; see [MEASUREMENTS.md](MEASUREMENTS.md) for direct before/after evidence and explicit deferral reasons for candidates 2–5.
+- All three implementation phases are technically complete. The requested PR uses `develop` as its base.
