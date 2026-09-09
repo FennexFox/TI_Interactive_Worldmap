@@ -5,8 +5,8 @@
     "scenarioYear": "1962",
     "nationTemplate": {
       "file": "TINationTemplate.json",
-      "size": 326534,
-      "sha256": "8eeb3b30ce7a76efd52d2eb82497b86d3d66b1b2725c25099a1105aba5600949"
+      "size": 326546,
+      "sha256": "be79f5994a93eb293d8136f2eb46bb584187ac113f09b8db00c5e197fc1640bf"
     },
     "localizationLanguages": [
       "kor",
@@ -10388,7 +10388,7 @@
       "existsAtStart": true,
       "initialRegionCount": 5,
       "isClaimIssuer": true,
-      "claimRegionCount": 6,
+      "claimRegionCount": 7,
       "isBreakaway": false,
       "breakawayFrom": "",
       "source": {
@@ -13217,7 +13217,7 @@
       },
       "baseDisplayName": {},
       "displayNameWithArticle": {
-        "en": "the Rebublic of Rome",
+        "en": "the Republic of Rome",
         "kor": "로마 공화국"
       },
       "nationAdjective": {
@@ -13241,7 +13241,7 @@
         "SPR",
         "Republic of Rome",
         "로마 공화국",
-        "the Rebublic of Rome",
+        "the Republic of Rome",
         "Roman",
         "로만",
         "Mare Nostrum",
@@ -15120,7 +15120,7 @@
       "existsAtStart": true,
       "initialRegionCount": 2,
       "isClaimIssuer": true,
-      "claimRegionCount": 3,
+      "claimRegionCount": 4,
       "isBreakaway": false,
       "breakawayFrom": "",
       "source": {
