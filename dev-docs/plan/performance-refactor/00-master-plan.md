@@ -1,9 +1,9 @@
-# Measured search and base-color refactor
+# Measured interaction and rendering refactor
 
 ## Issue Target And Scope Summary
 
 - Issue target: performance-refactor
-- Title: Measured search dropdown refactor
+- Title: Measured interaction and rendering refactor
 - Source investigation: HANDOUT.md; implementation authorized by the 2026-09-09 user request.
 - Scope: candidates 1 and 2. Candidate 1 is complete; the follow-up user request authorizes choosing the most promising remaining candidate by estimation. Candidate 2 adds single-last-input base-color reuse with explicit invalidation.
 
@@ -49,3 +49,14 @@
 ## Follow-up strategy
 
 - Compare visible region order, geometry/path and resolved fill inputs plus normalized world-copy values before constructing SVG descriptors or fragments. Keep only the last applied snapshot. Recompute cheap colors to detect mutable callback outputs; never serialize geometry into a key. Reset/geometry/scenario transitions invalidate. Separate rebuild and skip counters from invocation counters.
+
+## Remaining candidates — authorized follow-up
+
+- The user requested completion of the remaining work. Candidates 3–5 are now in scope; earlier deferrals are historical.
+- Phase 7: search computation reuse. Preserve separate dropdown/map matching semantics and context invalidation.
+- Phase 8: wheel DOM write batching. Preserve every logical zoom event and interleaved controls/lifecycle order; measure event/write counts before deciding on implementation.
+- Phase 9: selection outline reuse. Compare actual rendered geometry, marker/label and copy inputs; invalidate clear/reset/destroy.
+- Phase 10: integrate browser regression tests, measurements and update PR #101.
+- Dependencies: 7 → 8 → 9 → 10. Independent read-only investigation may overlap; implementation and measurement remain per candidate.
+- Each implementation phase rebuilds Pages output and passes verify, lint and relevant browser tests before its commit. Full browser suite runs for final integration.
+- Deterministic work counts are primary evidence; timing samples never imply paint/FPS or perceived improvements. No deployment or external data extraction.
