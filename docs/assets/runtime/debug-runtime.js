@@ -45,6 +45,7 @@ const RENDER_STAT_KEYS = Object.freeze([
   'gridRenderMsTotal',
   'gridRenderMsMax',
   'panViewBoxApplyCount',
+  'wheelViewBoxApplyCount',
   'gridRebuildsDuringPan',
   'panSvgRectReads',
   'visibleSvgNodeCount',

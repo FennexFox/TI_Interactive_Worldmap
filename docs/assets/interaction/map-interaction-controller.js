@@ -184,31 +184,39 @@ export function createMapInteractionController({
   }
 
   function cancelMapViewRender() {
+    const hadPendingRender = !!mapViewFrame;
     if (mapViewFrame) {
       window.cancelAnimationFrame(mapViewFrame);
       mapViewFrame = 0;
     }
     pendingMapViewRenderContext = null;
+    return hadPendingRender;
   }
 
   function scheduleMapViewRender(renderContext = {}) {
+    if (destroyed) return false;
     if (renderContext.isPan) {
       pendingMapViewRenderContext = {
+        ...pendingMapViewRenderContext,
         isPan: true,
         scheduledAt: Number.isFinite(Number(renderContext.scheduledAt))
           ? Number(renderContext.scheduledAt)
           : performance.now(),
       };
-    } else if (!pendingMapViewRenderContext) {
-      pendingMapViewRenderContext = renderContext;
+    } else {
+      pendingMapViewRenderContext = {
+        ...pendingMapViewRenderContext,
+        ...renderContext,
+      };
     }
-    if (mapViewFrame) return;
+    if (mapViewFrame) return true;
     mapViewFrame = window.requestAnimationFrame(() => {
       const context = pendingMapViewRenderContext || {};
       pendingMapViewRenderContext = null;
       mapViewFrame = 0;
       onMapViewRender?.(context);
     });
+    return true;
   }
 
   function bind() {
@@ -235,19 +243,19 @@ export function createMapInteractionController({
     }
   }
 
-  function resetContext() {
+  function resetContext({flushMapView = true} = {}) {
     cancelHoverPreview();
     cancelHoverFullVisualPass();
-    cancelMapViewRender();
+    const mapViewRenderCanceled = cancelMapViewRender();
     pan.reset();
     tooltip.reset();
-    onContextReset?.();
+    onContextReset?.({flushMapView, mapViewRenderCanceled});
   }
 
   function destroy() {
     if (destroyed) return;
     destroyed = true;
-    resetContext();
+    resetContext({flushMapView: false});
     if (bound) {
       bound = false;
       hitLayer?.removeEventListener('pointerover', onHitLayerPointerOver);
@@ -280,7 +288,9 @@ export function createMapInteractionController({
     hasActiveTooltip: tooltip.hasActiveTooltip,
     hideTooltip: tooltip.hide,
     invalidateTooltipLayout: tooltip.invalidateLayout,
+    cancelMapViewRender,
     resetContext,
+    scheduleMapViewRender,
     scheduleHoverFullVisualPass,
     scheduleHoverPreview,
     showTooltip: tooltip.show,

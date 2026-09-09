@@ -62,6 +62,8 @@ const mapViewController = createMapViewController({
     rerenderWorldWrapLayers();
   },
   onTooltipLayoutInvalidated: () => mapInteractionController.invalidateTooltipLayout(),
+  scheduleMapViewRender: context => mapInteractionController.scheduleMapViewRender(context),
+  cancelMapViewRender: () => mapInteractionController.cancelMapViewRender(),
   getDebugContext: () => ({debugRenderStats, recordRenderStat, recordRenderTiming}),
 });
 const mapView = mapViewController.mapView;
@@ -778,7 +780,9 @@ const mapInteractionController = createMapInteractionController({
   },
   onHoverFullVisualPass: applyMapVisualState,
   onMapViewRender: mapViewController.apply,
-  onContextReset: () => {},
+  onContextReset: ({flushMapView, mapViewRenderCanceled} = {}) => {
+    if (flushMapView && mapViewRenderCanceled) mapViewController.apply();
+  },
   getMapView: () => mapView,
   getWorldWrapEnabled: mapViewController.isWorldWrapEnabled,
   panMapView,
