@@ -44,6 +44,7 @@ export function createMapSceneRenderer({
   const regionCenterCache = new Map();
   let labelsVisible = false;
   let cachedRegionGeometryStats = {};
+  let baseColorSnapshot = null;
   let destroyed = false;
 
   function context(overrides = {}) {
@@ -153,32 +154,60 @@ export function createMapSceneRenderer({
       recordRenderStat = () => {},
     } = context(overrides);
     recordRenderStat('baseColorRenderCalls');
-    const descriptors = regions
-      .filter(region => !visualState.hiddenRegionIds.has(region.regionName))
-      .map(region => {
-        const fill = colorFor(region);
-        const fillKey = `base:${baseMode}:${fill}`;
-        return {
-          path: region.path,
-          regionName: region.regionName,
-          className: 'normal-region-color visual-fill-group',
-          fill,
-          groupKey: fillKey,
-          dataset: {fillKey},
-        };
+    const copies = normalizeWorldCopyContexts(copyContexts);
+    const visible = [];
+    for (const region of regions) {
+      if (visualState.hiddenRegionIds.has(region.regionName)) continue;
+      // Resolve colors even when the callback is unchanged: its inputs can mutate.
+      visible.push({regionName: region.regionName, path: region.path, fill: colorFor(region)});
+    }
+    const previous = baseColorSnapshot;
+    const unchanged = previous
+      && previous.baseMode === baseMode
+      && previous.copies.length === copies.length
+      && copies.every((copy, index) => {
+        const old = previous.copies[index];
+        return copy.copyIndex === old.copyIndex
+          && copy.xOffset === old.xOffset
+          && copy.isCanonical === old.isCanonical;
+      })
+      && previous.visible.length === visible.length
+      && visible.every((region, index) => {
+        const old = previous.visible[index];
+        return region.regionName === old.regionName
+          && region.path === old.path
+          && region.fill === old.fill;
       });
+    if (unchanged) {
+      recordRenderStat('baseColorRenderSkips');
+      return;
+    }
+    const descriptors = visible.map(({path, regionName, fill}) => {
+      const fillKey = `base:${baseMode}:${fill}`;
+      return {
+        path,
+        regionName,
+        className: 'normal-region-color visual-fill-group',
+        fill,
+        groupKey: fillKey,
+        dataset: {fillKey},
+      };
+    });
     normalRegionColorElements.length = 0;
     const fragment = createGroupedVisualFillFragment({
       descriptors,
-      copyContexts: normalizeWorldCopyContexts(copyContexts),
+      copyContexts: copies,
       copyGroupClassName: 'normal-region-color-copy',
     });
     normalRegionColorElements.push(...fragment.querySelectorAll?.('.normal-region-color') || []);
     replaceLayerChildren(normalRegionColorLayer, fragment);
+    baseColorSnapshot = {baseMode, copies, visible};
+    recordRenderStat('baseColorRebuilds');
   }
 
   function renderGeometry(overrides = {}) {
     if (destroyed) return;
+    baseColorSnapshot = null;
     const {
       indices,
       copyContexts,
@@ -332,6 +361,7 @@ export function createMapSceneRenderer({
   }
 
   function reset() {
+    baseColorSnapshot = null;
     cachedRegionGeometryStats = {};
     regionCenterCache.clear();
   }
@@ -339,6 +369,7 @@ export function createMapSceneRenderer({
   function destroy() {
     if (destroyed) return;
     destroyed = true;
+    baseColorSnapshot = null;
     pathByRegion.clear();
     pathInstancesByRegion.clear();
     hitPathByRegion.clear();

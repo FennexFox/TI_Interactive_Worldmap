@@ -23,6 +23,58 @@ test('localized search catalog matches nation tags, aliases, projects, and regio
   assert.equal(filterSearchCatalog(catalog, 'seoul').regionMatches[0].regionName, 'SouthKorea');
 });
 
+test('nation search preserves every rank tier and deterministic ties', () => {
+  const choice = (tag, label, aliases = [], projectAliases = []) => ({
+    tag, label, aliases, projectAliases,
+    searchText: 'needle',
+    normalizedTag: tag.toLowerCase(),
+    normalizedLabel: label.toLowerCase(),
+    normalizedAliases: aliases.map(value => value.toLowerCase()),
+    normalizedProjectAliases: projectAliases.map(value => value.toLowerCase()),
+  });
+  const catalog = {
+    nationChoices: [
+      choice('NEEDLE', 'fallback'),
+      choice('ALIAS', 'fallback', ['needle']),
+      choice('NEEDLE_PREFIX', 'fallback'),
+      choice('LABEL', 'needle label'),
+      choice('PROJECT_EXACT', 'fallback', [], ['needle']),
+      choice('PROJECT_PREFIX', 'fallback', [], ['needle project']),
+      choice('FALLBACK', 'fallback'),
+    ],
+    regionChoices: [],
+  };
+  assert.deepEqual(
+    filterSearchCatalog(catalog, 'needle', {regionLimit: 0}).nationMatches.map(choice => choice.tag),
+    ['NEEDLE', 'ALIAS', 'NEEDLE_PREFIX', 'LABEL', 'PROJECT_EXACT', 'PROJECT_PREFIX', 'FALLBACK'],
+  );
+  const ties = buildSearchCatalog({
+    nationLabel: tag => ({AAA: 'Zeta', BBB: 'Alpha', CCC: 'Same', DDD: 'Same'}[tag]),
+    nationMeta: {
+      AAA: {aliases: ['Tie'], displayName: {en: 'Zeta'}},
+      BBB: {aliases: ['Tie'], displayName: {en: 'Alpha'}},
+      CCC: {aliases: ['Tie'], displayName: {en: 'Same'}},
+      DDD: {aliases: ['Tie'], displayName: {en: 'Same'}},
+    },
+  });
+  assert.deepEqual(
+    filterSearchCatalog(ties, 'Tie', {regionLimit: 0}).nationMatches.map(choice => choice.tag),
+    ['BBB', 'CCC', 'DDD', 'AAA'],
+  );
+});
+
+test('zero-limit search categories are not traversed and negative limits retain slice semantics', () => {
+  const unreadable = new Proxy([], {get() { throw new Error('unused category read'); }});
+  assert.deepEqual(filterSearchCatalog({nationChoices: unreadable, regionChoices: unreadable}, 'a', {
+    nationLimit: 0, regionLimit: 0,
+  }), {nationMatches: [], regionMatches: []});
+  const catalog = buildSearchCatalog({regions: [
+    {id: 0, regionName: 'Alpha', nationTag: 'AAA'},
+    {id: 1, regionName: 'Beta', nationTag: 'BBB'},
+  ]});
+  assert.deepEqual(filterSearchCatalog(catalog, 'a', {nationLimit: -1, regionLimit: -1}).regionMatches.map(item => item.id), [0]);
+});
+
 test('claim descriptor builders are deterministic and DOM-free', () => {
   const model = {
     displayBaseSet: new Set(['Owned']),

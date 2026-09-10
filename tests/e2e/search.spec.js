@@ -76,3 +76,50 @@ test('nation search matches claim project names to claimant nations', async ({pa
   await search.fill('연합된 투르키스탄');
   await expect(nationOption('TUR').first()).toBeVisible();
 });
+
+test('search input and keyboard navigation reuse dropdown options without changing contracts', async ({page}) => {
+  await page.goto('/');
+  await expect(page.locator('#regions .region').first()).toBeVisible({timeout: 10000});
+
+  const search = page.locator('#search');
+  const dropdown = page.locator('#nationDropdown');
+  const options = dropdown.locator('.searchOption[data-index]');
+  await search.focus();
+  await expect(dropdown).toBeVisible();
+  await dropdown.evaluate(element => {
+    element.searchChildListChanges = 0;
+    element.searchMutationObserver = new window.MutationObserver(records => {
+      element.searchChildListChanges += records.filter(record => record.type === 'childList').length;
+    });
+    element.searchMutationObserver.observe(element, {childList: true});
+  });
+
+  await search.fill('Canada');
+  await expect(options.first().locator('.searchOptionTag')).toHaveText('CAN');
+  await expect.poll(() => dropdown.evaluate(element => element.searchChildListChanges)).toBe(1);
+  await expect(options.first()).toHaveClass(/\bactive\b/);
+  await dropdown.evaluate(element => {
+    element.searchFirstOption = element.querySelector('.searchOption[data-index="0"]');
+  });
+
+  await search.press('ArrowDown');
+  await expect(options.nth(1)).toHaveClass(/\bactive\b/);
+  await search.press('ArrowUp');
+  await expect(options.first()).toHaveClass(/\bactive\b/);
+  expect(await dropdown.evaluate(element => (
+    element.searchFirstOption === element.querySelector('.searchOption[data-index="0"]')
+  ))).toBe(true);
+  expect(await dropdown.evaluate(element => element.searchChildListChanges)).toBe(1);
+
+  await search.press('Enter');
+  await expect(search).toHaveAttribute('data-selected-nation', 'CAN');
+  await search.fill('Mexico');
+  await expect(search).toHaveAttribute('data-selected-nation', '');
+
+  await search.fill('zzzz-not-a-country');
+  await expect(dropdown.locator('.searchOption.empty')).toBeVisible();
+  await search.press('Escape');
+  await expect(search).toHaveAttribute('aria-expanded', 'false');
+  await expect(dropdown).toBeHidden();
+  await dropdown.evaluate(element => element.searchMutationObserver.disconnect());
+});

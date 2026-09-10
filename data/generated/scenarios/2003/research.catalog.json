@@ -4,13 +4,13 @@
     "templateRoot": "TerraInvicta_Data/StreamingAssets/Templates",
     "techTemplate": {
       "file": "TITechTemplate.json",
-      "size": 56406,
-      "sha256": "3ade7a27040d0fe10023f257b1d2e420b71539f1bf431937607ddf0cefbc203c"
+      "size": 56392,
+      "sha256": "f949e0df6cf0ebb70eb52dfbf54484dc3be08805384592aaa87a15f05d580f87"
     },
     "projectTemplate": {
       "file": "TIProjectTemplate.json",
-      "size": 477291,
-      "sha256": "14802b83d72272a939a3f562b47aa1eb4a147dfc8008d530bcffba510d2d0492"
+      "size": 477332,
+      "sha256": "e9df7079640145bd4e98f6a1693e58aefc8f88f0e24f65c9429859fb46d2b99f"
     },
     "localizationLanguages": [
       "kor",

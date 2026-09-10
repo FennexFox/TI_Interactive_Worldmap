@@ -35,6 +35,8 @@ export function createMapViewController({
   getLanguage,
   onWorldWrapChanged,
   onTooltipLayoutInvalidated,
+  scheduleMapViewRender,
+  cancelMapViewRender,
   getDebugContext = () => ({}),
 } = {}) {
   const mapView = initializeMapView(activeData);
@@ -60,16 +62,19 @@ export function createMapViewController({
 
   function apply(renderContext = {}) {
     if (destroyed) return;
+    cancelMapViewRender?.();
     const {
       debugRenderStats,
       recordRenderStat = () => {},
       recordRenderTiming = () => {},
     } = getDebugContext();
     const isPan = !!renderContext.isPan;
+    const isWheel = !!renderContext.isWheel;
     const scheduledAt = Number(renderContext.scheduledAt);
     const start = debugRenderStats ? performance.now() : 0;
     svg?.setAttribute('viewBox', formatViewBoxForMapView(mapView));
     if (isPan) recordRenderStat('panViewBoxApplyCount');
+    if (isWheel) recordRenderStat('wheelViewBoxApplyCount');
     if (debugRenderStats) {
       const finishedAt = performance.now();
       recordRenderTiming('mapViewApplyMs', finishedAt - start);
@@ -80,7 +85,7 @@ export function createMapViewController({
     onTooltipLayoutInvalidated?.();
   }
 
-  function zoomAt(scale, anchor = null) {
+  function zoomAt(scale, anchor = null, {deferRender = false} = {}) {
     if (destroyed) return;
     zoomMapView(mapView, {
       scale,
@@ -88,7 +93,11 @@ export function createMapViewController({
       anchorY: anchor?.y,
       normalizeX: worldWrapEnabled,
     });
-    apply();
+    if (deferRender && scheduleMapViewRender) {
+      scheduleMapViewRender({isWheel: true});
+    } else {
+      apply();
+    }
   }
 
   function reset(nextActiveData = getActiveData()) {
@@ -109,7 +118,7 @@ export function createMapViewController({
     event.preventDefault();
     const anchor = pointFromClient(event.clientX, event.clientY);
     const scale = event.deltaY < 0 ? 1 / MAP_WHEEL_ZOOM_FACTOR : MAP_WHEEL_ZOOM_FACTOR;
-    zoomAt(scale, anchor);
+    zoomAt(scale, anchor, {deferRender: true});
   }
 
   function updateLabels() {
@@ -143,6 +152,7 @@ export function createMapViewController({
   function destroy() {
     if (destroyed) return;
     destroyed = true;
+    cancelMapViewRender?.();
     controls?.destroy();
     controls = null;
   }
@@ -151,10 +161,12 @@ export function createMapViewController({
     if (destroyed) return false;
     const nextEnabled = !!enabled;
     if (worldWrapEnabled === nextEnabled) return false;
+    const pendingRenderCanceled = cancelMapViewRender?.();
     worldWrapEnabled = nextEnabled;
     copyContexts = createWorldCopyContexts(mapView, worldWrapEnabled);
     svg?.classList.toggle('world-wrap-enabled', worldWrapEnabled);
     updateLabels();
+    if (pendingRenderCanceled) apply();
     onWorldWrapChanged?.({enabled: worldWrapEnabled, copyContexts});
     return true;
   }

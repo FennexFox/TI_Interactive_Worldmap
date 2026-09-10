@@ -10,6 +10,7 @@ import {
   bindNationSearchControl,
   renderNationDropdown,
   renderSearchResults,
+  updateNationDropdownHighlight,
 } from './controls.js';
 
 const EMPTY_CATALOG = Object.freeze({
@@ -35,21 +36,26 @@ export function createSearchController({
   combo,
   results,
   document,
+  filterCatalog = filterSearchCatalog,
 } = {}) {
   let context = {};
   let catalog = EMPTY_CATALOG;
   let dropdownOpen = false;
   let highlightedIndex = -1;
   let dropdownChoices = [];
+  let dropdownChoicesCatalog = null;
+  let dropdownChoicesQuery = '';
+  let dropdownSelectionKey = '';
+  let mapSearchTextCache = new WeakMap();
   let destroyed = false;
 
   const selectedRegionIds = () => context.getSelectedRegionIds?.() || new Set();
-  const visibleChoices = () => {
-    const query = search?.value?.trim().toLowerCase() || '';
+  const dropdownQuery = () => search?.value?.trim().toLowerCase() || '';
+  const visibleChoices = query => {
     if (!query) {
       return catalog.nationChoices.slice(0, 28).map(choice => ({...choice, type: 'nation'}));
     }
-    const {nationMatches, regionMatches} = filterSearchCatalog(catalog, query, {
+    const {nationMatches, regionMatches} = filterCatalog(catalog, query, {
       nationLimit: 12,
       regionLimit: 16,
     });
@@ -58,23 +64,60 @@ export function createSearchController({
       ...regionMatches,
     ].slice(0, 28);
   };
-  const renderDropdown = () => {
+  const invalidateDropdownChoices = () => {
+    dropdownChoicesCatalog = null;
+    dropdownChoicesQuery = '';
+  };
+  const invalidateMapSearch = () => {
+    mapSearchTextCache = new WeakMap();
+  };
+  // Region objects are stable within a context/catalog revision; canonical
+  // arrays are recreated by the renderer on every filter application.
+  const mapSearchText = region => {
+    const cached = mapSearchTextCache.get(region);
+    if (cached !== undefined) return cached;
+    const text = regionSearchText(region, context.localizedRegionName);
+    mapSearchTextCache.set(region, text);
+    return text;
+  };
+  const resolveDropdownChoices = () => {
+    const query = dropdownQuery();
+    if (dropdownChoicesCatalog === catalog && dropdownChoicesQuery === query) return false;
+    dropdownChoices = visibleChoices(query);
+    dropdownChoicesCatalog = catalog;
+    dropdownChoicesQuery = query;
+    return true;
+  };
+  const selectionKey = selectedIds => dropdownChoices.map(choice => (
+    choice.type === 'nation'
+      ? search?.dataset.selectedNation === choice.tag
+      : selectedIds.has(choice.regionName)
+  ) ? '1' : '0').join('');
+  const renderDropdown = ({resetHighlight = false} = {}) => {
     if (destroyed) return;
-    dropdownChoices = visibleChoices();
+    if (dropdownOpen) resolveDropdownChoices();
+    if (resetHighlight) highlightedIndex = dropdownChoices.length ? 0 : -1;
+    const selectedIds = selectedRegionIds();
     highlightedIndex = renderNationDropdown({
       dropdown,
       search,
       open: dropdownOpen,
       choices: dropdownChoices,
       highlightedIndex,
-      selectedRegionIds: selectedRegionIds(),
+      selectedRegionIds: selectedIds,
       t: context.t,
     });
+    dropdownSelectionKey = selectionKey(selectedIds);
   };
   const openDropdown = () => {
     if (destroyed) return;
     dropdownOpen = true;
     renderDropdown();
+  };
+  const refreshDropdown = () => {
+    if (destroyed) return;
+    dropdownOpen = true;
+    renderDropdown({resetHighlight: true});
   };
   const closeDropdown = () => {
     dropdownOpen = false;
@@ -82,6 +125,10 @@ export function createSearchController({
     renderDropdown();
   };
   const chooseDropdown = (index = highlightedIndex) => {
+    if (dropdownOpen && resolveDropdownChoices()) {
+      renderDropdown();
+      return false;
+    }
     const choice = dropdownChoices[index];
     if (!choice) return false;
     if (choice.type === 'region') context.onRegionSelected?.(choice.id);
@@ -89,6 +136,20 @@ export function createSearchController({
     closeDropdown();
     search?.focus?.();
     return true;
+  };
+  const moveDropdownHighlight = delta => {
+    if (destroyed || !dropdownOpen) return;
+    const choicesChanged = resolveDropdownChoices();
+    const selectionChanged = selectionKey(selectedRegionIds()) !== dropdownSelectionKey;
+    const count = dropdownChoices.length;
+    highlightedIndex = count > 0
+      ? Math.max(0, Math.min(count - 1, highlightedIndex + delta))
+      : -1;
+    if (choicesChanged || selectionChanged) {
+      renderDropdown();
+    } else {
+      highlightedIndex = updateNationDropdownHighlight({dropdown, highlightedIndex});
+    }
   };
   const parseNationSearchValue = value => parseCatalogValue(catalog, value);
   const getSelectedNation = () => search?.dataset?.selectedNation || '';
@@ -114,7 +175,7 @@ export function createSearchController({
     const regions = context.getSearchRegions?.() || context.regions || [];
     for (const region of regions) {
       if (!region) continue;
-      const visible = !query || regionSearchText(region, context.localizedRegionName).includes(query);
+      const visible = !query || mapSearchText(region).includes(query);
       if (visible) {
         visibleRegionIds.add(region.regionName);
         if (matches.length < 90) matches.push(region);
@@ -129,7 +190,7 @@ export function createSearchController({
     });
     if (!rerenderResults || !results) return;
     const nationMatches = query
-      ? filterSearchCatalog(catalog, query, {nationLimit: 25, regionLimit: 0}).nationMatches
+      ? filterCatalog(catalog, query, {nationLimit: 25, regionLimit: 0}).nationMatches
       : [];
     renderSearchResults({
       root: results,
@@ -152,14 +213,11 @@ export function createSearchController({
     onSelectedNationCleared: () => context.onSelectedNationCleared?.(),
     openDropdown,
     closeDropdown,
-    renderDropdown,
+    refreshDropdown,
     applyFilters,
-    getChoiceCount: () => dropdownChoices.length,
     getDropdownOpen: () => dropdownOpen,
     getHighlightedIndex: () => highlightedIndex,
-    setHighlightedIndex: index => {
-      highlightedIndex = index;
-    },
+    moveDropdownHighlight,
     chooseDropdown,
     focusNationFromSearch: nation => context.onNationSelected?.(nation),
   });
@@ -168,6 +226,8 @@ export function createSearchController({
     setContext(nextContext = {}) {
       if (destroyed) return;
       context = {...context, ...nextContext};
+      invalidateDropdownChoices();
+      invalidateMapSearch();
     },
     rebuildCatalog() {
       if (destroyed) return catalog;
@@ -180,6 +240,8 @@ export function createSearchController({
         localizedRegionName: context.localizedRegionName,
         prettyRegionName: context.prettyRegionName,
       });
+      invalidateDropdownChoices();
+      invalidateMapSearch();
       context.onCatalogBuilt?.(catalog);
       return catalog;
     },
@@ -195,6 +257,8 @@ export function createSearchController({
       dropdownOpen = false;
       highlightedIndex = -1;
       dropdownChoices = [];
+      invalidateDropdownChoices();
+      invalidateMapSearch();
       renderDropdown();
       if (dropdown) dropdown.textContent = '';
       if (results) results.textContent = '';
@@ -212,6 +276,7 @@ export function createSearchController({
       disposeSearchEvents();
       context = {};
       catalog = EMPTY_CATALOG;
+      invalidateMapSearch();
     },
   };
   return Object.freeze(controller);

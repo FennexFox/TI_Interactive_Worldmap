@@ -370,3 +370,88 @@ test('world-wrap default applies search filtering to every copy without duplicat
 
   expect(filterStats).toEqual({amazonia: 3, amazoniaHidden: 0, ontario: 3, ontarioHidden: 3});
 });
+
+test('base colors reuse unchanged inputs and invalidate visibility, mode, language, scenario and wrap correctly', async ({page}) => {
+  await waitForSingleCopyMap(page, '/?worldWrap=0&debugRenderStats=1');
+  const layer = page.locator('#normalRegionColors');
+  const search = page.locator('#search');
+  const capture = () => layer.evaluate(element => {
+    element.baseColorFirstChild = element.firstElementChild;
+    window.__TI_DEBUG_RENDER_STATS__.reset();
+  });
+  const stats = () => layer.evaluate(element => ({
+    sameNode: element.firstElementChild === element.baseColorFirstChild,
+    calls: window.__TI_DEBUG_RENDER_STATS__.baseColorRenderCalls,
+    rebuilds: window.__TI_DEBUG_RENDER_STATS__.baseColorRebuilds,
+    skips: window.__TI_DEBUG_RENDER_STATS__.baseColorRenderSkips,
+  }));
+  const expectVisibleRegionsMatch = async () => {
+    const sets = await page.evaluate(() => ({
+      fills: [...document.querySelectorAll('#normalRegionColors .normal-region-color[data-wrap-canonical="1"]')]
+        .flatMap(path => (path.dataset.regions || '').split(' ').filter(Boolean)).sort(),
+      hits: [...document.querySelectorAll('#hitRegions .region-hit[data-wrap-canonical="1"]:not(.hidden)')]
+        .map(path => path.dataset.region).sort(),
+    }));
+    expect(sets.fills).toEqual(sets.hits);
+  };
+
+  await capture();
+  await search.dispatchEvent('input');
+  expect(await stats()).toEqual({sameNode: true, calls: 1, rebuilds: 0, skips: 1});
+  await expectVisibleRegionsMatch();
+
+  await capture();
+  await page.selectOption('#languageSel', 'ko');
+  expect(await stats()).toMatchObject({sameNode: true, rebuilds: 0, skips: 1});
+
+  await capture();
+  await search.fill('Ontario');
+  expect(await stats()).toMatchObject({sameNode: false, rebuilds: 1, skips: 0});
+  await expectVisibleRegionsMatch();
+
+  await capture();
+  await search.dispatchEvent('input');
+  expect(await stats()).toEqual({sameNode: true, calls: 1, rebuilds: 0, skips: 1});
+
+  await capture();
+  await page.selectOption('#languageSel', 'en');
+  expect(await stats()).toMatchObject({sameNode: true, rebuilds: 0, skips: 1});
+  await expectVisibleRegionsMatch();
+
+  await capture();
+  await page.selectOption('#baseMode', 'plain');
+  expect(await stats()).toMatchObject({sameNode: false, rebuilds: 1});
+  await expectVisibleRegionsMatch();
+
+  await capture();
+  await search.fill('');
+  expect(await stats()).toMatchObject({sameNode: false, rebuilds: 1});
+  await expectVisibleRegionsMatch();
+
+  await capture();
+  await page.locator('[data-map-view-wrap-toggle]').click();
+  expect(await stats()).toMatchObject({sameNode: false, rebuilds: 1});
+  await expect(layer.locator('.normal-region-color-copy')).toHaveCount(3);
+  await expectVisibleRegionsMatch();
+
+  await capture();
+  await search.dispatchEvent('input');
+  expect(await stats()).toEqual({sameNode: true, calls: 1, rebuilds: 0, skips: 1});
+
+  await capture();
+  await page.selectOption('#scenarioSel', '2070');
+  expect((await stats()).rebuilds).toBeGreaterThan(0);
+  expect((await stats()).sameNode).toBe(false);
+  await expectVisibleRegionsMatch();
+
+  await capture();
+  await search.dispatchEvent('input');
+  expect(await stats()).toEqual({sameNode: true, calls: 1, rebuilds: 0, skips: 1});
+
+  await search.fill('zzzz-no-such-region');
+  await expect(layer.locator('.normal-region-color')).toHaveCount(0);
+  await capture();
+  await search.dispatchEvent('input');
+  expect(await stats()).toEqual({sameNode: true, calls: 1, rebuilds: 0, skips: 1});
+  await expectVisibleRegionsMatch();
+});

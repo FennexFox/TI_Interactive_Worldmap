@@ -101,6 +101,86 @@ class VerifyGeneratedOutputsTests(unittest.TestCase):
         ):
             verify_generated_outputs.scenario_bundle_value({}, "unknown.generated.json")
 
+    def test_broken_earth_claim_requires_projectless_bucket(self):
+        claims_by_nation = {
+            "PAK": {"projects": []},
+            "AFG": {"capitalRegions": ["Afghanistan"]},
+        }
+
+        with self.assertRaisesRegex(
+            verify_generated_outputs.VerificationFailure,
+            "PAK missing projectless claims bucket",
+        ):
+            verify_generated_outputs.verify_broken_earth_chain_claim(
+                claims_by_nation,
+                {"Afghanistan": "AFG"},
+                "PAK",
+                "Afghanistan",
+                "AFG",
+            )
+
+    def test_broken_earth_claim_requires_explicit_empty_project_id(self):
+        missing = object()
+        malformed_project_ids = (missing, None, False, 0, [])
+        for project_id in malformed_project_ids:
+            with self.subTest(project_id=project_id):
+                project = {
+                    "claims": {
+                        "Afghanistan": {
+                            "currentOwner": "AFG",
+                            "hostileClaim": True,
+                        },
+                    },
+                }
+                if project_id is not missing:
+                    project["project"] = project_id
+                claims_by_nation = {
+                    "PAK": {"projects": [project]},
+                    "AFG": {"capitalRegions": ["Afghanistan"]},
+                }
+
+                with self.assertRaisesRegex(
+                    verify_generated_outputs.VerificationFailure,
+                    "PAK missing projectless claims bucket",
+                ):
+                    verify_generated_outputs.verify_broken_earth_chain_claim(
+                        claims_by_nation,
+                        {"Afghanistan": "AFG"},
+                        "PAK",
+                        "Afghanistan",
+                        "AFG",
+                    )
+
+    def test_broken_earth_claim_requires_matching_region_owner(self):
+        claims_by_nation = {
+            "PAK": {
+                "projects": [
+                    {
+                        "project": "",
+                        "claims": {
+                            "Afghanistan": {
+                                "currentOwner": "AFG",
+                                "hostileClaim": True,
+                            },
+                        },
+                    },
+                ],
+            },
+            "AFG": {"capitalRegions": ["Afghanistan"]},
+        }
+
+        with self.assertRaisesRegex(
+            verify_generated_outputs.VerificationFailure,
+            "region map must assign Afghanistan to AFG",
+        ):
+            verify_generated_outputs.verify_broken_earth_chain_claim(
+                claims_by_nation,
+                {"Afghanistan": "PAK"},
+                "PAK",
+                "Afghanistan",
+                "AFG",
+            )
+
     def test_collector_failure_does_not_discard_later_diagnostics(self):
         root = self.make_root()
         syntax_diagnostic = verify_generated_outputs.Diagnostic(
