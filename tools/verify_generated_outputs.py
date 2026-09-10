@@ -260,7 +260,7 @@ def verify_broken_earth_chain_claim(
         (
             project
             for project in list_value(nation_claims.get("projects"))
-            if isinstance(project, dict) and not project.get("project")
+            if isinstance(project, dict) and project.get("project") == ""
         ),
         {},
     )

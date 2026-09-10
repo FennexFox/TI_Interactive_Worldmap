@@ -291,6 +291,23 @@ test('map marker renderer owns capital render keys and lifecycle without semanti
   assert.equal(renderer.render(baseContext), false);
 }));
 
+test('map marker lifecycle accepts absent and partially configured layers', () => withFakeDom(() => {
+  const emptyRenderer = createMapMarkerRenderer();
+  assert.equal(emptyRenderer.clear(), false);
+  assert.equal(emptyRenderer.reset(), false);
+  assert.equal(emptyRenderer.destroy(), true);
+  assert.equal(emptyRenderer.destroy(), false);
+
+  for (const operation of ['clear', 'reset', 'destroy']) {
+    const selectionLayer = new FakeNode('g');
+    selectionLayer.appendChild(new FakeNode('path'));
+    const renderer = createMapMarkerRenderer({selectionLayer});
+    assert.equal(renderer[operation](), true);
+    assert.equal(selectionLayer.childNodes.length, 0);
+    assert.equal(renderer.clear(), false);
+  }
+}));
+
 test('map marker selection reuses a stable snapshot and detects mutable geometry and callbacks', () => withFakeDom(() => {
   const selectionLayer = new FakeNode('g');
   const recorder = statRecorder();
