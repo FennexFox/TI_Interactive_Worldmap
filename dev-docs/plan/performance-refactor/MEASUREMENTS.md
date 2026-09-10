@@ -149,3 +149,8 @@ The authoritative baseline was rerun from built ffb1fdb after candidate4 with `t
 All10 equal-language samples retained node identity and recorded0 rebuilds/1 skip. The changed-language samples rebuilt correct labels. Wrap transition still clears renderer lifecycle state and builds required copies, then skips the redundant second render. One snapshot per layer compares ordered effective region paths/names, resolved label coordinates/text and capital-dot visibility, and normalized world-copy values. It recomputes cheap callback outputs each attempt, then builds SVG from captured values only on change. Clear (even empty), reset and destroy invalidate. Geometry is never serialized into a key.
 
 Selection counts are the evidence; the small synchronous refresh timing samples include all UI work, debug overhead and concurrent browser test load in the after run, and do not establish latency/paint/FPS improvement. Benefit is bounded by selected-region count. WSL build/verify78JS+53Python, full lint and17 focused pins/language/scenario/selection browser checks passed. Unit checks isolate mutable path/position/localization/capital inputs, order/multiplicity, copy values, independent layers, force, null labels and lifecycle invalidation. No human visual review.
+
+
+## Final integration
+
+All candidates1–5 are complete. Final source build/verify passed78JavaScript+53Python tests, full JS/Python/shell lint passed, and full Playwright passed82/82. Generated consistency and strict10-phase plan validation passed. PR #101 against develop includes all candidate commits and rebuilt9 browser modules. Per-candidate timing limitations above still apply; no real-device latency, FPS or human visual-review claim.

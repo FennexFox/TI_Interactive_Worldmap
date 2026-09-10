@@ -42,12 +42,16 @@
 
 ## Progress
 
-- Planned; source investigation and baseline are pending.
+- Completed candidates3–5 in commits18bbb03, ffb1fdb and9284cd1. Source and rebuilt assets pushed to perf_refactor; PR #101 updated to describe all five candidates.
+- Final source WSL build and verify passed78 JavaScript +53 Python tests. Full lint passed. Full Playwright suite passed82/82 (1.1m); generated consistency check passed. Final documentation diff and strict phase-plan validation complete the handoff.
 
 ## Decision log
 
-- User authorized remaining candidates; prior scope deferrals are superseded. Keep candidate measurements and commits separate.
+- User authorized remaining candidates; prior scope deferrals are superseded. Candidate measurements and commits stayed separate.
+- Reused final source build from phase9; subsequent changes were tests and documentation. Final verify/lint/full browser tests cover the completed source. PR updated through REST because gh pr edit previously failed on the deprecated classic-project GraphQL field.
 
 ## Outcomes / Retrospective
 
-- Pending execution and validation; no performance claim yet.
+- All five candidates are implemented, measured and covered by regression checks. Candidate3 preserves all24 query/limit signatures; wheel burst viewBox writes40→1 and bounded debug-off trace Layout40→1 with unchanged final viewBox; identical selection construction1→0 and wrap construction2→1 with matching paths/labels. Details and limits are in MEASUREMENTS.md.
+- Validation logs: /tmp/ti-selection-build.log, /tmp/ti-final-verify.log, /tmp/ti-final-lint.log, /tmp/ti-final-e2e.log. Focused suites also passed; their initial failures and fixes are recorded in each phase. No human visual review or real-device input latency study was performed. No deployment.
+- Browser module9 generated artifacts are rebuilt output, not hand edits. Existing branch HANDOUT/AGENTS commits are preserved. PR remains open against develop.
