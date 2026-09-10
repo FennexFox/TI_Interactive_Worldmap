@@ -62,6 +62,101 @@ test('map view controller refreshes wrapped copy offsets when reset changes worl
   expect(attributes.viewBox).toBe('0 0 720 180');
 });
 
+test('map view controller batches wheel DOM writes while preserving sequential zoom state', () => {
+  const attributes = {};
+  const frames = [];
+  let cancellations = 0;
+  const rect = {left: 10, top: 20, width: 800, height: 400};
+  const svg = {
+    classList: {toggle() {}},
+    getBoundingClientRect() {
+      return rect;
+    },
+    setAttribute(name, value) {
+      attributes[name] = value;
+    },
+  };
+  const controller = createMapViewController({
+    svg,
+    activeData: sampleActiveData([0, 0, 360, 180]),
+    location: {search: '?worldWrap=0'},
+    scheduleMapViewRender: context => frames.push(context),
+    cancelMapViewRender: () => { cancellations += 1; },
+  });
+  const expected = initializeMapView(sampleActiveData([0, 0, 360, 180]));
+  const wheelEvents = [
+    {clientX: 120, clientY: 150, deltaY: -1},
+    {clientX: 240, clientY: 190, deltaY: -1},
+    {clientX: 640, clientY: 250, deltaY: 1},
+  ];
+
+  for (const [index, event] of wheelEvents.entries()) {
+    if (index === 1) {
+      rect.left = 30;
+      rect.top = 10;
+      rect.width = 640;
+      rect.height = 320;
+    }
+    let prevented = false;
+    controller.onWheel({...event, preventDefault: () => { prevented = true; }});
+    expect(prevented).toBe(true);
+    const anchorX = expected.x + ((event.clientX - rect.left) / rect.width) * expected.width;
+    const anchorY = expected.y + ((event.clientY - rect.top) / rect.height) * expected.height;
+    zoomMapView(expected, {
+      scale: event.deltaY < 0 ? 1 / 1.18 : 1.18,
+      anchorX,
+      anchorY,
+      normalizeX: false,
+    });
+  }
+
+  expect(frames).toEqual([{isWheel: true}, {isWheel: true}, {isWheel: true}]);
+  expect(attributes.viewBox).toBeUndefined();
+  controller.apply(frames.at(-1));
+  expect(attributes.viewBox).toBe(formatViewBoxForMapView(expected));
+  expect(cancellations).toBe(1);
+});
+
+test('map view controller cancels queued wheel renders for synchronous controls and destroy', () => {
+  const writes = [];
+  const frames = new Map();
+  let frameId = 0;
+  const svg = {
+    classList: {toggle() {}},
+    getBoundingClientRect() {
+      return {left: 0, top: 0, width: 800, height: 400};
+    },
+    setAttribute(name, value) {
+      writes.push({name, value});
+    },
+  };
+  const controller = createMapViewController({
+    svg,
+    activeData: sampleActiveData([0, 0, 360, 180]),
+    scheduleMapViewRender: context => frames.set(++frameId, context),
+    cancelMapViewRender: () => {
+      const hadPendingRender = frames.size > 0;
+      frames.clear();
+      return hadPendingRender;
+    },
+  });
+
+  controller.onWheel({clientX: 100, clientY: 100, deltaY: -1, preventDefault() {}});
+  controller.zoomAt(1 / 1.25);
+  expect(frames.size).toBe(0);
+  expect(writes).toHaveLength(1);
+  controller.reset();
+  expect(writes).toHaveLength(2);
+  controller.onWheel({clientX: 100, clientY: 100, deltaY: -1, preventDefault() {}});
+  controller.setWorldWrapEnabled(true);
+  expect(frames.size).toBe(0);
+  expect(writes).toHaveLength(3);
+  controller.onWheel({clientX: 100, clientY: 100, deltaY: -1, preventDefault() {}});
+  controller.destroy();
+  expect(frames.size).toBe(0);
+  expect(writes).toHaveLength(3);
+});
+
 test('normalizes positive and negative horizontal offsets by whole world widths', () => {
   const mapView = createMapViewState({
     x: -3,

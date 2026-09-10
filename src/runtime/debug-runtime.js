@@ -45,6 +45,7 @@ const RENDER_STAT_KEYS = Object.freeze([
   'gridRenderMsTotal',
   'gridRenderMsMax',
   'panViewBoxApplyCount',
+  'wheelViewBoxApplyCount',
   'gridRebuildsDuringPan',
   'panSvgRectReads',
   'visibleSvgNodeCount',
@@ -89,6 +90,8 @@ const RENDER_STAT_KEYS = Object.freeze([
   'debugLabelsDisabled',
   'debugCanonicalHitPaths',
   'selectionOutlinePathCount',
+  'selectionOutlineRebuilds',
+  'selectionOutlineRenderSkips',
   'hoverOutlinePathCount',
   'hoverClaimPreviewOverlayPathCount',
   'manualEnvelopeOverlayPathCount',
@@ -107,6 +110,8 @@ const RENDER_STAT_KEYS = Object.freeze([
   'scenarioRefreshRuns',
   'languageRefreshRuns',
   'baseColorRenderCalls',
+  'baseColorRebuilds',
+  'baseColorRenderSkips',
   'regionGeometryRenderCalls',
 ]);
 

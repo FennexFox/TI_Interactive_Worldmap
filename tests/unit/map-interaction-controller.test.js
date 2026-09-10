@@ -244,6 +244,37 @@ test('resetContext cancels hover, tooltip, pan, and render frames before they ca
   assert.equal(mapViewRuns, 0);
 });
 
+test('shared map view scheduler merges wheel and pan work into one frame', () => {
+  const renderContexts = [];
+  const harness = createHarness({
+    onMapViewRender: context => renderContexts.push(context),
+  });
+  const {controller, frames, hit, svg} = harness;
+  controller.bind();
+
+  controller.scheduleMapViewRender({isWheel: true});
+  svg.dispatch('pointerdown', {
+    button: 0,
+    clientX: 0,
+    clientY: 0,
+    pointerId: 1,
+  });
+  svg.dispatch('pointermove', {
+    clientX: 20,
+    clientY: 0,
+    pointerId: 1,
+    preventDefault() {},
+    target: hit,
+  });
+
+  assert.equal(frames.size, 1);
+  [...frames.values()][0]();
+  assert.equal(renderContexts.length, 1);
+  assert.equal(renderContexts[0].isWheel, true);
+  assert.equal(renderContexts[0].isPan, true);
+  assert.equal(Number.isFinite(renderContexts[0].scheduledAt), true);
+});
+
 test('hit events use the current context and drag suppression consumes one click', () => {
   const entered = [];
   const clicked = [];

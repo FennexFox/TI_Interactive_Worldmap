@@ -111,6 +111,21 @@ export function renderNationDropdown({
   return normalizedIndex;
 }
 
+export function updateNationDropdownHighlight({
+  dropdown,
+  highlightedIndex = -1,
+} = {}) {
+  if (!dropdown) return highlightedIndex;
+  const options = [...dropdown.querySelectorAll('.searchOption[data-index]')];
+  const normalizedIndex = options.length
+    ? Math.max(-1, Math.min(options.length - 1, highlightedIndex))
+    : -1;
+  options.forEach((option, index) => {
+    option.classList.toggle('active', index === normalizedIndex);
+  });
+  return normalizedIndex;
+}
+
 export function renderSearchResults({
   root,
   nationMatches = [],
@@ -143,12 +158,11 @@ export function bindNationSearchControl({
   onSelectedNationCleared,
   openDropdown,
   closeDropdown,
-  renderDropdown,
+  refreshDropdown,
   applyFilters,
-  getChoiceCount,
   getDropdownOpen,
   getHighlightedIndex,
-  setHighlightedIndex,
+  moveDropdownHighlight,
   chooseDropdown,
   focusNationFromSearch,
 } = {}) {
@@ -160,25 +174,18 @@ export function bindNationSearchControl({
     if (selectedNation && parseNationSearchValue(search.value) !== selectedNation) {
       onSelectedNationCleared?.();
     }
-    openDropdown?.();
-    setHighlightedIndex?.(getChoiceCount?.() ? 0 : -1);
-    renderDropdown?.();
+    refreshDropdown?.();
     applyFilters?.(true);
   };
   const onKeyDown = event => {
     if (event.key === 'ArrowDown') {
       event.preventDefault();
       if (!getDropdownOpen?.()) openDropdown?.();
-      const currentIndex = getHighlightedIndex?.() ?? -1;
-      setHighlightedIndex?.(Math.min((getChoiceCount?.() || 0) - 1, currentIndex + 1));
-      renderDropdown?.();
+      moveDropdownHighlight?.(1);
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
       if (!getDropdownOpen?.()) openDropdown?.();
-      const currentIndex = getHighlightedIndex?.() ?? -1;
-      const count = getChoiceCount?.() || 0;
-      setHighlightedIndex?.(count > 0 ? Math.max(0, currentIndex - 1) : -1);
-      renderDropdown?.();
+      moveDropdownHighlight?.(-1);
     } else if (event.key === 'Enter') {
       if (getDropdownOpen?.() && (getHighlightedIndex?.() ?? -1) >= 0) {
         event.preventDefault();
