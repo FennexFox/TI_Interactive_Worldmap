@@ -38,21 +38,23 @@
 
 ## Evidence
 
-- Baseline: Pending phase evidence
-- After: Pending phase evidence
-- Delta: Pending phase evidence
-- Interpretation: Pending phase evidence
-- Commit: Pending phase evidence
-- Commit blocker: Pending phase evidence
+- Baseline: 463e594 browser sources; complete distributions and counters in MEASUREMENTS.md.
+- After: Built source 47da157; 84 full-suite e2e tests and two additional headed interaction tests passed. Build/verify passed 85 JS and 54 Python unit tests; JS lint and diff whitespace checks passed.
+- Delta: Drag P95 and drag/wheel maxima improve; no >50 ms samples in final run. Wheel P95 caveat and lack of reproduction of the historical >100 ms spike explicitly documented.
+- Interpretation: Complete for implemented rendering and measurement scope, with bounded environment-specific evidence; no universal FPS/P95 claim.
+- Commit: Final evidence/audit commit follows gate.
+- Commit blocker: None.
 
 ## Progress
 
-- Planned; awaiting gate.
+- Full regression and headed checks passed. Six headed screenshots inspected (wrap off/on × zoom 0/3/6), confirming four pins and marker readability after actual pans. Headed tests additionally cover wheel, restoration, unpin, and scenario transitions.
 
 ## Decision log
 
-- Preserve semantics and isolate phase commits.
+- User requested branch isolation: moved plan commit and dirty work to fix/issue-103-frame-performance, restored develop to 463e594, and committed all later work only on the feature branch.
+- User authorized reporting via remote issue comments; publish concrete results there after final audit. No push, merge, or issue closure requested.
+- Review questioned diagnostic unitless dashes versus production px notation; direct Chromium computed-style checks confirmed identical values (4px, 3px and 1px, 3px). No rerun needed; final-site measurements used shipped CSS without overrides.
 
 ## Outcomes / Retrospective
 
-- Pending execution.
+- Complete. No computation-cache follow-up is justified by these input counters. Historical >100 ms wheel reproduction and other-device performance remain explicit evidence limits, not claimed results.
