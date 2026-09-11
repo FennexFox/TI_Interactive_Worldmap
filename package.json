@@ -15,6 +15,7 @@
     "verify": "python -m compileall -q tools && npm run test:unit && python tools/verify_generated_outputs.py",
     "test:e2e": "playwright test",
     "measure:render-stats": "node tools/measure_debug_render_stats.mjs",
+    "measure:interaction-frames": "node tools/measure_interaction_frames.mjs",
     "rebuild:game": "python tools/rebuild_pages.py",
     "deploy": "python tools/rebuild_pages.py --push"
   },

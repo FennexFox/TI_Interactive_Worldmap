@@ -38,16 +38,16 @@
 
 ## Evidence
 
-- Baseline: Pending phase evidence
-- After: Pending phase evidence
-- Delta: Pending phase evidence
-- Interpretation: Pending phase evidence
-- Commit: Pending phase evidence
-- Commit blocker: Pending phase evidence
+- Baseline: Unchanged browser source 463e594; three repeats recorded in MEASUREMENTS.md, four pins and 112 paths reproduced.
+- After: Shared opt-in collector integrated into existing render-stat tool and new actual-input runner. Six unit tests and JS lint pass; WSL build/verify passed (82 JS + 54 Python tests at that time). Existing-tool smoke run passed with five pan and six zoom post-update samples.
+- Delta: Adds full-input and post-update RAF distributions, preserving model/rebuild counters; no production rendering change.
+- Interpretation: Instrumentation only. Baseline selected drag P95 35.28 ms/max 83.6 ms; wheel P95 33.01 ms/max 75.9 ms (full windows). Both model/rebuild counters remain zero.
+- Commit: Phase-sized tooling commit follows gate.
+- Commit blocker: None.
 
 ## Progress
 
-- Planned; awaiting gate.
+- Implemented and baseline measured. Existing-tool smoke run checks shared collector integration.
 
 ## Decision log
 
@@ -55,4 +55,4 @@
 
 ## Outcomes / Retrospective
 
-- Pending execution.
+- Instrumentation only; rendering comparison remains phase 2.

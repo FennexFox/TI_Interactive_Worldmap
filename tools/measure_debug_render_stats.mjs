@@ -6,6 +6,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { chromium } from 'playwright';
+import { measureFrameIntervals } from './frame-intervals.mjs';
 
 const DEFAULT_PORT = 4175;
 const DEFAULT_OUT_DIR = '.chatgpt/tool-tests/render-stats';
@@ -24,6 +25,10 @@ const SUMMARY_COLUMNS = [
   'panFrameMsTotal',
   'panFrameMsAvg',
   'panFrameMsMax',
+  'panRafFullInput',
+  'panRafPostUpdate',
+  'zoomRafFullInput',
+  'zoomRafPostUpdate',
   'mapViewApplyMsMax',
   'visibleSvgNodeCount',
   'claimOverlayPathCount',
@@ -654,6 +659,10 @@ function summarize(results) {
     panFrameMsTotal: item.stats?.panFrameMsTotal,
     panFrameMsAvg: item.stats?.panFrameMsCount ? Number((item.stats.panFrameMsTotal / item.stats.panFrameMsCount).toFixed(3)) : 0,
     panFrameMsMax: item.stats?.panFrameMsMax,
+    panRafFullInput: JSON.stringify(item.panFrames?.fullInput),
+    panRafPostUpdate: JSON.stringify(item.panFrames?.postUpdate),
+    zoomRafFullInput: JSON.stringify(item.zoomFrames?.fullInput),
+    zoomRafPostUpdate: JSON.stringify(item.zoomFrames?.postUpdate),
     mapViewApplyMsMax: item.stats?.mapViewApplyMsMax,
     visibleSvgNodeCount: item.stats?.visibleSvgNodeCount,
     claimOverlayPathCount: item.stats?.claimOverlayPathCount,
@@ -866,10 +875,11 @@ async function main() {
           const setupStats = await captureSetupStats(page);
           const interactionStats = await captureInteractionProbes(page, scenario);
           await resetStats(page);
-          const center = await zoomMap(page, zoomSteps);
+          const zoomFrames = await measureFrameIntervals(page, () => zoomMap(page, zoomSteps));
+          const center = zoomFrames.value;
           const zoomStats = await captureStats(page);
           await resetStats(page);
-          await panMap(page, center, args.panSteps);
+          const panFrames = await measureFrameIntervals(page, () => panMap(page, center, args.panSteps));
           const stats = await captureStats(page);
           const viewBox = await page.locator('#map').getAttribute('viewBox');
           results.push({
@@ -883,6 +893,8 @@ async function main() {
             setupStats,
             interactionStats,
             zoomStats,
+            zoomFrames,
+            panFrames,
             stats,
           });
         }
