@@ -41,7 +41,7 @@
 - Baseline: MEASUREMENTS.md records unchanged source 463e594, three repetitions per selection/input condition.
 - After: Differentiated 4px/3px normal and 1px/3px overlap dashes; capital-star filter removed while existing SVG shadows, fills, strokes and hatching remain. Three-repeat dash/permanent/transient comparisons and final built-site run recorded.
 - Delta: Full-window selected drag P95 35.28→18.60 ms, max 83.6→30.5 ms; wheel max 75.9→36.7 ms and >50 ms samples 8→0. Wheel full-window P95 essentially unchanged, post-update P95 increased (documented).
-- Interpretation: Measured drag and wheel long-tail improvement, not a universal P95/FPS claim. Existing SVG shadow is adequate; temporary mode offered no consistent benefit and was not implemented.
+- Interpretation: Measured drag and wheel long-tail improvement, not a universal P95/FPS claim. Review follow-up: the existing same-points SVG shadow needs a wider outer stroke for contrast; temporary mode offered no consistent benefit and was not implemented.
 - Commit: Rendering phase commit follows gate.
 - Commit blocker: None.
 
@@ -51,7 +51,7 @@
 
 ## Decision log
 
-- Preserve existing widths/depth colors/hostile hatch/base filters and marker geometry; change only two dash patterns and redundant capital filters. No production timer/RAF lifecycle changes.
+- Preserve existing widths/depth colors/hostile hatch/base filters and marker geometry; change only two dash patterns and capital filters. No production timer/RAF lifecycle changes.
 
 ## Outcomes / Retrospective
 

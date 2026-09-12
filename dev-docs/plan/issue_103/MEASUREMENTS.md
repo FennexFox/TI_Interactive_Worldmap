@@ -1,12 +1,14 @@
 # Issue #103 frame measurements
 
+These tables record the pre-review implementation and its two-trailing-RAF measurement window. PR #104 review fixes extend that window to three trailing RAFs to capture both post-update intervals when the collector runs before the final map update. The marker shadow also gains an outer stroke for contrast. The historical timings below have not been rerun for those changes and do not establish their performance.
+
 Baseline browser source: `463e594`. Tooling is opt-in and adds no instrumentation to normal app use.
 
 Command: `npm run measure:interaction-frames -- /tmp/issue103-baseline.json --repeats=3` against docs served on port 4178.
 
 Environment: Chromium 149.0.7827.55, headless, WSL, viewport 1440×1000, 2026, all claims, world wrap off, three zoom-in button clicks. Four pins: Beijing → SouthThailand → MalayPeninsula → Java; 112 envelope paths. A fresh page per interaction/repetition; selection order alternates per repetition. Drag: 60 actual mouse moves over 360 px with a 30 px sine arc. Wheel: 36 actual wheel events, alternating six-event blocks of ±100, same pointer anchor, no explicit sleep. Setup clicks Beijing's hit layer and the three reachable-candidate rows.
 
-Two priming RAFs are excluded. Observation covers the input action and two trailing RAFs. `postUpdate` includes the first two intervals following a changed viewBox, deduplicating overlapping windows; this covers callback ordering in the update frame and the subsequent paint opportunity. Intervals use performance.now inside callbacks. These are scheduling/paint-pressure proxies, not direct paint duration or guaranteed display FPS. Percentiles interpolate pooled raw samples, not per-run percentiles. Each stop disconnects the MutationObserver and cancels RAF, including errors.
+Two priming RAFs are excluded. Observation covers the input action and two trailing RAFs. `postUpdate` includes the first two intervals following a changed viewBox, deduplicating overlapping windows; the original two-trailing-RAF window could miss the second interval for the final update when the collector ran first. Intervals use performance.now inside callbacks. These are scheduling/paint-pressure proxies, not direct paint duration or guaranteed display FPS. Percentiles interpolate pooled raw samples, not per-run percentiles. Each stop disconnects the MutationObserver and cancels RAF, including errors.
 
 ## Baseline
 
@@ -42,7 +44,7 @@ All candidates were measured against unchanged deployment styles using diagnosti
 | transient | wheel36 | fullInput | 345 | 17.974 | 17.1 | 34.5 | 44.6 | 24 (6.96%) | 0 (0.00%) |
 | transient | wheel36 | postUpdate | 216 | 19.622 | 18.05 | 35.6 | 44.6 | 24 (11.11%) | 0 (0.00%) |
 
-Decision: retain the existing SVG shadow polygons and remove their redundant capital-star drop-shadow filters permanently. The transient candidate offered no consistent frame advantage and would add restoration/timer state. Keep long normal dashes and short overlap dashes, all existing widths/depth colors/hatching/fills. Candidate wheel P95 and >33.34 ms ratio do not improve: report this explicitly. Lower >50 ms tails and shorter complete wheel-input windows demonstrate a narrower benefit; changing idle-sample proportions makes overall means misleading.
+Decision: retain the existing SVG shadow polygons and remove capital-star drop-shadow filters permanently. Review found that the same-points shadow fill alone did not preserve outer contrast; the follow-up adds a wider SVG shadow stroke. The transient candidate offered no consistent frame advantage and would add restoration/timer state. Keep long normal dashes and short overlap dashes, all existing widths/depth colors/hatching/fills. Candidate wheel P95 and >33.34 ms ratio do not improve: report this explicitly. Lower >50 ms tails and shorter complete wheel-input windows demonstrate a narrower benefit; changing idle-sample proportions makes overall means misleading.
 
 ## Final built site
 

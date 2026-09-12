@@ -227,11 +227,11 @@
 
   #capitalMarkers { pointer-events:none; opacity:1; mix-blend-mode:normal; }
   .capital-marker { pointer-events:none; opacity:1; }
-  .capital-star-shadow { fill:rgba(45,25,0,.74); stroke:none; stroke-width:0; stroke-linejoin:round; vector-effect:non-scaling-stroke; }
-  /* The existing shadow polygon provides contrast without a raster filter on
-     every capital, pinned capital, and reachable candidate during zoom. */
+  .capital-star-shadow { fill:rgba(45,25,0,.74); stroke:rgba(20,12,2,.96); stroke-width:4.5px; stroke-linejoin:round; vector-effect:non-scaling-stroke; paint-order:stroke fill; }
+  /* A wider, dark outline keeps every capital, pinned capital, and reachable
+     candidate readable without a raster filter during zoom. */
   .capital-star { fill:rgba(255,184,61,.12); stroke:#ffd84d; stroke-width:1.75px; stroke-linejoin:round; vector-effect:non-scaling-stroke; paint-order:stroke fill; filter:none; }
-  .capital-marker.is-selected .capital-star-shadow { fill:rgba(59,33,0,.82); stroke:none; stroke-width:0; }
+  .capital-marker.is-selected .capital-star-shadow { fill:rgba(59,33,0,.82); stroke:rgba(20,12,2,.98); stroke-width:5px; }
   .capital-marker.is-selected .capital-star { fill:rgba(255,184,61,.86); stroke:#fff1a8; stroke-width:2px; }
   svg.is-panning #capitalMarkers *,
   svg.is-panning #pinnedRegionMarkers *,

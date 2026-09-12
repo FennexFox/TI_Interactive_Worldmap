@@ -7,9 +7,43 @@ import {
   waitForAnimationFrames,
 } from '../fixtures/app.js';
 
+async function inspectMarkerContrast(page, selector, label) {
+  const marker = await page.evaluate(selector => {
+    const node = document.querySelector(selector);
+    const star = node?.querySelector('.capital-star');
+    const shadow = node?.querySelector('.capital-star-shadow');
+    const starStyle = star ? getComputedStyle(star) : null;
+    const shadowStyle = shadow ? getComputedStyle(shadow) : null;
+    return {
+      count: document.querySelectorAll(selector).length,
+      points: star?.getAttribute('points') || '',
+      shadowPoints: shadow?.getAttribute('points') || '',
+      stroke: shadowStyle?.stroke || '',
+      strokeOpacity: shadowStyle?.strokeOpacity || '',
+      strokeWidth: shadowStyle?.strokeWidth || '',
+      starStrokeWidth: starStyle?.strokeWidth || '',
+      vectorEffect: shadowStyle?.vectorEffect || '',
+    };
+  }, selector);
+  expect(marker.count, `${label} marker count`).toBeGreaterThan(0);
+  expect(marker.points, `${label} polygon geometry`).toBe(marker.shadowPoints);
+  expect(marker.stroke, `${label} shadow stroke`).not.toBe('none');
+  const channels = marker.stroke.match(/\d+(?:\.\d+)?/g)?.map(Number) || [];
+  expect(channels.length).toBeGreaterThanOrEqual(3);
+  expect(channels[3] ?? 1, `${label} stroke alpha`).toBeGreaterThan(0);
+  expect(Math.max(...channels.slice(0, 3)), `${label} shadow darkness`).toBeLessThan(100);
+  expect(parseFloat(marker.strokeOpacity), `${label} shadow opacity`).toBeGreaterThan(0);
+  expect(marker.vectorEffect, `${label} stroke scaling`).toBe('non-scaling-stroke');
+  expect(parseFloat(marker.strokeWidth), `${label} outer width`)
+    .toBeGreaterThan(parseFloat(marker.starStrokeWidth));
+}
+
 async function selectFourCapitalChain(page) {
   await page.locator('#hitRegions .region-hit[data-region="Beijing"][data-wrap-canonical="1"]')
     .dispatchEvent('click', {bubbles: true});
+  await waitForAnimationFrames(page, 2);
+  await inspectMarkerContrast(page, '#capitalMarkers .capital-marker', 'normal capital');
+  await inspectMarkerContrast(page, '#reachableCapitalCandidates .reachable-capital-candidate', 'reachable candidate');
   for (const region of ['SouthThailand', 'MalayPeninsula', 'Java']) {
     await page.locator(`#reachableCandidatesPanel [data-candidate-focus="${region}"]`).click();
     await waitForAnimationFrames(page, 2);
@@ -55,6 +89,7 @@ async function inspectEnvelopeAndMarkers(page) {
   expect(result.depth0Stroke).not.toBe('');
   expect(result.depth1Stroke).not.toBe('');
   expect(result.depth0Stroke).not.toBe(result.depth1Stroke);
+  expect(result.hostileHatches.length).toBeGreaterThan(0);
   for (const hatch of result.hostileHatches) {
     expect(hatch.opacity).not.toBe('0');
     expect(hatch.fill).toContain('url(');

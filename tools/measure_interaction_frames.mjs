@@ -2,13 +2,18 @@
 // SPDX-License-Identifier: MIT
 
 // Build/serve docs first, then run:
-// node tools/measure_interaction_frames.mjs OUTPUT.json [BASE_URL] [--repeats=3] [--variant=baseline]
+// node tools/measure_interaction_frames.mjs OUTPUT.json [BASE_URL] [--repeats=3] [--variant=baseline] [--wrap=0|1|true|false|both]
 import {writeFile} from 'node:fs/promises';
 import {chromium} from 'playwright';
-import {measureFrameIntervals, poolIntervalSummaries} from './frame-intervals.mjs';
+import {
+  measureFrameIntervals,
+  parseWorldWrapArg,
+  poolIntervalSummaries,
+  TRAILING_RAF_COUNT,
+} from './frame-intervals.mjs';
 
 const positional = process.argv.slice(2).filter(arg => !arg.startsWith('--'));
-if (!positional[0]) throw new Error('Usage: node tools/measure_interaction_frames.mjs OUTPUT.json [BASE_URL] [--repeats=3] [--variant=baseline]');
+if (!positional[0]) throw new Error('Usage: node tools/measure_interaction_frames.mjs OUTPUT.json [BASE_URL] [--repeats=3] [--variant=baseline] [--wrap=0|1|true|false|both]');
 const outputPath = positional[0];
 const baseUrl = positional[1] || 'http://127.0.0.1:4178';
 const repeats = Number(process.argv.find(arg => arg.startsWith('--repeats='))?.split('=')[1] || 3);
@@ -117,9 +122,8 @@ async function wheel(page) {
 const inputs = {drag60: drag, wheel36: wheel};
 const samples = [];
 try {
-  const wrapArg = process.argv.find(arg => arg.startsWith('--wrap='))?.split('=')[1] || '0';
-  if (!['0', '1', 'both'].includes(wrapArg)) throw new Error('--wrap must be 0, 1, or both');
-  const wrapValues = wrapArg === 'both' ? [false, true] : [wrapArg === '1' || wrapArg === 'true'];
+  const wrapArg = process.argv.find(arg => arg.startsWith('--wrap='))?.split('=')[1] ?? '0';
+  const wrapValues = parseWorldWrapArg(wrapArg);
   for (const worldWrap of wrapValues) {
     for (let repeat = 1; repeat <= repeats; repeat += 1) {
       for (const selected of repeat % 2 ? [false, true] : [true, false]) {
@@ -153,7 +157,9 @@ try {
     scenario: '2026',
     claimMode: 'all',
     zoomButtonSteps: 3,
-    observation: 'Two priming RAFs excluded; action and two trailing RAFs included. postUpdate is first two intervals following a changed viewBox (overlapping windows deduplicated), covering same-frame observer/RAF order and subsequent paint. performance.now callback intervals; linear interpolated percentiles pooled from raw samples.',
+    primingRafCount: 2,
+    trailingRafCount: TRAILING_RAF_COUNT,
+    observation: 'Two priming RAFs excluded; action and three trailing RAFs included. postUpdate is first two intervals following a changed viewBox (overlapping windows deduplicated), covering same-frame observer/RAF order and subsequent paint. performance.now callback intervals; linear interpolated percentiles pooled from raw samples.',
     inputProtocol: '60 drag moves over 360px with 30px sine arc; 36 wheel events, delta +/-100 alternating six-event blocks, mouse moved to same anchor each event; no explicit sleep. Selection order alternates per repeat. Setup uses Beijing hit-layer click and three candidate-panel clicks.',
     sampleCount: samples.length,
     samples,

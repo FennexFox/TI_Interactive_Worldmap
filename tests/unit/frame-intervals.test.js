@@ -6,10 +6,20 @@ import assert from 'node:assert/strict';
 import {
   installRafCollector,
   measureFrameIntervals,
+  parseWorldWrapArg,
   percentile,
   poolIntervalSummaries,
   summarizeIntervals,
 } from '../../tools/frame-intervals.mjs';
+
+test('world wrap accepts numeric and boolean aliases', () => {
+  assert.deepEqual(parseWorldWrapArg('0'), [false]);
+  assert.deepEqual(parseWorldWrapArg('false'), [false]);
+  assert.deepEqual(parseWorldWrapArg('1'), [true]);
+  assert.deepEqual(parseWorldWrapArg('true'), [true]);
+  assert.deepEqual(parseWorldWrapArg('both'), [false, true]);
+  assert.throws(() => parseWorldWrapArg('yes'), /--wrap must be/);
+});
 
 test('percentile interpolates sorted values and handles empty input', () => {
   assert.equal(percentile([], 0.5), null);
@@ -85,6 +95,13 @@ function fakeCollectorPage() {
     now += 10;
     callback();
   }
+  function frameBatch() {
+    const callbacks = [...rafs.values()];
+    assert.ok(callbacks.length, 'expected queued RAFs');
+    rafs.clear();
+    now += 10;
+    for (const callback of callbacks) callback();
+  }
   function mutateViewBox(value) {
     attributes.viewBox = value;
     observers.at(-1)?.callback([{type: 'attributes', attributeName: 'viewBox', target: svg}]);
@@ -97,7 +114,7 @@ function fakeCollectorPage() {
     globalThis.cancelAnimationFrame = original.cancelAnimationFrame;
     Object.defineProperty(globalThis, 'performance', {configurable: true, value: original.performance});
   }
-  return {page, frame, mutateViewBox, observers, rafs, canceled, restore};
+  return {page, frame, frameBatch, mutateViewBox, observers, rafs, canceled, restore};
 }
 
 test('RAF collector ignores unchanged viewBox and classifies numeric post-update intervals', async () => {
@@ -123,12 +140,17 @@ test('RAF collector ignores unchanged viewBox and classifies numeric post-update
 
 function wrapperPage(fake) {
   return {
-    evaluate: async callback => {
-      // Prime/trailing callbacks are intentionally controlled by the fake RAF
-      // scheduler in the action; their promise need not be driven here.
-      const source = String(callback);
-      if (source.includes('new Promise') && source.includes('requestAnimationFrame')) return undefined;
-      return callback();
+    evaluate: async (callback, argument) => {
+      const result = callback(argument);
+      if (!result?.then) return result;
+      let done = false;
+      result.then(() => { done = true; });
+      for (let index = 0; !done && index < 20; index += 1) {
+        await Promise.resolve();
+        if (!done) fake.frameBatch();
+      }
+      assert.equal(done, true);
+      return result;
     },
   };
 }
@@ -139,12 +161,10 @@ test('measureFrameIntervals returns numeric summaries and cleans up on action fa
     const page = wrapperPage(fake);
     const success = await measureFrameIntervals(page, async () => {
       fake.mutateViewBox('2 0 1 1');
-      fake.frame();
-      fake.frame();
       return 'done';
     });
     assert.equal(success.value, 'done');
-    assert.equal(success.fullInput.sampleCount, 2);
+    assert.equal(success.fullInput.sampleCount, 3);
     assert.equal(success.postUpdate.sampleCount, 2);
     assert.equal(success.postUpdate.mean, 10);
     await assert.rejects(
@@ -152,6 +172,19 @@ test('measureFrameIntervals returns numeric summaries and cleans up on action fa
       /input failed/
     );
     assert.equal(globalThis.window.__TI_FRAME_COLLECTOR__, undefined);
+  } finally {
+    fake.restore();
+  }
+});
+
+test('three trailing RAFs capture both intervals when app RAF follows collector RAF', async () => {
+  const fake = fakeCollectorPage();
+  try {
+    const result = await measureFrameIntervals(wrapperPage(fake), async () => {
+      requestAnimationFrame(() => fake.mutateViewBox('2 0 1 1'));
+    });
+    assert.equal(result.viewBoxMutations, 1);
+    assert.deepEqual(result.postUpdateIntervals, [10, 10]);
   } finally {
     fake.restore();
   }

@@ -11,6 +11,15 @@ export function percentile(values, rank) {
   return sorted[lower] + (sorted[upper] - sorted[lower]) * (position - lower);
 }
 
+export const TRAILING_RAF_COUNT = 3;
+
+export function parseWorldWrapArg(value = '0') {
+  if (value === 'both') return [false, true];
+  if (value === '0' || value === 'false') return [false];
+  if (value === '1' || value === 'true') return [true];
+  throw new Error('--wrap must be 0, 1, true, false, or both');
+}
+
 export function summarizeIntervals(intervals = []) {
   const values = intervals.filter(Number.isFinite);
   const round = value => value == null ? null : Number(value.toFixed(3));
@@ -82,8 +91,9 @@ export async function installRafCollector(page) {
   });
 }
 
-// Tool-side only: prime two RAFs, then observe the action through two trailing
-// RAFs so the last scheduled viewBox write and its following frame are included.
+// Tool-side only: prime two RAFs, then observe the action through three trailing
+// RAFs so the last scheduled viewBox write and its following two frames are included
+// even when the collector callback runs before the app callback.
 // postUpdate is the first two observed intervals after a changed viewBox, a scheduling
 // proxy that includes paint pressure, not a direct paint-duration measurement.
 export async function measureFrameIntervals(page, action) {
@@ -96,9 +106,14 @@ export async function measureFrameIntervals(page, action) {
       }));
     }));
     const value = await action();
-    await page.evaluate(() => new Promise(resolve => {
-      requestAnimationFrame(() => requestAnimationFrame(resolve));
-    }));
+    await page.evaluate(frameCount => new Promise(resolve => {
+      let remaining = frameCount;
+      function step() {
+        if (--remaining <= 0) resolve();
+        else requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }), TRAILING_RAF_COUNT);
     const raw = await page.evaluate(() => window.__TI_FRAME_COLLECTOR__.stop());
     const intervals = raw.intervals.map(item => item.dt);
     return {
