@@ -227,10 +227,12 @@
 
   #capitalMarkers { pointer-events:none; opacity:1; mix-blend-mode:normal; }
   .capital-marker { pointer-events:none; opacity:1; }
-  .capital-star-shadow { fill:rgba(45,25,0,.74); stroke:none; stroke-width:0; stroke-linejoin:round; vector-effect:non-scaling-stroke; }
-  .capital-star { fill:rgba(255,184,61,.12); stroke:#ffd84d; stroke-width:1.75px; stroke-linejoin:round; vector-effect:non-scaling-stroke; paint-order:stroke fill; filter:drop-shadow(0 0 1.25px rgba(255,216,77,.42)); }
-  .capital-marker.is-selected .capital-star-shadow { fill:rgba(59,33,0,.82); stroke:none; stroke-width:0; }
-  .capital-marker.is-selected .capital-star { fill:rgba(255,184,61,.86); stroke:#fff1a8; stroke-width:2px; filter:drop-shadow(0 0 2px rgba(255,184,61,.55)); }
+  .capital-star-shadow { fill:rgba(45,25,0,.74); stroke:rgba(20,12,2,.96); stroke-width:4.5px; stroke-linejoin:round; vector-effect:non-scaling-stroke; paint-order:stroke fill; }
+  /* A wider, dark outline keeps every capital, pinned capital, and reachable
+     candidate readable without a raster filter during zoom. */
+  .capital-star { fill:rgba(255,184,61,.12); stroke:#ffd84d; stroke-width:1.75px; stroke-linejoin:round; vector-effect:non-scaling-stroke; paint-order:stroke fill; filter:none; }
+  .capital-marker.is-selected .capital-star-shadow { fill:rgba(59,33,0,.82); stroke:rgba(20,12,2,.98); stroke-width:5px; }
+  .capital-marker.is-selected .capital-star { fill:rgba(255,184,61,.86); stroke:#fff1a8; stroke-width:2px; }
   svg.is-panning #capitalMarkers *,
   svg.is-panning #pinnedRegionMarkers *,
   svg.is-panning #reachableCapitalCandidates *,
@@ -341,11 +343,13 @@
   }
   #manualEnvelopeOverlays { pointer-events:none; mix-blend-mode:normal; }
   .manual-envelope-fill { pointer-events:none; stroke:none; mix-blend-mode:screen; }
-  .manual-envelope-region-outline { pointer-events:none; stroke:rgba(255,255,255,.50); stroke-width:.014; vector-effect:non-scaling-stroke; stroke-dasharray:.036 .026; }
+  /* Non-scaling dashes use screen units: keep normal boundaries longer than
+     the short overlap rhythm, without subpixel dash tessellation during pan. */
+  .manual-envelope-region-outline { pointer-events:none; stroke:rgba(255,255,255,.50); stroke-width:.014; vector-effect:non-scaling-stroke; stroke-dasharray:4px 3px; }
   .manual-envelope-region-outline.manual-envelope-depth-0 { stroke:oklch(0.90 0.10 170 / .80); }
   .manual-envelope-region-outline.manual-envelope-depth-1 { stroke:oklch(0.84 0.13 220 / .82); }
   .manual-envelope-region-outline.has-overlap { stroke-width:.019; }
-  .manual-envelope-overlap { pointer-events:none; stroke-width:.033; vector-effect:non-scaling-stroke; stroke-dasharray:.018 .014; }
+  .manual-envelope-overlap { pointer-events:none; stroke-width:.033; vector-effect:non-scaling-stroke; stroke-dasharray:1px 3px; }
   .manual-envelope-hostile-hatch { pointer-events:none; opacity:.92; }
   #pinnedRegionMarkers { pointer-events:none; opacity:1; mix-blend-mode:normal; }
   .pinned-fill { pointer-events:none; fill:oklch(0.78 0.13 185 / .20); stroke:none; mix-blend-mode:screen; }
