@@ -38,7 +38,7 @@
 
 ## Evidence
 
-- Baseline app-runtime.js: 1035 lines; app-runtime now 784 lines.
+- Baseline app-runtime.js: 1035 lines; Claim composition extracted; final size recorded in phase 3.
 - Commit: Phase commit follows this gate.
 - Commit blocker: No commit blocker.
 
