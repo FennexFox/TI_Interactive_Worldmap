@@ -38,18 +38,18 @@
 
 ## Evidence
 
-- Baseline app-runtime.js: 1035 lines; capture after extraction.
-- Commit: Will record phase commit after gate.
-- Commit blocker: None.
+- Baseline app-runtime.js: 1035 lines; After: 296 lines, reduced by 739 (71%). Focused owners are 234/226/193 lines.
+- Commit: Phase commit follows gate; generated comparison and reproducibility recorded in final audit commit.
+- Commit blocker: No commit blocker.
 
 ## Progress
 
-- Not started.
+- Implemented and validated; generated HEAD comparison runs immediately after phase commit because the command compares committed artifacts.
 
 ## Decision log
 
-- No decisions recorded yet.
+- Preserve the sole composition-root snapshot; coordinator replaces it through a setter before existing catalog/index rebuild and reconciliation. Shell filter semantic callbacks moved to the UI owner; start/destroy remain at root.
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- Validated: full lint, unit (88 JS + 54 Python), WSL build/verify, standalone verify, all 84 E2E tests, import DFS (49 modules, no cycles), and git diff --check pass. Existing lifecycle E2E verifies frozen API, repeated start/destroy, canceled callbacks, and inert destroyed runtime. Separate manual browser session not run; automated browser suite covers planned flows.
