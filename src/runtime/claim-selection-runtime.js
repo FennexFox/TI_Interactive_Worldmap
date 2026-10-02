@@ -123,47 +123,12 @@ const claimPresentation = createClaimPresentationService({
   }),
 });
 const claimModel = claimPresentation.claimModel;
+
 const {
-  projectCost,
-  projectSortLabel,
-  dependsOn,
-  sortedProjectEntries,
-  countryProjectTierMap,
-  nationClaimTierCount,
-  countryProjectTier,
-  isExcludedSystemClaim,
-  entryFilterValue,
-  getClaimKindFilteredProjectEntries,
-  getVisibleProjectEntriesForKind,
-  cumulativeClaimEntries,
-  incomingTargetRegions,
-  outgoingClaimKey,
-  incomingClaimKey,
-  selectedIncomingEntry,
-  incomingClaimsForTarget,
-  visibleClaimRegionsForEntry,
-  compareManualEnvelopeSourceSpecs,
-  buildManualEnvelopeModelData,
-  nationBaseRegionNames,
-  nationResultRegionNames,
-  nationFullyIncludedInResult,
-  isReachableCapitalCandidateNation,
-  reachableCapitalCandidateNations,
-} = claimModel;
-const {
-  activeClaimPreviewContainsRegion,
-  activeClaimPreviewRegionSet,
   buildActiveExpansionScope,
-  getClaimLabelDescriptorSet,
-  getClaimOverlayDescriptorSet,
   getForeignHoverOverlayDescriptorSet,
-  getManualEnvelopeModel: buildManualEnvelopeModel,
-  getNationOverlayModel,
-  manualEnvelopeAnchorNation,
-  manualEnvelopeVisibleRegionSet,
   reachableCapitalCandidateDescriptors,
-  resolveCapitalClaimantForRegion,
-  resolveReachableCapitalSelectionClaimant,
+  resolveCapitalClaimantForRegion
 } = claimPresentation;
 const mapOutputController = createMapOutputController({
   mapSceneRenderer,
@@ -213,18 +178,14 @@ const mapOutputController = createMapOutputController({
   }),
 });
 const {
-  capitalRegionsText,
   isCapitalRegionForNation,
   pinnedExpansionClaimants,
   renderCapitalMarkers,
   renderHoverOutlines,
-  renderPinnedRegionMarkers,
-  renderPinnedRegionsPanel,
   renderReachableCapitalCandidateMarkers,
   renderReachableCapitalCandidatesPanel,
-  renderSelectionOutlines,
   syncReachableCapitalCandidateHoverState,
-  updateSelectedRegions,
+  updateSelectedRegions
 } = mapOutputController;
 const selectionCoordinator = createSelectionCoordinator({
   stateAdapter,
