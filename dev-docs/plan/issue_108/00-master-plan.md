@@ -49,7 +49,7 @@
 
 ## Global Validation Expectations
 
-- npm run lint:js
+- Full lint, unit, WSL build/verify, standalone verify, E2E, generated consistency, import cycle check and diff check.
 
 ## Known Risks And Assumptions
 
@@ -65,16 +65,16 @@
 
 ## Final Audit Checklist
 
-- [ ] Final diff reviewed against issue body and user request.
-- [ ] Final diff reviewed against this master plan.
-- [ ] Phase acceptance criteria checked.
-- [ ] Validation results recorded.
-- [ ] Manual smoke test results recorded or explicitly deferred.
-- [ ] Generated-file policy followed.
-- [ ] Phase-sized commit flow audited.
-- [ ] Commit blockers documented when phase-sized commits were skipped.
-- [ ] Commit-flow classification assigned.
-- [ ] Completion classification assigned honestly.
+- [x] Final diff reviewed against issue body and user request.
+- [x] Final diff reviewed against this master plan.
+- [x] Phase acceptance criteria checked.
+- [x] Validation results recorded.
+- [x] Manual smoke test results recorded or explicitly deferred.
+- [x] Generated-file policy followed.
+- [x] Phase-sized commit flow audited.
+- [x] Commit blockers documented when phase-sized commits were skipped.
+- [x] Commit-flow classification assigned.
+- [x] Completion classification assigned honestly.
 
 ## Commit Audit Requirements
 
@@ -84,3 +84,15 @@
 - Commit blocker policy: document blocker in the relevant phase plan and final report before proceeding without a phase commit.
 - Generated artifact policy: include generated artifacts only when repository policy requires them.
 - Commit-flow non-compliance outcome: report separately in Final Audit even if implementation works.
+
+## Final Audit
+
+- Completion classification: Complete.
+- Completed: extracted focused claim/selection, UI semantic binding and refresh owners; reduced composition root from 1,035 to 296 lines (739 fewer, 71%); kept frozen browser API and top-level lifecycle; updated architecture.
+- Not completed: no separate manual browser session (automated E2E covers planned flows); no unrelated feature or performance work.
+- Validation: full npm lint; npm unit (88 JavaScript + 54 Python); WSL checked-in build/verify; standalone npm verify; 84 Playwright E2E tests; explicit import DFS across 49 source modules without cycles; git diff --check.
+- Manual smoke tests: covered by automated browser tests for scenario/language/search/overlays/pins/reachable capitals/pan/zoom/world wrap; lifecycle E2E verifies frozen public API, repeated start/destroy and inert teardown; existing controller unit tests cover removed listeners and canceled frames.
+- Generated-file policy: rebuilt four runtime assets with ./scripts/build-wsl.sh --skip-install. No game data or graph changed. Post-commit repeat build left a clean tree; npm run check:generated passed.
+- Commit audit: plan/baseline de5fa9f preceded source edits; claims e7aded4, UI 0fa9b2c, refresh/docs/generated 584c652 are reviewable phase commits; phase validation and evidence included; final audit recorded separately. No unrelated changes included; no blockers. Commit flow compliant.
+- Known risks: lazy callbacks rely on completing construction before start, as before; live getters resolve the current snapshot. Existing browser suite passed with these boundaries.
+- Follow-up recommendation: none required for #108.

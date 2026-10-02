@@ -38,13 +38,13 @@
 
 ## Evidence
 
-- Baseline app-runtime.js: 1035 lines; After: 296 lines, reduced by 739 (71%). Focused owners are 234/226/193 lines.
-- Commit: Phase commit follows gate; generated comparison and reproducibility recorded in final audit commit.
+- Baseline app-runtime.js: 1035 lines; After: 296 lines, reduced by 739 (71%). Focused owners are 234/227/193 lines.
+- Commit: 584c652; clean post-commit WSL rebuild and npm run check:generated passed.
 - Commit blocker: No commit blocker.
 
 ## Progress
 
-- Implemented and validated; generated HEAD comparison runs immediately after phase commit because the command compares committed artifacts.
+- Implemented and validated; generated HEAD comparison and post-commit rebuild both pass.
 
 ## Decision log
 
@@ -52,4 +52,4 @@
 
 ## Outcomes / Retrospective
 
-- Validated: full lint, unit (88 JS + 54 Python), WSL build/verify, standalone verify, all 84 E2E tests, import DFS (49 modules, no cycles), and git diff --check pass. Existing lifecycle E2E verifies frozen API, repeated start/destroy, canceled callbacks, and inert destroyed runtime. Separate manual browser session not run; automated browser suite covers planned flows.
+- Validated: full lint, unit (88 JS + 54 Python), WSL build/verify, standalone verify, all 84 E2E tests, import DFS (49 modules, no cycles), and git diff --check pass. Existing lifecycle E2E verifies frozen API, repeated start/destroy and inert destroyed runtime; controller unit tests verify listener removal and canceled scheduled frames. Separate manual browser session not run; automated browser suite covers planned flows.
