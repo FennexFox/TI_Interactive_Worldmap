@@ -155,10 +155,13 @@ for (const worldWrap of ['0', '1']) {
     await expect(page.locator('#pinnedRegionMarkers .pinned-node-marker-group[data-wrap-canonical="1"]')).toHaveCount(3);
 
     const scenarios = await page.locator('#scenarioSel option').evaluateAll(options => options.map(option => option.value));
-    if (scenarios.length > 1) {
-      await page.selectOption('#scenarioSel', scenarios.at(-1));
+    const alternateScenario = scenarios.find(scenario => scenario !== '2026');
+    if (alternateScenario) {
+      await page.selectOption('#scenarioSel', alternateScenario);
+      await expect(page.locator('#scenarioSel')).toHaveValue(alternateScenario);
       await expect(page.locator('#regions .region').first()).toBeVisible();
       await page.selectOption('#scenarioSel', '2026');
+      await expect(page.locator('#scenarioSel')).toHaveValue('2026');
       await expect(page.locator('#regions .region').first()).toBeVisible();
     }
   });
