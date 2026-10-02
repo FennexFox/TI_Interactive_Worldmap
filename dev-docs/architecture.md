@@ -11,7 +11,7 @@ Update it when `src/**`, `tools/**`, or generated-output boundaries change mater
 - `src/data/**`: active scenario access and derived lookup indices.
 - `src/interaction/**`: DOM interaction controllers with local interaction state, such as map pan and tooltip scheduling.
 - `src/render/**`: low-level SVG layer rendering helpers.
-- `src/runtime/**`: explicit refresh/scheduling flow helpers that describe orchestration order without owning app state.
+- `src/runtime/**`: composition root, focused service wiring, and refresh sequencing; durable interaction state stays in state modules.
 - `src/ui/**`: UI rendering and control-binding helpers for panels, controls, localization, and map controls.
 - `tools/**`: catalog builders, page builders, generated-output verifiers, and measurement scripts.
 - `tests/**`: Python and Playwright regression coverage.
@@ -26,33 +26,22 @@ Update it when `src/**`, `tools/**`, or generated-output boundaries change mater
 
 ```text
 src/index.html
-  -> src/app.js
-     -> src/data/active-data.js
-     -> src/data/derived-indices.js
-     -> src/data/claim-model.js
-        -> claim-project-graph.js
-        -> claim-cumulative-model.js
-        -> claim-incoming-overlay.js
-        -> claim-manual-envelope.js
-     -> src/data/search-catalog.js
-     -> src/data/overlay-descriptors.js
-     -> src/state/app-state.js
-     -> src/state/map-view-state.js
-     -> src/state/map-visual-state.js
-     -> src/interaction/map-pan.js
-     -> src/interaction/tooltip.js
-     -> src/render/map-layers.js
-     -> src/runtime/refresh-flow.js
-     -> src/runtime/refresh-actions.js
-     -> src/runtime/scenario-runtime.js
-     -> src/runtime/debug-runtime.js
-     -> src/runtime/lru-cache.js
-     -> src/ui/*
+  -> src/app.js (browser bootstrap)
+     -> src/runtime/app-runtime.js (composition and lifecycle)
+        -> scenario-context.js (active scenario data and derived runtime)
+        -> app-state-adapter.js (state transitions)
+        -> claim-selection-runtime.js (claims, map outputs, selection)
+        -> ui-runtime-bindings.js (search and nation panel semantics)
+        -> refresh-coordinator.js (scenario, language, world-wrap ordering)
+        -> debug-runtime.js and browser-api.js
+        -> src/interaction/*, src/render/*, src/ui/* (focused controllers)
 ```
 
-`src/app.js` is the orchestration layer. It wires data, state, rendering, events, language, selection, hover, pins, scenario switching, and diagnostics together, while delegated modules own focused model, UI, interaction, and refresh-flow responsibilities.
+`src/app.js` reads generated browser data and starts the runtime. `src/runtime/app-runtime.js` constructs major controllers, connects focused runtime modules, owns idempotent start/destroy, and exposes the frozen public runtime API.
 
-State modules should not render. Render modules should not own app state. Data modules should not depend on visual state. UI and interaction modules should receive state-derived values and callbacks from `src/app.js` rather than importing app state directly.
+The composition root retains one live scenario snapshot. Every focused runtime receives a getter for this snapshot; scenario refresh replaces it before rebuilding catalogs and reconciling state. Callbacks resolve the current snapshot at invocation time.
+
+State modules should not render. Render modules should not own app state. Data modules should not depend on visual state. UI and interaction modules receive state-derived values and callbacks through runtime composition rather than importing app state directly.
 
 ## State modules
 
@@ -120,6 +109,14 @@ Keep this module careful around:
 - world-wrap copies.
 
 ## Runtime modules
+
+### Focused runtime composition
+
+`claim-selection-runtime.js` constructs claim presentation, map presentation/output, and selection coordination. It wires map outputs internally; UI and interaction callbacks are bound later with `selectionCoordinator.setContext({outputs})` to resolve initialization order without forwarding wrappers.
+
+`ui-runtime-bindings.js` binds search catalog/filter callbacks, nation panel claim and region actions, and shell filter controls. It reads current scenario data through the injected getter and owns no listeners beyond the existing shell/controller lifecycle.
+
+`refresh-coordinator.js` orders scenario invalidation, catalog/index rebuild, state reconciliation, and view refresh. It also owns language refresh and world-wrap full redraw. It uses the existing named refresh steps and controller APIs; lifecycle guards come from the composition root.
 
 ### `src/runtime/refresh-flow.js`
 
