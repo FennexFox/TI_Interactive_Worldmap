@@ -38,18 +38,18 @@
 
 ## Evidence
 
-- Baseline app-runtime.js: 1035 lines; capture after extraction.
-- Commit: Will record phase commit after gate.
-- Commit blocker: None.
+- Baseline app-runtime.js: 1035 lines; app-runtime now 784 lines.
+- Commit: Phase commit follows this gate.
+- Commit blocker: No commit blocker.
 
 ## Progress
 
-- Not started.
+- Implemented and validated.
 
 ## Decision log
 
-- No decisions recorded yet.
+- Bind UI and interaction callbacks late through selectionCoordinator.setContext; keep map/claim outputs in the focused factory.
 
 ## Outcomes / Retrospective
 
-- Not completed yet.
+- Validated: JavaScript lint and all 88 JS unit tests pass. Browser coverage deferred to final validation phase.
