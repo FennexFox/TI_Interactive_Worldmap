@@ -4,22 +4,15 @@
 import {panMapView} from '../state/map-view-state.js';
 import {createMapInteractionController} from '../interaction/map-interaction-controller.js';
 import {createMapViewController} from '../interaction/map-view-controller.js';
-import {createClaimPresentationService} from '../data/claim-presentation-service.js';
 import {createMapSceneRenderer} from '../render/map-scene-renderer.js';
-import {createMapPresentationController} from '../render/map-presentation-controller.js';
-import {createMapOutputController} from '../render/map-output-controller.js';
-import {createClaimOverlayRenderer} from '../render/claim-overlay-renderer.js';
-import {createManualEnvelopeRenderer} from '../render/manual-envelope-renderer.js';
-import {createMapMarkerRenderer} from '../render/map-marker-renderer.js';
+import {createClaimSelectionRuntime} from './claim-selection-runtime.js';
 import {createDebugRuntime} from './debug-runtime.js';
 import {installBrowserApi} from './browser-api.js';
 import {createAppStateAdapter} from './app-state-adapter.js';
 import {createLanguageRefreshActions, createScenarioRefreshActions} from './refresh-actions.js';
 import {createScenarioContext} from './scenario-context.js';
-import {createSelectionCoordinator} from './selection-coordinator.js';
 import {createAppShellController} from '../ui/app-shell-controller.js';
 import {
-  BASE_TERRITORY_COLOR,
   claimIsEffectivelyHostile,
   createPresentationFormatters,
 } from '../ui/presentation-formatters.js';
@@ -127,53 +120,6 @@ const mapSceneRenderer = createMapSceneRenderer({
     recordRenderTiming,
     hasCommittedClaimOverlay: !!selectionCoordinator.currentOverlayModel?.hasClaimOverlay,
     hasClaimPreview: !!selectionCoordinator.hoverClaimPreviewNation,
-  }),
-});
-const claimOverlayRenderer = createClaimOverlayRenderer({
-  claimOverlayLayer: gClaimOverlays,
-  claimLabelLayer: gClaimLabels,
-});
-const manualEnvelopeRenderer = createManualEnvelopeRenderer({
-  layer: gManualEnvelopeOverlays,
-});
-const mapMarkerRenderer = createMapMarkerRenderer({
-  capitalLayer: gCapitalMarkers,
-  foreignLayer: gForeignHoverOverlays,
-  secondaryLayer: gSecondaryHoverOverlays,
-  hoverLayer: gHoverOutlines,
-  selectionLayer: gSelectionOutlines,
-  pinnedLayer: gPinnedRegionMarkers,
-  reachableLayer: gReachableCapitalCandidates,
-});
-const mapPresentation = createMapPresentationController({
-  claimOverlayRenderer,
-  manualEnvelopeRenderer,
-  mapMarkerRenderer,
-  hoverPreviewLayer: gHoverClaimPreviewOverlays,
-  getContext: () => ({
-    copyContexts: worldCopyContexts,
-    regionByName: scenarioSnapshot.regionByName,
-    language: currentLanguage,
-    claimMode: filterControls.getClaimMode(),
-    claimKind: filterControls.getClaimKind(),
-    projectFilter: getProjectFilter(),
-    dataKey: claimPresentation.overlayModelDataVersionKey(
-      scenarioSnapshot.activeData,
-      scenarioSnapshot.indices
-    ),
-    hostileHatchingDisabled: hostileClaimHatchingDisabled,
-    claimOverlayCommitDelayFrames,
-    recordRenderStat,
-    setRenderStat,
-    debugRenderStats,
-    window,
-    labelPosition,
-    localizedRegionName,
-    t,
-    projectDisplay,
-    nationDisplayName,
-    formatNumber,
-    claimIsEffectivelyHostile,
   }),
 });
 const {
@@ -435,48 +381,14 @@ function applyMapVisualStateForRegions(regionIds, renderContext = {}) {
   return mapSceneRenderer.applyForRegions(regionIds, renderContext);
 }
 
-const claimPresentation = createClaimPresentationService({
-  getContext: () => ({
-    activeScenarioId: appState.activeScenarioId,
-    defaultScenarioId: appData.defaultScenario,
-    activeData: scenarioSnapshot.activeData,
-    indices: scenarioSnapshot.indices,
-    language: currentLanguage,
-    claimsByNation: scenarioSnapshot.claimsByNation,
-    nationRegions: scenarioSnapshot.nationRegions,
-    projectMeta: scenarioSnapshot.projectMeta,
-    claimMode: filterControls.getClaimMode(),
-    claimKind: filterControls.getClaimKind(),
-    projectFilter: getProjectFilter(),
-    activeIncomingClaimKey: getActiveIncomingClaimKey(),
-    selectedRegionIds,
-    incomingClaimsByRegion: scenarioSnapshot.incomingClaimsByRegion,
-    capitalNationsByRegion: scenarioSnapshot.indices.capitalNationsByRegion,
-    regionByName: scenarioSnapshot.regionByName,
-    activeNationId: getActiveNation(),
-    lockedNationId: getLockedNation(),
-    focusedRegionName: getFocusedRegionName(),
-    currentOverlayModel: selectionCoordinator.currentOverlayModel,
-    pinnedRegionIds: getPinnedRegionIds(),
-    getPinnedCapitalClaimant,
-    pinnedExpansionClaimants,
-    isCapitalRegionForNation,
-    projectDisplay,
-    sourceLabels: {
-    inheritedFrom: project => t('source.inheritedFrom', {project}),
-    basicClaim: () => t('source.basicClaim'),
-    direct: () => t('source.direct'),
-    },
-    baselineLabel: t('claimCard.projectBaseline'),
-    labelPosition,
-    projectColor,
-    baseTerritoryColor: BASE_TERRITORY_COLOR,
-    hoverNationProjectOpacity,
-    claimIsEffectivelyHostile,
-    recordRenderStat,
-  }),
+const {claimPresentation, claimModel, mapPresentation, mapOutputController, selectionCoordinator} = createClaimSelectionRuntime({
+  window, elements, appData, stateAdapter, filterControls, i18n, presentationFormatters,
+  mapSceneRenderer, debugRuntime,
+  getInteractionController: () => mapInteractionController,
+  getSnapshot: () => scenarioSnapshot,
+  getLanguage: () => currentLanguage,
+  getCopyContexts: () => worldCopyContexts,
 });
-const claimModel = claimPresentation.claimModel;
 claimHelpers = claimModel;
 const {
   projectCost,
@@ -520,53 +432,6 @@ const {
   resolveCapitalClaimantForRegion,
   resolveReachableCapitalSelectionClaimant,
 } = claimPresentation;
-const mapOutputController = createMapOutputController({
-  mapSceneRenderer,
-  mapPresentation,
-  roots: {
-    pinnedRegionsPanel,
-    reachableCandidatesPanel,
-    selectedPill,
-  },
-  getContext: () => ({
-    regionByName: scenarioSnapshot.regionByName,
-    claimsByNation: scenarioSnapshot.claimsByNation,
-    indices: scenarioSnapshot.indices,
-    selectedRegionIds,
-    copyContexts: worldCopyContexts,
-    language: currentLanguage,
-    currentOverlayModel: selectionCoordinator.currentOverlayModel,
-    visibleNationRegionNames: selectionCoordinator.visibleNationRegionNames,
-    getActiveNation,
-    getHoverNation,
-    getHoveredRegionName,
-    getLockedNation,
-    getPinnedCapitalClaimant,
-    getPinnedRegionIds,
-    getSecondaryHoverNation,
-    getShowReachableCapitalCandidates,
-    buildActiveExpansionScope,
-    resolveCapitalClaimantForRegion,
-    getForeignHoverOverlayDescriptorSet,
-    reachableCapitalCandidateDescriptors,
-    labelPosition,
-    localizedRegionName,
-    nationDisplayName,
-    formatNumber,
-    t,
-    debugRenderStats,
-    recordRenderStat,
-    setRenderStat,
-    focusPinnedRegion: selectionCoordinator.focusPinnedRegion,
-    unpinPinnedRegion: selectionCoordinator.unpinPinnedRegionState,
-    clearPinnedRegions: selectionCoordinator.clearPinnedRegionState,
-    renderManualEnvelope: selectionCoordinator.renderManualEnvelope,
-    refreshReachableCapitalCandidateOutputs: (
-      selectionCoordinator.refreshReachableCapitalCandidateOutputs
-    ),
-    commitReachableCapitalSelection: selectionCoordinator.commitReachableCapitalSelection,
-  }),
-});
 const {
   capitalRegionsText,
   isCapitalRegionForNation,
@@ -581,72 +446,6 @@ const {
   syncReachableCapitalCandidateHoverState,
   updateSelectedRegions,
 } = mapOutputController;
-const selectionCoordinator = createSelectionCoordinator({
-  stateAdapter,
-  claimPresentation,
-  mapPresentation,
-  getContext: () => ({
-    activeData: scenarioSnapshot.activeData,
-    indices: scenarioSnapshot.indices,
-    regionByName: scenarioSnapshot.regionByName,
-  }),
-  outputs: {
-    setOverlayVisualState,
-    clearOverlayVisualState,
-    applyMapVisualState,
-    clearHoverVisualState: previousRegionName => {
-      mapSceneRenderer.setHover('');
-      if (previousRegionName) mapSceneRenderer.applyForRegions([previousRegionName]);
-      else mapSceneRenderer.apply();
-    },
-    updateHoverVisualState: ({previousRegionName, region, regionChanged}) => {
-      mapSceneRenderer.setHover(region.regionName);
-      if (regionChanged) {
-        mapSceneRenderer.applyForRegions(
-          [previousRegionName, region.regionName].filter(Boolean)
-        );
-      } else {
-        mapInteractionController.scheduleHoverFullVisualPass();
-      }
-    },
-    renderCapitalMarkers,
-    renderHoverOutlines,
-    syncReachableCapitalCandidateHoverState,
-    renderReachableCapitalCandidates: ({anchorModel}) => {
-      renderReachableCapitalCandidatesPanel(anchorModel);
-      renderReachableCapitalCandidateMarkers(anchorModel);
-    },
-    refreshPinnedRegionOutputs: ({changedRegionIds}) => (
-      mapOutputController.refreshPinnedRegionOutputs(changedRegionIds)
-    ),
-    updateSelectedRegions,
-    renderClaimPill: model => nationOverlayController.renderClaimPill(model),
-    clearClaimPill: setClaimsPillEmpty,
-    renderNationDetails: model => nationOverlayController.render(model, {renderPill: false}),
-    clearNationDetails: () => nationOverlayController.clear(t('nationInfo.empty')),
-    renderProjectOptions: nation => nationOverlayController.renderProjectOptions(nation),
-    applyFilters,
-    setSearchNation: nation => {
-      searchController.setSelectedNation(nation);
-    },
-    clearSearchSelection: () => searchController.setSelectedNation(''),
-    closeNationDropdown,
-    resetClaimControls: () => {
-      filterControls.setProject('');
-      if (filterControls.getClaimMode() === 'project') {
-        filterControls.setClaimMode('all');
-      }
-    },
-    updateReachableCapitalsButton: updateReachableCapitalsButtonState,
-    setHoverPill,
-    showRegionTooltip,
-    hideRegionTooltip,
-    scheduleHoverPreview: nation => mapInteractionController.scheduleHoverPreview(nation),
-    cancelHoverPreview: () => mapInteractionController.cancelHoverPreview(),
-    syncClaimPresentationState,
-    isCapitalRegionForNation,
-  },
-});
 const {
   cancelPendingHoverPreview,
   clearPinnedRegionState,
@@ -790,6 +589,31 @@ const mapInteractionController = createMapInteractionController({
   samplePanSvgNodeCount: mapSceneRenderer.samplePanSvgNodeCount,
   debugRenderStats,
 });
+selectionCoordinator.setContext({outputs: {
+    renderClaimPill: model => nationOverlayController.renderClaimPill(model),
+    clearClaimPill: setClaimsPillEmpty,
+    renderNationDetails: model => nationOverlayController.render(model, {renderPill: false}),
+    clearNationDetails: () => nationOverlayController.clear(t('nationInfo.empty')),
+    renderProjectOptions: nation => nationOverlayController.renderProjectOptions(nation),
+    applyFilters,
+    setSearchNation: nation => {
+      searchController.setSelectedNation(nation);
+    },
+    clearSearchSelection: () => searchController.setSelectedNation(''),
+    closeNationDropdown,
+    resetClaimControls: () => {
+      filterControls.setProject('');
+      if (filterControls.getClaimMode() === 'project') {
+        filterControls.setClaimMode('all');
+      }
+    },
+    updateReachableCapitalsButton: updateReachableCapitalsButtonState,
+    setHoverPill,
+    showRegionTooltip,
+    hideRegionTooltip,
+    scheduleHoverPreview: nation => mapInteractionController.scheduleHoverPreview(nation),
+    cancelHoverPreview: () => mapInteractionController.cancelHoverPreview(),
+  }});
 function handleNationInfoClaimSelected({kind, source, model}) {
   if (kind === 'incoming') {
     const claimant = source.claimant || '';
