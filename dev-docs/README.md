@@ -1,12 +1,13 @@
 # Development docs
 
-`dev-docs/` is for temporary implementation context, issue plans, profiling notes, and local handoff material. It is not the public GitHub Pages site and it is not the durable product documentation set.
+`dev-docs/` contains internal engineering references and temporary implementation context. It is not the public GitHub Pages site or user-facing product documentation.
 
 The public/static site is built into `docs/`. Do not use `docs/` for planning documentation in this repository.
 
 ## Working architecture map
 
 - [`architecture.md`](architecture.md): current repository and browser-runtime architecture map. It is a living guide, not a frozen design contract. Current source, tests, and generated-output verifiers remain authoritative when they disagree with the map.
+- [`performance-notes.md`](performance-notes.md): concise source-checked performance invariants and historical measurement caveats retained from completed work. It records evidence, not a performance guarantee.
 
 ## Durable versus temporary docs
 
@@ -22,11 +23,18 @@ Temporary planning material belongs in:
 - `.chatgpt/**` for local ChatGPT/Codex run handoffs and receipts;
 - `.chatgpt/tool-tests/**` for generated local measurements.
 
+Keep completed plan folders disposable. Promote only source-verified findings
+that remain useful to the architecture map or focused performance notes. Do not
+retain phase history, raw measurements, or stale implementation status as current
+documentation.
+
 ## Plan document lifecycle
 
 - Create per-issue and per-PR plans under `dev-docs/plan/<issue-or-topic>/`.
 - Treat those plan folders as disposable after the related PR is merged, closed, or abandoned.
-- Before deleting a plan folder, promote any still-useful decisions, conventions, or validated findings into `README.md`, `AGENTS.md`, `.github/**`, or a durable issue body.
+- Before deleting a plan folder, promote any still-useful decisions, conventions,
+  or validated findings into `README.md`, `AGENTS.md`, `.github/**`, a durable
+  issue body, `architecture.md`, or `performance-notes.md`.
 - Do not treat old references from `dev-docs/plan/**` as compatibility blockers for reorganizing durable documentation.
 - Do not review `dev-docs/plan/**` as product code unless the PR explicitly asks for planning-document review.
 

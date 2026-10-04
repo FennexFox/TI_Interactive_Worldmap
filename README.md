@@ -5,7 +5,13 @@
 
 Standalone builder and GitHub Pages site for a Terra Invicta segmented world map.
 
-The first pass is a browser-local **Claim / Unification Map**. It renders Terra Invicta regions as segmented polygons and visualizes direct nation claims from `TIBilateralTemplate.json`, including project-unlocked claims, projectless claims, hostile claims, capital claims, breakaway-gated claims, and initial territory anchors.
+The browser app is a save-independent **Claim / Unification Map**. It renders
+Terra Invicta regions as segmented polygons and uses direct claim rows from
+`TIBilateralTemplate.json` to show baseline and research-unlocked claims,
+including hostile, capital, and breakaway-gated claims. It also displays
+inherited claims through research prerequisites and a manually pinned recursive
+expansion envelope as a planning aid; it does not simulate save-specific
+ownership or in-game outcomes.
 
 The generated Pages site lives in `docs/index.html`.
 
@@ -13,13 +19,16 @@ The generated Pages site lives in `docs/index.html`.
 
 - Render extracted Terra Invicta region outlines as an SVG map.
 - Build direct claim profiles from `TIBilateralTemplate.json`.
+- Show inherited claims through research prerequisites and a manually pinned
+  recursive expansion envelope.
 - Include projectless/basic claims as well as project-unlocked claims.
 - Distinguish hostile claims from peaceful claims.
+- Show scenario-specific initial territory ownership.
 - Switch the visible map between `2003 (DLC)`, `2022`, `2026`, `2070`, and
   `2112 - Broken Earth (DLC)`. Broken Earth uses the internal scenario ID `1962`.
 - Treat Taiwan-style cases as `breakaway_gated_existing` instead of pure formables.
-- Keep the first pass static and save-file independent.
-- Leave recursive megastate absorption closure for a later issue.
+- Keep the map static and save-file independent; the expansion envelope is an
+  interactive planning view, not a game-state simulation.
 
 ## Setup
 
@@ -176,13 +185,10 @@ For a nonstandard DLC location, set `TI_DLC_DIR` or pass `--dlc-dir` with the pa
 The `--scenario-year` option is deprecated; `2026` remains the default and legacy
 top-level output.
 
-For development fixtures, use:
-
-```powershell
-python .\tools\rebuild_pages.py `
-  --bilateral-template .\fixtures\TIBilateralTemplate.json `
-  --region-map-json .\fixtures\region_outlines.raw.json
-```
+Custom inputs can be supplied with `--bilateral-template` and
+`--region-map-json`. Scenario catalog generation still requires a complete game
+template tree, supplied with `--templates-dir` or inferable from the bilateral
+template path.
 
 `TI_TEMPLATES_DIR` can also point to `TerraInvicta_Data/StreamingAssets/Templates`.
 
@@ -241,8 +247,8 @@ and Pages output, verifies them, and leaves changes in the working tree. Use
 
 - `--commit` stages only manifest-declared generated/deployment paths and commits them;
 - `--push` implies `--commit` and pushes the selected branch, or the current branch;
-- `--no-commit` and `--no-push` remain accepted as deprecated compatibility aliases
-  for one transition cycle (`--no-push` preserves the former commit-only behavior).
+- `--no-commit` and `--no-push` remain accepted as deprecated compatibility options;
+  `--no-push` preserves the former commit-only behavior.
 
 To rebuild, verify, commit generated changes, and push the current branch explicitly:
 
@@ -288,9 +294,15 @@ Durable project guidance lives in:
 
 - `README.md` for setup, build, deploy, and user-facing scope;
 - `AGENTS.md` for contributor and agent workflow rules;
-- `.github/**` for issue, PR, review, and automation guidance.
+- `.github/**` for issue, PR, review, and automation guidance;
+- [`dev-docs/architecture.md`](dev-docs/architecture.md) for module ownership and
+  state boundaries;
+- [`dev-docs/performance-notes.md`](dev-docs/performance-notes.md) for validated
+  performance findings and durable decisions.
 
-Temporary implementation plans and profiling notes live in `dev-docs/plan/**`. Those folders may be deleted after the related PR is merged, closed, or abandoned. Before deleting a plan folder, promote only still-useful decisions or validated findings into durable documentation or the relevant GitHub issue.
+Use GitHub issues and pull requests to track active work. Promote lasting decisions
+and validated findings into the durable documentation above. Temporary planning
+notes live in `dev-docs/plan/**` and are working context, not durable project guidance.
 
 ## License
 

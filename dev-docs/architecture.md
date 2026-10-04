@@ -9,8 +9,8 @@ Update it when `src/**`, `tools/**`, or generated-output boundaries change mater
 - `src/**`: browser app source. Edit this for user-facing app behavior.
 - `src/state/**`: state modules for app interaction, viewport, and visual state.
 - `src/data/**`: active scenario access and derived lookup indices.
-- `src/interaction/**`: DOM interaction controllers with local interaction state, such as map pan and tooltip scheduling.
-- `src/render/**`: low-level SVG layer rendering helpers.
+- `src/interaction/**`: DOM interaction controllers for map input, viewport controls, pan, and tooltip scheduling.
+- `src/render/**`: SVG scene, overlay presentation, output coordination, and low-level layer helpers.
 - `src/runtime/**`: composition root, focused service wiring, and refresh sequencing; durable interaction state stays in state modules.
 - `src/ui/**`: UI rendering and control-binding helpers for panels, controls, localization, and map controls.
 - `tools/**`: catalog builders, page builders, generated-output verifiers, and measurement scripts.
@@ -18,7 +18,8 @@ Update it when `src/**`, `tools/**`, or generated-output boundaries change mater
 - `data/manual/**`: hand-maintained normalization inputs.
 - `data/generated/**`: generated Terra Invicta-derived catalogs and scenario bundles.
 - `docs/**`: generated GitHub Pages output. Do not use this as a documentation folder and do not hand-edit it as source.
-- `dev-docs/plan/**`: temporary per-issue and per-PR plans, profiling notes, and implementation context.
+- `dev-docs/plan/**`: active per-issue and per-PR plans; completed folders are disposable.
+- `dev-docs/performance-notes.md`: source-checked performance invariants and historical measurement limits.
 - `.chatgpt/**`: local run handoffs, receipts, and generated measurement artifacts.
 - `graphify-out/**`: generated code-navigation output. Use it as a map, not as source of truth.
 
@@ -30,11 +31,13 @@ src/index.html
      -> src/runtime/app-runtime.js (composition and lifecycle)
         -> scenario-context.js (active scenario data and derived runtime)
         -> app-state-adapter.js (state transitions)
-        -> claim-selection-runtime.js (claims, map outputs, selection)
+        -> claim-selection-runtime.js (claim presentation, map outputs, selection)
         -> ui-runtime-bindings.js (search and nation panel semantics)
         -> refresh-coordinator.js (scenario, language, world-wrap ordering)
         -> debug-runtime.js and browser-api.js
-        -> src/interaction/*, src/render/*, src/ui/* (focused controllers)
+        -> map-view and map-interaction controllers
+        -> map scene, presentation, and output controllers
+        -> app-shell and focused UI controllers
 ```
 
 `src/app.js` reads generated browser data and starts the runtime. `src/runtime/app-runtime.js` constructs major controllers, connects focused runtime modules, owns idempotent start/destroy, and exposes the frozen public runtime API.
@@ -73,6 +76,17 @@ Builds lookup indices derived from active scenario data. Keep this module determ
 cumulative/hostility, incoming-overlay, and manual-envelope/reachable-capital logic
 live in focused pure submodels and remain testable without DOM access.
 
+Claim builders select scenario-filtered direct `Claim` rows. The browser claim
+model applies research-prerequisite inheritance; it does not simulate save-specific
+territory absorption. In `tools/build_claim_data.py`, `regionRaw` keeps the
+scenario-prefix-normalized source template ID, while `region` holds the
+alias-resolved canonical map-region ID used for lookup. Rendering joins by that
+canonical ID and gets user-facing text from localized `displayName`, then
+`primaryCity`, then a readable form of `regionName`. Keep source IDs, canonical
+keys, and display labels distinct; display text is not a join key. Starting
+ownership remains sourced separately from scenario-filtered `initialOwner` rows,
+as documented in the root README.
+
 ### `src/data/search-catalog.js` and `src/data/overlay-descriptors.js`
 
 Build localized search entries/query results and deterministic overlay descriptors.
@@ -80,9 +94,21 @@ Neither module reads or mutates the DOM.
 
 ## Interaction modules
 
-### `src/interaction/map-pan.js`
+### `src/interaction/map-interaction-controller.js`
 
-Owns transient map pan state, drag threshold handling, pointer capture lifecycle, drag-click suppression, and post-pan hover refresh scheduling. It mutates map view only through injected callbacks.
+Owns map and hit-layer event binding, hover and click routing, wheel input,
+coalesced animation-frame scheduling, tooltip invalidation wiring, and event and
+observer cleanup. It delegates drag mechanics and tooltip behavior to focused
+controllers and receives semantic callbacks from runtime composition.
+
+### `src/interaction/map-pan.js` and `map-view-controller.js`
+
+`map-pan.js` tracks drag state, the drag threshold, pointer capture, click
+suppression, and post-pan hover refresh through injected callbacks. The map view
+controller owns the live viewport object, zoom and reset controls, world-wrap
+copies, and the SVG `viewBox`; scheduled writes use the interaction controller's
+RAF queue. Logical wheel zoom is applied for each event while the viewBox write is
+batched.
 
 ### `src/interaction/tooltip.js`
 
@@ -92,10 +118,22 @@ Owns tooltip position scheduling, cached layout measurements, and hide/show stat
 
 ### `src/render/map-layers.js`
 
-Contains low-level SVG layer rendering helpers. Geometry, base colors, and labels are
-separate stages. Base-mode refreshes must preserve region, hit-path, and label node
-identity. The module receives state-derived values through parameters or render
-context rather than importing app state directly.
+Contains low-level SVG layer and world-copy helpers. Render modules receive
+state-derived values through parameters or injected context rather than importing
+app state directly.
+
+### Scene and presentation ownership
+
+- `map-scene-renderer.js` owns base region geometry, hit paths, labels, grid,
+  visibility state, and base-color rendering. Its unchanged-input base-color path
+  preserves existing SVG children; invalidation follows its effective visible
+  region, color, mode, and copy inputs.
+- `map-presentation-controller.js` coordinates claim, manual-envelope, and marker
+  renderer requests using injected presentation context.
+- `map-output-controller.js` derives selection, pin, capital, reachable-capital,
+  and panel outputs from injected state and data, then delegates SVG presentation.
+- `claim-overlay-renderer.js`, `manual-envelope-renderer.js`, and
+  `map-marker-renderer.js` own focused SVG overlay and marker construction.
 
 Keep this module careful around:
 
@@ -112,7 +150,10 @@ Keep this module careful around:
 
 ### Focused runtime composition
 
-`claim-selection-runtime.js` constructs claim presentation, map presentation/output, and selection coordination. It wires map outputs internally; UI and interaction callbacks are bound later with `selectionCoordinator.setContext({outputs})` to resolve initialization order without forwarding wrappers.
+`claim-selection-runtime.js` constructs claim presentation, map presentation and
+output controllers, and selection coordination. It resolves initialization order
+through injected getters and `selectionCoordinator.setContext({outputs})` rather
+than forwarding wrappers.
 
 `ui-runtime-bindings.js` binds search catalog/filter callbacks, nation panel claim and region actions, and shell filter controls. It reads current scenario data through the injected getter and owns no listeners beyond the existing shell/controller lifecycle.
 
@@ -122,11 +163,11 @@ Keep this module careful around:
 
 Defines named refresh step order for scenario and language refresh paths. It should describe orchestration sequence without owning app data, state, DOM references, or render implementation.
 
-### `src/runtime/refresh-actions.js` and `src/runtime/scenario-runtime.js`
+### `src/runtime/refresh-actions.js`, `src/runtime/scenario-runtime.js`, and `src/runtime/scenario-context.js`
 
-Bind explicit scenario/language refresh actions and create one active-scenario runtime
-context with derived indices. Scenario preparation builds those indices once per
-transition; view refresh consumes the prepared context.
+Bind explicit scenario/language refresh actions and maintain one live scenario
+snapshot with its derived indices. Scenario preparation builds the indices for a
+transition before view refresh consumes the new snapshot.
 
 ### `src/runtime/debug-runtime.js` and `src/runtime/lru-cache.js`
 
@@ -142,6 +183,12 @@ Owns app-local translation strings, language normalization/storage helpers, and 
 ### `src/ui/aside-cards.js`, `src/ui/panels.js`, `src/ui/controls.js`, `src/ui/map-controls.js`, and `src/ui/nation-info-panel.js`
 
 Own focused UI rendering or event-binding concerns. They should keep DOM structure stable and receive callbacks for state transitions instead of importing app state directly.
+
+`app-shell-controller.js` owns shell element lookup, localized control setup,
+search and nation-overlay controllers, and shell lifecycle. `search-controller.js`
+owns the search catalog, dropdown choices, keyboard interaction, and search
+results; `nation-overlay-controller.js` and `nation-info-panel.js` own
+nation-information presentation and its interaction binding.
 
 ## Build and data pipeline
 
@@ -208,7 +255,7 @@ Performance changes should preserve map meaning and interaction correctness. Pre
 ## Architectural rules
 
 - Do not hand-edit `docs/assets/**`, `docs/data/**`, or other generated Pages outputs. Edit `src/**`, `tools/**`, or manual inputs, then rebuild.
-- Do not make render modules import `appState` directly. Pass state-derived values from `src/app.js`.
+- Do not make render modules import `appState` directly. Pass state-derived values through runtime composition arguments or injected render context.
 - Do not make data modules depend on render or view state.
 - Do not make UI or interaction modules own semantic app state. Pass callbacks for state transitions.
 - Keep refresh-flow modules declarative and order-focused; avoid turning them into a hidden global app orchestrator.

@@ -3,7 +3,7 @@
 ## Source And Navigation
 
 - Work in `src/**` for browser code, `tools/**` for extraction/build/verification, `data/manual/**` for maintained inputs, and `tests/**` for coverage. Deployment files are generated from these sources.
-- Use focused searches and small source slices. When Serena is available, prefer symbol and reference queries for large modules such as `src/app.js`.
+- Use focused searches and small source slices. When Serena is available, prefer symbol and reference queries for large runtime and rendering modules.
 - Use Graphify when it helps locate ownership or cross-module relationships. For unfamiliar or broad changes, start with `graphify-out/GRAPH_REPORT.md` if available. Simple, obvious edits do not need graph exploration.
 - Treat Graphify as navigation, not source of truth: verify inferred relationships in source. Do not regenerate the graph unless the task needs a refresh.
 
@@ -31,12 +31,12 @@ The browser uses native ES modules:
 - `src/data/derived-indices.js`: indices derived from active data.
 - `src/render/map-layers.js`: low-level SVG rendering with explicit dependencies.
 
-Keep state, data, and rendering responsibilities separate. Render modules must not import `appState` directly; pass state-derived values from `src/app.js` through arguments or render context.
+Keep state, data, and rendering responsibilities separate. `src/app.js` bootstraps `src/runtime/app-runtime.js`; focused runtime modules compose the controllers. Render modules must not import `appState` directly; pass state-derived values through arguments or render context.
 
 ## Build And Validation
 
 - Rebuild checked-in Pages output with `npm run build` after changes that affect it. On WSL, use `./scripts/build-wsl.sh` for the environment-aware build and verification workflow.
-- Rebuild local-game catalogs on WSL with `./scripts/build-wsl.sh --from-game`. On Windows, use `python tools/rebuild_pages.py ... --no-commit`.
+- Rebuild local-game catalogs on WSL with `./scripts/build-wsl.sh --from-game`. On Windows, use `python tools/rebuild_pages.py --templates-dir <confirmed-path>`. Rebuilds do not commit or push unless `--commit` or `--push` is supplied.
 - Reuse existing region geometry by default. Add `--refresh-region-outlines` only when intentionally re-extracting the Unity `regionoutlines` asset.
 - Use `TI_TEMPLATES_DIR` or a confirmed local path for required game templates. Ask for missing paths when necessary; do not invent replacement game data.
 - After source, generator, or data changes, run `npm run verify` and applicable lint checks. Run `npm run test:e2e` for user-facing browser behavior. Rebuild affected output before checking consistency or testing the deployed app.

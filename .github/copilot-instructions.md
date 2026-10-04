@@ -37,11 +37,14 @@ Playwright specs under `tests/e2e/**`, using `tests/fixtures/app.js`.
 explicit with `--commit` or `--push`, and only manifest-declared generated paths may
 be staged.
 
-Also do not review tool-state or temporary planning artifacts as product code:
+Do not treat generated navigation, tool-state files, or temporary planning notes
+as product source:
 - graphify-out/**
 - .serena/**
 - .chatgpt/**
 - .codex/**
 - dev-docs/plan/**
 
-Use these only as navigation or handoff context when explicitly relevant.
+Use Graphify output for navigation when relevant. Read durable notes such as
+`dev-docs/architecture.md` and `dev-docs/performance-notes.md` as context, and
+verify behavior against source code and tests.
