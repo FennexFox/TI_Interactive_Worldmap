@@ -20,7 +20,7 @@
     "deploy": "python tools/rebuild_pages.py --push"
   },
   "devDependencies": {
-    "@playwright/test": "1.63.0",
+    "@playwright/test": "1.64.1",
     "eslint": "10.11.0"
   }
 }
